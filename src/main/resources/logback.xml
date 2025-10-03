@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Set specific loggers to suppress DEBUG logs from third-party tools -->
+    
+    <!-- ASM Library -->
+    <logger name="org.objectweb.asm" level="WARN"/>
+    
+    <!-- BCEL Library -->
+    <logger name="org.apache.bcel" level="WARN"/>
+    
+    <!-- Javassist Library -->
+    <logger name="javassist" level="WARN"/>
+    
+    <!-- JavaParser Library -->
+    <logger name="com.github.javaparser" level="WARN"/>
+    
+    <!-- Roaster Library -->
+    <logger name="org.jboss.forge.roaster" level="WARN"/>
+    
+    <!-- SonarSource Java -->
+    <logger name="org.sonarsource" level="WARN"/>
+    <logger name="org.sonar" level="WARN"/>
+    
+    <!-- Progress Bar Library -->
+    <logger name="me.tongfei.progressbar" level="WARN"/>
+    
+    <!-- Picocli -->
+    <logger name="picocli" level="WARN"/>
+    
+    <!-- Commons Libraries -->
+    <logger name="org.apache.commons" level="WARN"/>
+    
+    <!-- JUnit and testing libraries (for test runs) -->
+    <logger name="org.junit" level="WARN"/>
+    <logger name="org.mockito" level="WARN"/>
+
+    <!-- Application loggers - keep at INFO level for normal operation -->
+    <logger name="com.analyzer" level="INFO"/>
+
+    <!-- Root logger - set to INFO to suppress DEBUG from all other sources -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

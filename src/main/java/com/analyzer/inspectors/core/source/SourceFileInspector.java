@@ -1,4 +1,4 @@
-package com.analyzer.inspectors.source;
+package com.analyzer.inspectors.core.source;
 
 import com.analyzer.core.Clazz;
 import com.analyzer.core.Inspector;

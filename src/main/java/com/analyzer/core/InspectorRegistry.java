@@ -1,9 +1,10 @@
 package com.analyzer.core;
 
-import com.analyzer.inspectors.binary.BinaryClassInspector;
-import com.analyzer.inspectors.binary.TypeInspector;
-import com.analyzer.inspectors.source.ClocInspector;
-import com.analyzer.inspectors.source.SourceFileInspector;
+import com.analyzer.inspectors.core.binary.BinaryClassInspector;
+import com.analyzer.inspectors.core.source.SourceFileInspector;
+import com.analyzer.inspectors.rules.binary.TypeInspector;
+import com.analyzer.inspectors.rules.binary.MethodCountInspector;
+import com.analyzer.inspectors.rules.source.ClocInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,7 @@ public class InspectorRegistry {
      * - cloc: returns the number of lines of codes (using a source inspector)
      * - type: returns the type of declaration using a binary inspector (class,
      * interface, record, enum etc)
+     * - method-count: returns the number of methods in a class (using binary inspector)
      */
     private void loadDefaultInspectors() {
         logger.info("Loading default inspectors...");
@@ -52,6 +54,8 @@ public class InspectorRegistry {
         // Load the default inspectors with ResourceResolver
         registerInspector(new ClocInspector(resourceResolver));
         registerInspector(new TypeInspector(resourceResolver));
+        registerInspector(new MethodCountInspector(resourceResolver));
+        registerInspector(new CyclomaticComplexityInspector(resourceResolver));
 
         logger.info("Default inspectors loaded: {}", inspectors.size());
     }

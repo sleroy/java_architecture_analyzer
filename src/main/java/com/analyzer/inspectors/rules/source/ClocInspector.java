@@ -1,21 +1,25 @@
-package com.analyzer.inspectors.source;
+package com.analyzer.inspectors.rules.source;
 
 import com.analyzer.core.Clazz;
 import com.analyzer.core.InspectorResult;
+import com.analyzer.inspectors.core.source.SourceFileInspector;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
 
 import java.io.IOException;
 
 /**
- * Lines of Code (CLOC) inspector that counts the number of lines in source
- * files.
- * This is one of the default inspectors specified in purpose.md.
- * 
- * Extends SourceFileInspector to analyze source files only.
+ * Inspector that counts lines of code (CLOC) in Java source files.
+ * This is a concrete implementation of SourceFileInspector that provides
+ * basic line counting functionality for source code analysis.
  */
 public class ClocInspector extends SourceFileInspector {
 
+    /**
+     * Creates a ClocInspector with the specified ResourceResolver.
+     * 
+     * @param resourceResolver the resolver for accessing source file resources
+     */
     public ClocInspector(ResourceResolver resourceResolver) {
         super(resourceResolver);
     }
@@ -38,10 +42,9 @@ public class ClocInspector extends SourceFileInspector {
     @Override
     protected InspectorResult analyzeSourceFile(Clazz clazz, ResourceLocation sourceLocation) throws IOException {
         try {
-            // Use the inherited countLines method from SourceFileInspector
             long lineCount = countLines(sourceLocation);
             return new InspectorResult(getName(), lineCount);
-        } catch (Exception e) {
+        } catch (IOException e) {
             return InspectorResult.error(getName(), "Error counting lines: " + e.getMessage());
         }
     }

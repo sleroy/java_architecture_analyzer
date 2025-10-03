@@ -2,6 +2,7 @@ package com.analyzer.inspectors.source;
 
 import com.analyzer.core.Clazz;
 import com.analyzer.core.InspectorResult;
+import com.analyzer.inspectors.rules.source.ClocInspector;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
 import org.junit.jupiter.api.BeforeEach;

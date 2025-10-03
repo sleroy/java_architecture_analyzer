@@ -1,7 +1,8 @@
-package com.analyzer.inspectors.binary;
+package com.analyzer.inspectors.rules.binary;
 
 import com.analyzer.core.Clazz;
 import com.analyzer.core.InspectorResult;
+import com.analyzer.inspectors.core.binary.ASMInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.Opcodes;
 import org.slf4j.Logger;
@@ -47,7 +48,7 @@ public class TypeInspector extends ASMInspector {
         // BOTH)
         // which is different from Java language type, so we always use bytecode
         // analysis
-        return new TypeExtractorVisitor(getName(), clazz);
+        return new TypeExtractorVisitor(getName());
     }
 
     /**
@@ -56,8 +57,8 @@ public class TypeInspector extends ASMInspector {
     private static class TypeExtractorVisitor extends ASMClassVisitor {
         private int accessFlags;
 
-        public TypeExtractorVisitor(String inspectorName, Clazz clazz) {
-            super(inspectorName, clazz);
+        public TypeExtractorVisitor(String inspectorName) {
+            super(inspectorName);
         }
 
         @Override
@@ -69,7 +70,7 @@ public class TypeInspector extends ASMInspector {
 
             // Set the result based on the access flags
             String classType = determineTypeFromAccessFlags(accessFlags);
-            setSuccessResult(classType);
+            setResult(classType);
         }
     }
 

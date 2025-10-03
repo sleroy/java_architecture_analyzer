@@ -2,6 +2,7 @@ package com.analyzer.inspectors.source;
 
 import com.analyzer.core.Clazz;
 import com.analyzer.core.InspectorResult;
+import com.analyzer.inspectors.core.source.SourceFileInspector;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
 import org.junit.jupiter.api.BeforeEach;
@@ -176,7 +177,7 @@ class SourceFileInspectorTest {
                 .thenReturn(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
 
         // When
-        String result = inspector.readFileContent(mockSourceLocation);
+        String result = inspector.testReadFileContent(mockSourceLocation);
 
         // Then
         assertEquals(content, result);
@@ -191,7 +192,7 @@ class SourceFileInspectorTest {
                 .thenReturn(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
 
         // When
-        long result = inspector.countLines(mockSourceLocation);
+        long result = inspector.testCountLines(mockSourceLocation);
 
         // Then
         assertEquals(3L, result);
@@ -226,6 +227,15 @@ class SourceFileInspectorTest {
             // Simple test implementation that reads content and returns it
             String content = readFileContent(sourceLocation);
             return new InspectorResult(getName(), (Object) ("analyzed: " + content));
+        }
+
+        // Public wrapper methods to expose protected methods for testing
+        public String testReadFileContent(ResourceLocation location) throws IOException {
+            return readFileContent(location);
+        }
+
+        public long testCountLines(ResourceLocation location) throws IOException {
+            return countLines(location);
         }
     }
 }

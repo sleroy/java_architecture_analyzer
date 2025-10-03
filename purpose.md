@@ -48,7 +48,7 @@ For the source code analyzer, we will support various types of inspectors provid
 * TextFileInspector : returns a String with the content of the source file.
 * SonarParserInspector : parse the source file using SonarSource Java parser available as a Maven dependency
 * RoasterInspector : use RoasterLibrary to parse the source code : https://github.com/forge/roaster
-* JavaParserInspectore : use https://github.com/javaparser/javaparser to parse the source code
+* JavaParserInspector : use https://github.com/javaparser/javaparser to parse the source code
 
 All these inspectors have a generic interface that provides the main methods decorate(Clazz classToDecorate).
 
