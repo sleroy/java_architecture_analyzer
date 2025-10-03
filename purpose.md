@@ -10,12 +10,11 @@ One of the command is `inventory`.
 
 The `inventory` command will the following parameters : 
 * `--source` : the optional path to the source of the application
-* `--binary` : the optional path to the JAR files of the application
-* `--war` : the optional path to the WAR files of the application
+* `--binary` : the optional path to the JAR, WAR, EAR, and ZIP files of the application or directories containing such files
 * `--output`: the result of the analysis ( CSV ), Default is inventory.csv value.
 * `--encoding`: the default encoding to use to read the files. By default the platform encoding is used.
 * `--java_version`: the java version of the source file. Mandatory if --source is used
-* `--inspector`: the list of inspectors to use ( comma separated list of inspector names). Optional. By default everything is uded.
+* `--inspector`: the list of inspectors to use ( comma separated list of inspector names). Optional. By default everything is used.
 
 The purpose of this command is to create an inventory of the application classes as a spreadsheet.
 
@@ -68,4 +67,3 @@ To begin with we provide the following inspectors :
 
 - cloc : returns the number of lines of codes ( using a source inspector )
 - type : returns the type of declaration using a binary inspector ( class, interface, record, enum etc)
-

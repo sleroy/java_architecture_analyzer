@@ -1,29 +1,22 @@
 package com.analyzer.cli;
 
 import com.analyzer.core.AnalysisEngine;
-import com.analyzer.core.ClassCsvRecord;
 import com.analyzer.core.Clazz;
 import com.analyzer.core.CsvExporter;
-import com.analyzer.core.CsvRecord;
+import com.analyzer.core.Inspector;
 import com.analyzer.core.InspectorRegistry;
-import com.analyzer.core.Package;
-import com.analyzer.core.PackageCsvRecord;
 import com.analyzer.core.PackageFilter;
 import com.analyzer.discovery.ClassDiscoveryEngine;
-import com.analyzer.discovery.PackageDiscoveryEngine;
 import com.analyzer.resource.CompositeResourceResolver;
 import com.analyzer.resource.ResourceLocation;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -36,14 +29,14 @@ import java.util.concurrent.Callable;
 @Command(name = "inventory", description = "Create an inventory of Java classes and packages")
 public class InventoryCommand implements Callable<Integer> {
 
+    private static final Logger logger = LoggerFactory.getLogger(InventoryCommand.class);
+
     @Option(names = { "--source" }, description = "Path to the source files (e.g., src/main/java or /path/to/src)")
     private String sourcePath;
 
-    @Option(names = { "--binary" }, description = "Path to JAR files (e.g., lib/app.jar or /path/to/lib.jar)")
+    @Option(names = {
+            "--binary" }, description = "Path to binary archive files or directory. Supports JAR, WAR, EAR, ZIP files. For directories, scans recursively for all archive files.")
     private String binaryPath;
-
-    @Option(names = { "--war" }, description = "Path to WAR files (e.g., target/app.war or /path/to/app.war)")
-    private String warPath;
 
     @Option(names = {
             "--output" }, description = "Output file for the analysis results (CSV format)", defaultValue = "out/inventory.csv")
@@ -69,7 +62,7 @@ public class InventoryCommand implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
-        System.out.println("Starting Java Architecture Analysis...");
+        logger.info("Starting Java Architecture Analysis...");
 
         // Validate parameters
         if (!validateParameters()) {
@@ -79,18 +72,22 @@ public class InventoryCommand implements Callable<Integer> {
         // Convert paths to URIs
         String sourceUri = convertPathToUri(sourcePath);
         String binaryUri = convertPathToUri(binaryPath);
-        String warUri = convertPathToUri(warPath);
 
-        System.out.println("Configuration:");
-        System.out.println("  Source path: " + sourcePath + " -> URI: " + sourceUri);
-        System.out.println("  Binary path: " + binaryPath + " -> URI: " + binaryUri);
-        System.out.println("  WAR path: " + warPath + " -> URI: " + warUri);
-        System.out.println("  Output file: " + outputFile);
-        System.out.println("  Encoding: " + encoding);
-        System.out.println("  Java version: " + javaVersion);
-        System.out.println("  Inspectors: " + inspectors);
-        System.out.println("  Plugins directory: " + pluginsDirectory);
-        System.out.println("  Package filters: " + packageFilters);
+        logger.debug("Converting paths to URIs");
+        logger.debug("sourcePath = {}", sourcePath);
+        logger.debug("binaryPath = {}", binaryPath);
+        logger.debug("sourceUri = {}", sourceUri);
+        logger.debug("binaryUri = {}", binaryUri);
+
+        logger.info("Configuration:");
+        logger.info("  Source path: {} -> URI: {}", sourcePath, sourceUri);
+        logger.info("  Binary path: {} -> URI: {}", binaryPath, binaryUri);
+        logger.info("  Output file: {}", outputFile);
+        logger.info("  Encoding: {}", encoding);
+        logger.info("  Java version: {}", javaVersion);
+        logger.info("  Inspectors: {}", inspectors);
+        logger.info("  Plugins directory: {}", pluginsDirectory);
+        logger.info("  Package filters: {}", packageFilters);
 
         try {
             // Initialize ResourceResolver system
@@ -100,27 +97,40 @@ public class InventoryCommand implements Callable<Integer> {
             ResourceLocation sourceLocation = sourceUri != null ? new ResourceLocation(sourceUri) : null;
             List<ResourceLocation> binaryLocations = new ArrayList<>();
 
+            logger.debug("Creating ResourceLocations");
+            logger.debug("sourceLocation = {}", sourceLocation);
+
             if (binaryUri != null) {
+                logger.debug("Adding binaryUri to binaryLocations: {}", binaryUri);
                 binaryLocations.add(new ResourceLocation(binaryUri));
+            } else {
+                logger.debug("binaryUri is null, not adding to binaryLocations");
             }
-            if (warUri != null) {
-                binaryLocations.add(new ResourceLocation(warUri));
-            }
+
+            logger.debug("binaryLocations.size() = {}", binaryLocations.size());
+            logger.debug("binaryLocations.isEmpty() = {}", binaryLocations.isEmpty());
 
             // 1. Initialize Inspector Registry with plugins
             InspectorRegistry inspectorRegistry = new InspectorRegistry(pluginsDirectory, resolver);
-            System.out.println(inspectorRegistry.getStatistics());
+            logger.info("{}", inspectorRegistry.getStatistics());
 
             // 2. Initialize Analysis Engine
             AnalysisEngine analysisEngine = new AnalysisEngine(inspectorRegistry, resolver);
-            System.out.println(analysisEngine.getStatistics());
+            logger.info("{}", analysisEngine.getStatistics());
 
             // 3. Discover classes
+            logger.debug("About to check condition for class discovery");
+            logger.debug("sourceLocation != null = {}", (sourceLocation != null));
+            logger.debug("!binaryLocations.isEmpty() = {}", (!binaryLocations.isEmpty()));
+            logger.debug("Overall condition = {}", (sourceLocation != null || !binaryLocations.isEmpty()));
+
             if (sourceLocation != null || !binaryLocations.isEmpty()) {
+                logger.debug("Condition passed, creating ClassDiscoveryEngine");
                 ClassDiscoveryEngine classDiscovery = new ClassDiscoveryEngine(resolver);
+                logger.debug("Calling classDiscovery.discoverClasses()");
                 Map<String, Clazz> discoveredClasses = classDiscovery.discoverClasses(sourceLocation, binaryLocations);
 
-                System.out.println("Discovered " + discoveredClasses.size() + " classes");
+                logger.info("Discovered {} classes", discoveredClasses.size());
 
                 // 4. Apply package filtering if specified
                 Map<String, Clazz> filteredClasses = discoveredClasses;
@@ -132,8 +142,8 @@ public class InventoryCommand implements Callable<Integer> {
                             discoveredClasses.size(), filteredClasses.size(),
                             packageFilters);
 
-                    System.out.println(stats);
-                    System.out.println("After filtering: " + filteredClasses.size() + " classes");
+                    logger.info("{}", stats);
+                    logger.info("After filtering: {} classes", filteredClasses.size());
                 }
 
                 // 5. Run inspector analysis on filtered classes
@@ -141,19 +151,20 @@ public class InventoryCommand implements Callable<Integer> {
 
                 // 6. Generate CSV output with inspector results
                 CsvExporter csvExporter = new CsvExporter(outputFile);
-                List<String> inspectorNames = analysisEngine.getInspectorNames(inspectors);
+                List<Inspector> inspectorList = analysisEngine.getInspectors(inspectors);
 
-                System.out.println(csvExporter.getStatistics(analyzedClasses, inspectorNames));
-                csvExporter.exportToCsv(analyzedClasses, inspectorNames);
+                logger.info("{}", csvExporter.getStatistics(analyzedClasses, inspectorList));
+                csvExporter.exportToCsv(analyzedClasses, inspectorList);
+            } else {
+                logger.warn("No source or binary locations found - skipping class discovery");
             }
 
-            System.out.println("Analysis completed successfully!");
-            System.out.println("Results written to: " + outputFile.getAbsolutePath());
+            logger.info("Analysis completed successfully!");
+            logger.info("Results written to: {}", outputFile.getAbsolutePath());
 
             return 0;
         } catch (Exception e) {
-            System.err.println("Error during analysis: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error during analysis: {}", e.getMessage(), e);
             return 1;
         }
     }
@@ -183,28 +194,28 @@ public class InventoryCommand implements Callable<Integer> {
                 return file.toURI().toString();
             }
         } catch (Exception e) {
-            System.err.println("Error converting path to URI: " + path + " - " + e.getMessage());
+            logger.error("Error converting path to URI: {} - {}", path, e.getMessage());
             return null;
         }
     }
 
     private boolean validateParameters() {
         // At least one input source must be specified
-        if (sourcePath == null && binaryPath == null && warPath == null) {
-            System.err.println("Error: At least one of --source, --binary, --war must be specified");
+        if (sourcePath == null && binaryPath == null) {
+            logger.error("Error: At least one of --source or --binary must be specified");
             return false;
         }
 
         // If source is used, Java version is mandatory
         if (sourcePath != null && javaVersion == null) {
-            System.err.println("Error: --java_version is required when --source is specified");
+            logger.error("Error: --java_version is required when --source is specified");
             return false;
         }
 
         // Validate plugins directory
         if (pluginsDirectory != null && !pluginsDirectory.exists()) {
-            System.out.println("Warning: Plugins directory does not exist: " + pluginsDirectory);
-            System.out.println("Creating plugins directory...");
+            logger.warn("Warning: Plugins directory does not exist: {}", pluginsDirectory);
+            logger.info("Creating plugins directory...");
             pluginsDirectory.mkdirs();
         }
 
@@ -220,20 +231,12 @@ public class InventoryCommand implements Callable<Integer> {
         return convertPathToUri(binaryPath);
     }
 
-    public String getWarUri() {
-        return convertPathToUri(warPath);
-    }
-
     public String getSourcePath() {
         return sourcePath;
     }
 
     public String getBinaryPath() {
         return binaryPath;
-    }
-
-    public String getWarPath() {
-        return warPath;
     }
 
     public File getOutputFile() {

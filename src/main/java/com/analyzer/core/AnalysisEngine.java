@@ -1,6 +1,9 @@
 package com.analyzer.core;
 
 import com.analyzer.resource.ResourceResolver;
+import me.tongfei.progressbar.ProgressBar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +18,7 @@ import java.util.Map;
  */
 public class AnalysisEngine {
 
+    private static final Logger logger = LoggerFactory.getLogger(AnalysisEngine.class);
     private final InspectorRegistry inspectorRegistry;
     private final ResourceResolver resourceResolver;
 
@@ -42,20 +46,17 @@ public class AnalysisEngine {
         // Get inspectors to execute
         List<Inspector> inspectors = getInspectorsToExecute(requestedInspectors);
 
-        System.out.println("Starting analysis with " + inspectors.size() + " inspectors...");
+        logger.info("Starting analysis with {} inspectors...", inspectors.size());
 
-        // Execute inspectors on each class
-        int processedCount = 0;
-        for (Clazz clazz : discoveredClasses.values()) {
-            processedCount++;
-            if (processedCount % 10 == 0) {
-                System.out.println("Analyzed " + processedCount + "/" + discoveredClasses.size() + " classes");
+        // Execute inspectors on each class with progress bar
+        try (ProgressBar pb = new ProgressBar("Analyzing classes", discoveredClasses.size())) {
+            for (Clazz clazz : discoveredClasses.values()) {
+                analyzeClass(clazz, inspectors);
+                pb.step();
             }
-
-            analyzeClass(clazz, inspectors);
         }
 
-        System.out.println("Analysis completed for " + discoveredClasses.size() + " classes");
+        logger.info("Analysis completed for {} classes", discoveredClasses.size());
         return discoveredClasses;
     }
 
@@ -83,8 +84,8 @@ public class AnalysisEngine {
                 }
             } catch (Exception e) {
                 // Handle inspector errors gracefully
-                System.err.println("Error running inspector '" + inspector.getName() +
-                        "' on class '" + clazz.getClassName() + "': " + e.getMessage());
+                logger.error("Error running inspector '{}' on class '{}': {}",
+                        inspector.getName(), clazz.getClassName(), e.getMessage());
                 clazz.addInspectorResult(inspector.getName(), "ERROR: " + e.getMessage());
             }
         }
@@ -105,7 +106,7 @@ public class AnalysisEngine {
                 if (inspector != null) {
                     inspectors.add(inspector);
                 } else {
-                    System.err.println("Warning: Inspector '" + inspectorName + "' not found");
+                    logger.warn("Inspector '{}' not found", inspectorName);
                 }
             }
             return inspectors;
@@ -123,6 +124,14 @@ public class AnalysisEngine {
             names.add(inspector.getName());
         }
         return names;
+    }
+
+    /**
+     * Gets the list of Inspector objects that will be executed.
+     * Used for CSV export to get proper column names.
+     */
+    public List<Inspector> getInspectors(List<String> requestedInspectors) {
+        return getInspectorsToExecute(requestedInspectors);
     }
 
     /**

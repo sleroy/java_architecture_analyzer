@@ -15,6 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * ResourceResolver implementation for jar:// scheme URIs.
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
  */
 public class JarResourceResolver implements ResourceResolver {
 
+    private static final Logger logger = LoggerFactory.getLogger(JarResourceResolver.class);
     private static final String JAR_SCHEME = "jar";
     private static final String JAR_SEPARATOR = "!/";
 
@@ -35,20 +38,27 @@ public class JarResourceResolver implements ResourceResolver {
 
     @Override
     public InputStream openStream(ResourceLocation location) throws IOException {
+        logger.debug("JarResourceResolver.openStream: location={}", location.getUri());
         validateLocation(location);
 
         JarFileInfo jarInfo = parseJarLocation(location);
+        logger.debug("JarResourceResolver.openStream: jarPath={}, entryPath={}", jarInfo.jarPath, jarInfo.entryPath);
+
         JarFile jarFile = getOrOpenJarFile(jarInfo.jarPath);
+        logger.debug("JarResourceResolver.openStream: jarFile opened successfully");
 
         JarEntry entry = jarFile.getJarEntry(jarInfo.entryPath);
         if (entry == null) {
+            logger.debug("JarResourceResolver.openStream: Entry not found: {}", jarInfo.entryPath);
             throw new IOException("Entry not found in JAR: " + jarInfo.entryPath);
         }
 
         if (entry.isDirectory()) {
+            logger.debug("JarResourceResolver.openStream: Entry is directory: {}", jarInfo.entryPath);
             throw new IOException("Cannot open stream for directory entry: " + jarInfo.entryPath);
         }
 
+        logger.debug("JarResourceResolver.openStream: Successfully opening stream for {}", jarInfo.entryPath);
         return jarFile.getInputStream(entry);
     }
 
@@ -60,6 +70,14 @@ public class JarResourceResolver implements ResourceResolver {
 
         try {
             JarFileInfo jarInfo = parseJarLocation(location);
+
+            // If entryPath is empty, we're checking if the JAR file itself exists
+            if (jarInfo.entryPath.isEmpty()) {
+                Path jarPath = Paths.get(jarInfo.jarPath);
+                return jarPath.toFile().exists();
+            }
+
+            // Otherwise, check if the entry exists within the JAR
             JarFile jarFile = getOrOpenJarFile(jarInfo.jarPath);
             return jarFile.getJarEntry(jarInfo.entryPath) != null;
         } catch (Exception e) {
@@ -129,7 +147,7 @@ public class JarResourceResolver implements ResourceResolver {
                 jarFile.close();
             } catch (IOException e) {
                 // Log but don't fail the entire close operation
-                System.err.println("Warning: Failed to close JAR file: " + e.getMessage());
+                logger.warn("Failed to close JAR file: {}", e.getMessage());
             }
         }
         jarCache.clear();

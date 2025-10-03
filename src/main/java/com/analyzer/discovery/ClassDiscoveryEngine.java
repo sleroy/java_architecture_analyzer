@@ -5,6 +5,8 @@ import com.analyzer.core.Clazz.ClassType;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
 import com.analyzer.resource.ResourceMetadata;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -20,6 +22,8 @@ import java.util.regex.Pattern;
  * optimization.
  */
 public class ClassDiscoveryEngine {
+
+    private static final Logger logger = LoggerFactory.getLogger(ClassDiscoveryEngine.class);
 
     // Pattern to extract package and class name from Java source files
     private static final Pattern PACKAGE_PATTERN = Pattern.compile("^\\s*package\\s+([\\w\\.]+)\\s*;",
@@ -49,28 +53,62 @@ public class ClassDiscoveryEngine {
      */
     public Map<String, Clazz> discoverClasses(ResourceLocation sourceLocation, List<ResourceLocation> binaryLocations)
             throws IOException {
+        logger.debug("Starting class discovery");
+        logger.debug("Source location: {}", sourceLocation);
+        logger.debug("Binary locations: {}", binaryLocations);
+
         // Clear previous results
         processedClasses.clear();
         discoveredClasses.clear();
 
         // Discover from source files first
         if (sourceLocation != null && resourceResolver.exists(sourceLocation)) {
+            logger.debug("Discovering from source: {}", sourceLocation);
             discoverFromSource(sourceLocation);
+        } else if (sourceLocation != null) {
+            logger.debug("Source location does not exist: {}", sourceLocation);
         }
 
         // Discover from binary files
-        if (binaryLocations != null) {
+        if (binaryLocations != null && !binaryLocations.isEmpty()) {
+            logger.info("Processing {} binary locations", binaryLocations.size());
+
+            // Log list of discovered JARs
+            List<String> jarPaths = new ArrayList<>();
             for (ResourceLocation binaryLocation : binaryLocations) {
+                logger.debug("Checking binary location: {}", binaryLocation);
+                logger.debug("Binary location type: {}", binaryLocation.getType());
+                logger.debug("Binary location exists: {}", resourceResolver.exists(binaryLocation));
+
                 if (resourceResolver.exists(binaryLocation)) {
+                    jarPaths.add(binaryLocation.getUri().toString());
+
                     if (binaryLocation.getType() == ResourceLocation.ResourceType.JAR) {
+                        logger.debug("Calling discoverFromJar");
                         discoverFromJar(binaryLocation);
                     } else if (binaryLocation.getType() == ResourceLocation.ResourceType.NESTED_JAR) {
+                        logger.debug("Calling discoverFromNestedJar");
                         discoverFromNestedJar(binaryLocation);
+                    } else {
+                        logger.warn("Unknown binary location type: {}", binaryLocation.getType());
                     }
+                } else {
+                    logger.warn("Binary location does not exist: {}", binaryLocation);
                 }
             }
+
+            // Log the list of discovered JARs
+            if (!jarPaths.isEmpty()) {
+                logger.info("Discovered JARs:");
+                for (String jarPath : jarPaths) {
+                    logger.info("  - {}", jarPath);
+                }
+            }
+        } else {
+            logger.debug("No binary locations provided");
         }
 
+        logger.info("Discovery completed. Total discovered classes: {}", discoveredClasses.size());
         return new HashMap<>(discoveredClasses);
     }
 
@@ -136,20 +174,30 @@ public class ClassDiscoveryEngine {
      * Discover classes from JAR file by scanning .class entries.
      */
     private void discoverFromJar(ResourceLocation jarLocation) throws IOException {
+        logger.debug("Starting JAR discovery for: {}", jarLocation);
+
         // List all children in the JAR
         List<ResourceLocation> children = new ArrayList<>(resourceResolver.listChildren(jarLocation));
+        logger.debug("Found {} entries in JAR", children.size());
 
         for (ResourceLocation child : children) {
-            if (child.getUri().toString().endsWith(".class")) {
+            String childUri = child.getUri().toString();
+            logger.trace("Processing JAR entry: {}", childUri);
+
+            if (childUri.endsWith(".class")) {
+                logger.trace("Found .class file: {}", childUri);
                 processJarClassEntry(child, jarLocation);
             } else {
                 // Check if it's a directory, and recursively scan it
                 ResourceMetadata metadata = resourceResolver.getMetadata(child);
                 if (metadata.isDirectory()) {
+                    logger.trace("Found directory, recursing: {}", childUri);
                     discoverFromJarDirectory(child, jarLocation);
                 }
             }
         }
+
+        logger.debug("Completed JAR discovery. Total classes discovered so far: {}", discoveredClasses.size());
     }
 
     /**
@@ -222,45 +270,48 @@ public class ClassDiscoveryEngine {
 
     /**
      * Extract class path from ResourceLocation URI.
-     * Handles different URI schemes to extract the actual class path.
+     * Simplified and fixed to properly handle JAR entry paths.
      */
     private String extractClassPath(ResourceLocation classLocation) {
+        try {
+            // For JAR and nested JAR resources, use the entry path directly
+            if (classLocation.getType() == ResourceLocation.ResourceType.JAR ||
+                    classLocation.getType() == ResourceLocation.ResourceType.NESTED_JAR) {
+                return classLocation.getEntryPath();
+            }
+
+            // For file resources, extract filename from the path
+            if (classLocation.getType() == ResourceLocation.ResourceType.FILE) {
+                String filePath = classLocation.getFilePath();
+                int lastSlash = filePath.lastIndexOf('/');
+                return lastSlash != -1 ? filePath.substring(lastSlash + 1) : filePath;
+            }
+        } catch (Exception e) {
+            logger.warn("Error extracting class path from {}: {}", classLocation, e.getMessage());
+        }
+
+        // Fallback: extract from URI string
         String uri = classLocation.getUri().toString();
 
-        // For jar:// schemes, extract the part after the JAR file
-        if (uri.startsWith("jar://")) {
-            int exclamationIndex = uri.indexOf('!');
-            if (exclamationIndex != -1) {
-                return uri.substring(exclamationIndex + 2); // Skip "!/"
+        // For jar: schemes, extract the part after the exclamation mark
+        if (uri.startsWith("jar:")) {
+            int exclamationIndex = uri.lastIndexOf('!');
+            if (exclamationIndex != -1 && exclamationIndex < uri.length() - 1) {
+                String entryPath = uri.substring(exclamationIndex + 1);
+                return entryPath.startsWith("/") ? entryPath.substring(1) : entryPath;
             }
         }
 
-        // For file:// schemes, extract the filename
-        if (uri.startsWith("file://")) {
+        // For file: schemes, extract the filename
+        if (uri.startsWith("file:")) {
             int lastSlash = uri.lastIndexOf('/');
             if (lastSlash != -1) {
                 return uri.substring(lastSlash + 1);
             }
         }
 
-        // Fallback - try to extract from entry path for JAR resources
-        try {
-            if (classLocation.getType() == ResourceLocation.ResourceType.JAR ||
-                    classLocation.getType() == ResourceLocation.ResourceType.NESTED_JAR) {
-                return classLocation.getEntryPath();
-            } else if (classLocation.getType() == ResourceLocation.ResourceType.FILE) {
-                String filePath = classLocation.getFilePath();
-                int lastSlash = filePath.lastIndexOf('/');
-                return lastSlash != -1 ? filePath.substring(lastSlash + 1) : filePath;
-            }
-        } catch (Exception e) {
-            // If all else fails, extract from the URI string
-            String uriStr = uri;
-            int lastSlash = uriStr.lastIndexOf('/');
-            return lastSlash != -1 ? uriStr.substring(lastSlash + 1) : uriStr;
-        }
-
-        // Final fallback
+        // Final fallback - return the URI as-is
+        logger.warn("Unable to extract class path from URI: {}", uri);
         return uri;
     }
 

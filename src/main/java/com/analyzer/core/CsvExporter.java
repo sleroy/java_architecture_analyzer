@@ -1,5 +1,9 @@
 package com.analyzer.core;
 
+import me.tongfei.progressbar.ProgressBar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -15,6 +19,7 @@ import java.util.Map;
  */
 public class CsvExporter {
 
+    private static final Logger logger = LoggerFactory.getLogger(CsvExporter.class);
     private final File outputFile;
 
     public CsvExporter(File outputFile) {
@@ -32,16 +37,16 @@ public class CsvExporter {
      * - Result of each inspector (dynamic columns)
      * 
      * @param analyzedClasses Map of class name to analyzed Clazz objects
-     * @param inspectorNames  List of inspector names for dynamic columns
+     * @param inspectors      List of inspectors for dynamic columns
      * @throws IOException if file writing fails
      */
-    public void exportToCsv(Map<String, Clazz> analyzedClasses, List<String> inspectorNames) throws IOException {
-        System.out.println("Exporting " + analyzedClasses.size() + " classes to CSV: " + outputFile.getAbsolutePath());
+    public void exportToCsv(Map<String, Clazz> analyzedClasses, List<Inspector> inspectors) throws IOException {
+        logger.info("Exporting {} classes to CSV: {}", analyzedClasses.size(), outputFile.getAbsolutePath());
 
         // Ensure output directory exists
         File outputDir = outputFile.getParentFile();
         if (outputDir != null && !outputDir.exists()) {
-            System.out.println("Creating output directory: " + outputDir.getAbsolutePath());
+            logger.info("Creating output directory: {}", outputDir.getAbsolutePath());
             if (!outputDir.mkdirs()) {
                 throw new IOException("Failed to create output directory: " + outputDir.getAbsolutePath());
             }
@@ -49,35 +54,32 @@ public class CsvExporter {
 
         try (PrintWriter writer = new PrintWriter(new FileWriter(outputFile))) {
             // Write CSV header with dynamic inspector columns
-            writeHeader(writer, inspectorNames);
+            writeHeader(writer, inspectors);
 
-            // Write data rows
-            int exportedCount = 0;
-            for (Clazz clazz : analyzedClasses.values()) {
-                writeClassRow(writer, clazz, inspectorNames);
-                exportedCount++;
-
-                if (exportedCount % 100 == 0) {
-                    System.out.println("Exported " + exportedCount + "/" + analyzedClasses.size() + " classes");
+            // Write data rows with progress bar
+            try (ProgressBar pb = new ProgressBar("Exporting to CSV", analyzedClasses.size())) {
+                for (Clazz clazz : analyzedClasses.values()) {
+                    writeClassRow(writer, clazz, inspectors);
+                    pb.step();
                 }
             }
 
-            System.out.println("CSV export completed: " + exportedCount + " classes exported");
+            logger.info("CSV export completed: {} classes exported", analyzedClasses.size());
         }
     }
 
     /**
      * Writes the CSV header with dynamic inspector columns.
      */
-    private void writeHeader(PrintWriter writer, List<String> inspectorNames) {
+    private void writeHeader(PrintWriter writer, List<Inspector> inspectors) {
         StringBuilder header = new StringBuilder();
 
         // Fixed columns as per purpose.md
         header.append("ClassName,Location");
 
-        // Dynamic inspector columns
-        for (String inspectorName : inspectorNames) {
-            header.append(",").append(escapeCsvField(inspectorName));
+        // Dynamic inspector columns - use getColumnName() instead of getName()
+        for (Inspector inspector : inspectors) {
+            header.append(",").append(escapeCsvField(inspector.getColumnName()));
         }
 
         writer.println(header.toString());
@@ -86,7 +88,7 @@ public class CsvExporter {
     /**
      * Writes a single class row with inspector results.
      */
-    private void writeClassRow(PrintWriter writer, Clazz clazz, List<String> inspectorNames) {
+    private void writeClassRow(PrintWriter writer, Clazz clazz, List<Inspector> inspectors) {
         StringBuilder row = new StringBuilder();
 
         // Class name (fully qualified)
@@ -96,9 +98,10 @@ public class CsvExporter {
         String location = getLocationString(clazz);
         row.append(",").append(escapeCsvField(location));
 
-        // Inspector results (dynamic columns)
-        for (String inspectorName : inspectorNames) {
-            Object result = clazz.getInspectorResult(inspectorName);
+        // Inspector results (dynamic columns) - use inspector getName() for result
+        // lookup
+        for (Inspector inspector : inspectors) {
+            Object result = clazz.getInspectorResult(inspector.getName());
             String resultString = formatInspectorResult(result);
             row.append(",").append(escapeCsvField(resultString));
         }
@@ -158,20 +161,20 @@ public class CsvExporter {
     /**
      * Gets export statistics for logging.
      */
-    public ExportStatistics getStatistics(Map<String, Clazz> analyzedClasses, List<String> inspectorNames) {
+    public ExportStatistics getStatistics(Map<String, Clazz> analyzedClasses, List<Inspector> inspectors) {
         int classCount = analyzedClasses.size();
-        int columnCount = 2 + inspectorNames.size(); // ClassName + Location + inspector columns
-        long estimatedFileSize = estimateFileSize(analyzedClasses, inspectorNames);
+        int columnCount = 2 + inspectors.size(); // ClassName + Location + inspector columns
+        long estimatedFileSize = estimateFileSize(analyzedClasses, inspectors);
 
-        return new ExportStatistics(classCount, columnCount, inspectorNames.size(), estimatedFileSize);
+        return new ExportStatistics(classCount, columnCount, inspectors.size(), estimatedFileSize);
     }
 
     /**
      * Estimates the CSV file size for logging purposes.
      */
-    private long estimateFileSize(Map<String, Clazz> analyzedClasses, List<String> inspectorNames) {
+    private long estimateFileSize(Map<String, Clazz> analyzedClasses, List<Inspector> inspectors) {
         // Rough estimation: average 50 chars per field
-        int fieldsPerRow = 2 + inspectorNames.size();
+        int fieldsPerRow = 2 + inspectors.size();
         int avgCharsPerField = 50;
         int headerSize = fieldsPerRow * 20; // Header is typically shorter
         int dataSize = analyzedClasses.size() * fieldsPerRow * avgCharsPerField;

@@ -107,6 +107,13 @@
             <version>${logback.version}</version>
         </dependency>
 
+        <!-- Progress Bar -->
+        <dependency>
+            <groupId>me.tongfei</groupId>
+            <artifactId>progressbar</artifactId>
+            <version>0.10.1</version>
+        </dependency>
+
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

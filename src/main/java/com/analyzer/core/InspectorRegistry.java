@@ -5,6 +5,8 @@ import com.analyzer.inspectors.binary.TypeInspector;
 import com.analyzer.inspectors.source.ClocInspector;
 import com.analyzer.inspectors.source.SourceFileInspector;
 import com.analyzer.resource.ResourceResolver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.lang.reflect.Modifier;
@@ -26,6 +28,7 @@ import java.util.Enumeration;
  */
 public class InspectorRegistry {
 
+    private static final Logger logger = LoggerFactory.getLogger(InspectorRegistry.class);
     private final Map<String, Inspector> inspectors = new HashMap<>();
     private final File pluginsDirectory;
     private final ResourceResolver resourceResolver;
@@ -44,13 +47,13 @@ public class InspectorRegistry {
      * interface, record, enum etc)
      */
     private void loadDefaultInspectors() {
-        System.out.println("Loading default inspectors...");
+        logger.info("Loading default inspectors...");
 
         // Load the default inspectors with ResourceResolver
         registerInspector(new ClocInspector(resourceResolver));
         registerInspector(new TypeInspector(resourceResolver));
 
-        System.out.println("Default inspectors loaded: " + inspectors.size());
+        logger.info("Default inspectors loaded: {}", inspectors.size());
     }
 
     /**
@@ -59,15 +62,15 @@ public class InspectorRegistry {
      */
     private void loadPluginInspectors() {
         if (pluginsDirectory == null || !pluginsDirectory.exists() || !pluginsDirectory.isDirectory()) {
-            System.out.println("No plugins directory found, skipping plugin loading");
+            logger.info("No plugins directory found, skipping plugin loading");
             return;
         }
 
-        System.out.println("Loading plugins from: " + pluginsDirectory.getAbsolutePath());
+        logger.info("Loading plugins from: {}", pluginsDirectory.getAbsolutePath());
 
         File[] jarFiles = pluginsDirectory.listFiles((dir, name) -> name.toLowerCase().endsWith(".jar"));
         if (jarFiles == null || jarFiles.length == 0) {
-            System.out.println("No JAR files found in plugins directory");
+            logger.info("No JAR files found in plugins directory");
             return;
         }
 
@@ -76,11 +79,11 @@ public class InspectorRegistry {
             try {
                 loadedPlugins += loadInspectorsFromJar(jarFile);
             } catch (Exception e) {
-                System.err.println("Error loading plugins from " + jarFile.getName() + ": " + e.getMessage());
+                logger.error("Error loading plugins from {}: {}", jarFile.getName(), e.getMessage());
             }
         }
 
-        System.out.println("Loaded " + loadedPlugins + " plugin inspectors from " + jarFiles.length + " JAR files");
+        logger.info("Loaded {} plugin inspectors from {} JAR files", loadedPlugins, jarFiles.length);
     }
 
     /**
@@ -108,11 +111,11 @@ public class InspectorRegistry {
                             Inspector inspector = (Inspector) clazz.getDeclaredConstructor().newInstance();
                             registerInspector(inspector);
                             loaded++;
-                            System.out.println("Loaded plugin inspector: " + inspector.getName());
+                            logger.info("Loaded plugin inspector: {}", inspector.getName());
                         }
                     } catch (Exception e) {
                         // Skip classes that can't be loaded or instantiated
-                        System.out.println("Skipping class " + className + ": " + e.getMessage());
+                        logger.debug("Skipping class {}: {}", className, e.getMessage());
                     }
                 }
             }
@@ -127,7 +130,7 @@ public class InspectorRegistry {
     public void registerInspector(Inspector inspector) {
         String name = inspector.getName();
         if (inspectors.containsKey(name)) {
-            System.err.println("Warning: Inspector '" + name + "' already registered, replacing with new instance");
+            logger.warn("Inspector '{}' already registered, replacing with new instance", name);
         }
         inspectors.put(name, inspector);
     }
