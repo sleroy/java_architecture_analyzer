@@ -56,11 +56,11 @@ public abstract class CountRegexpInspector extends SourceFileInspector {
         try {
             String content = readFileContent(sourceLocation);
             int count = countMatches(content);
-            return new InspectorResult(getName(), count);
+            return new InspectorResult(getColumnName(), count);
         } catch (IOException e) {
-            return InspectorResult.error(getName(), "Error reading source file: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error reading source file: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "Error counting pattern matches: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error counting pattern matches: " + e.getMessage());
         }
     }
 

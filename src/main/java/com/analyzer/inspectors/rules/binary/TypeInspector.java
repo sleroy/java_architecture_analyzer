@@ -35,10 +35,6 @@ public class TypeInspector extends ASMInspector {
         return "class_type";
     }
 
-    @Override
-    public String getDescription() {
-        return "Detects the type of declaration (class, interface, record, enum, annotation) from binary files";
-    }
 
     @Override
     protected ASMClassVisitor createClassVisitor(Clazz clazz) {
@@ -48,7 +44,7 @@ public class TypeInspector extends ASMInspector {
         // BOTH)
         // which is different from Java language type, so we always use bytecode
         // analysis
-        return new TypeExtractorVisitor(getName());
+        return new TypeExtractorVisitor(getColumnName());
     }
 
     /**

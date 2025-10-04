@@ -38,13 +38,13 @@ public abstract class PackageInspector implements Inspector<Package> {
     @Override
     public final InspectorResult decorate(Package packageToAnalyze) {
         if (!supports(packageToAnalyze)) {
-            return InspectorResult.notApplicable(getName());
+            return InspectorResult.notApplicable(getColumnName());
         }
 
         try {
             return analyzePackage(packageToAnalyze);
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "Error analyzing package: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error analyzing package: " + e.getMessage());
         }
     }
 

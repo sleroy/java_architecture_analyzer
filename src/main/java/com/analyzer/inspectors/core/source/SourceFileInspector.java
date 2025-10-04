@@ -26,23 +26,23 @@ public abstract class SourceFileInspector implements Inspector<Clazz> {
     @Override
     public final InspectorResult decorate(Clazz clazz) {
         if (!supports(clazz)) {
-            return InspectorResult.notApplicable(getName());
+            return InspectorResult.notApplicable(getColumnName());
         }
 
         try {
             ResourceLocation sourceLocation = clazz.getSourceLocation();
             if (sourceLocation == null) {
-                return InspectorResult.notApplicable(getName());
+                return InspectorResult.notApplicable(getColumnName());
             }
 
             if (!resourceResolver.exists(sourceLocation)) {
-                return InspectorResult.error(getName(), "Source file not found: " + sourceLocation);
+                return InspectorResult.error(getColumnName(), "Source file not found: " + sourceLocation);
             }
 
             return analyzeSourceFile(clazz, sourceLocation);
 
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "Error analyzing source file: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error analyzing source file: " + e.getMessage());
         }
     }
 

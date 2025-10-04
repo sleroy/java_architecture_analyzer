@@ -52,7 +52,7 @@ public abstract class ClassLoaderBasedInspector implements Inspector<Clazz> {
     @Override
     public final InspectorResult decorate(Clazz clazz) {
         if (!supports(clazz)) {
-            return InspectorResult.notApplicable(getName());
+            return InspectorResult.notApplicable(getColumnName());
         }
 
         try {
@@ -73,31 +73,31 @@ public abstract class ClassLoaderBasedInspector implements Inspector<Clazz> {
             // Class not found - this is expected for many classes
             logger.debug("Class not found in ClassLoader: {} ({})",
                     clazz.getFullyQualifiedName(), e.getMessage());
-            return InspectorResult.notApplicable(getName());
+            return InspectorResult.notApplicable(getColumnName());
 
         } catch (NoClassDefFoundError e) {
             // Missing dependencies - also expected
             logger.debug("Missing dependencies for class: {} ({})",
                     clazz.getFullyQualifiedName(), e.getMessage());
-            return InspectorResult.notApplicable(getName());
+            return InspectorResult.notApplicable(getColumnName());
 
         } catch (LinkageError e) {
             // Linkage issues - treat as not applicable
             logger.debug("Linkage error loading class: {} ({})",
                     clazz.getFullyQualifiedName(), e.getMessage());
-            return InspectorResult.notApplicable(getName());
+            return InspectorResult.notApplicable(getColumnName());
 
         } catch (SecurityException e) {
             // Security restrictions - treat as not applicable
             logger.debug("Security restriction loading class: {} ({})",
                     clazz.getFullyQualifiedName(), e.getMessage());
-            return InspectorResult.notApplicable(getName());
+            return InspectorResult.notApplicable(getColumnName());
 
         } catch (Exception e) {
             // Unexpected errors - return as error
             logger.warn("Unexpected error loading class: {} ({})",
                     clazz.getFullyQualifiedName(), e.getMessage());
-            return InspectorResult.error(getName(),
+            return InspectorResult.error(getColumnName(),
                     "Unexpected error loading class: " + e.getMessage());
         }
     }

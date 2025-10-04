@@ -44,11 +44,11 @@ public abstract class BCELInspector extends BinaryClassInspector {
             return analyzeJavaClass(javaClass, clazz);
             
         } catch (ClassFormatException e) {
-            return InspectorResult.error(getName(), "BCEL class format error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "BCEL class format error: " + e.getMessage());
         } catch (IOException e) {
-            return InspectorResult.error(getName(), "Error reading class file: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error reading class file: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "BCEL analysis error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "BCEL analysis error: " + e.getMessage());
         }
     }
 

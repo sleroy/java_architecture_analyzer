@@ -47,10 +47,6 @@ public class CyclomaticComplexityInspector extends JavaParserInspector {
         return "cyclomatic-complexity";
     }
 
-    @Override
-    public String getDescription() {
-        return "Calculates the cyclomatic complexity of Java source files using McCabe's metric";
-    }
 
     @Override
     protected InspectorResult analyzeCompilationUnit(CompilationUnit cu, Clazz clazz) {
@@ -58,7 +54,7 @@ public class CyclomaticComplexityInspector extends JavaParserInspector {
         cu.accept(calculator, null);
         
         int totalComplexity = calculator.getTotalComplexity();
-        return new InspectorResult(getName(), totalComplexity);
+        return new InspectorResult(getColumnName(), totalComplexity);
     }
 
     /**

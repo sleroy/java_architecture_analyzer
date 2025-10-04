@@ -39,9 +39,9 @@ public abstract class SonarParserInspector extends SourceFileInspector {
             String content = readFileContent(sourceLocation);
             return analyzeSonarSource(content, clazz, sourceLocation);
         } catch (IOException e) {
-            return InspectorResult.error(getName(), "Error reading source file: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error reading source file: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "SonarSource analysis error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "SonarSource analysis error: " + e.getMessage());
         }
     }
 

@@ -14,7 +14,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -91,7 +90,7 @@ class SourceFileInspectorTest {
 
         // Then
         assertTrue(result.isNotApplicable());
-        assertEquals("test", result.getInspectorName());
+        assertEquals("test", result.getTagName());
     }
 
     @Test
@@ -106,7 +105,7 @@ class SourceFileInspectorTest {
 
         // Then
         assertTrue(result.isNotApplicable());
-        assertEquals("test", result.getInspectorName());
+        assertEquals("test", result.getTagName());
     }
 
     @Test
@@ -122,7 +121,7 @@ class SourceFileInspectorTest {
 
         // Then
         assertTrue(result.isError());
-        assertEquals("test", result.getInspectorName());
+        assertEquals("test", result.getTagName());
         assertTrue(result.getErrorMessage().contains("Source file not found"));
     }
 
@@ -141,7 +140,7 @@ class SourceFileInspectorTest {
 
         // Then
         assertTrue(result.isError());
-        assertEquals("test", result.getInspectorName());
+        assertEquals("test", result.getTagName());
         assertTrue(result.getErrorMessage().contains("Error analyzing source file"));
         assertTrue(result.getErrorMessage().contains("Network error"));
     }
@@ -164,7 +163,7 @@ class SourceFileInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("test", result.getInspectorName());
+        assertEquals("test", result.getTagName());
         assertEquals("analyzed: " + content, result.getValue());
     }
 
@@ -208,25 +207,20 @@ class SourceFileInspectorTest {
         }
 
         @Override
-        public String getName() {
+        public String getColumnName() {
             return "test";
         }
 
         @Override
-        public String getColumnName() {
-            return "test_column";
-        }
-
-        @Override
-        public String getDescription() {
-            return "Test inspector";
+        public String getName() {
+            return "test";
         }
 
         @Override
         protected InspectorResult analyzeSourceFile(Clazz clazz, ResourceLocation sourceLocation) throws IOException {
             // Simple test implementation that reads content and returns it
             String content = readFileContent(sourceLocation);
-            return new InspectorResult(getName(), (Object) ("analyzed: " + content));
+            return new InspectorResult(getColumnName(), (Object) ("analyzed: " + content));
         }
 
         // Public wrapper methods to expose protected methods for testing

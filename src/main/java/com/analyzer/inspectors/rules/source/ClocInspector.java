@@ -31,21 +31,16 @@ public class ClocInspector extends SourceFileInspector {
 
     @Override
     public String getColumnName() {
-        return "lines_of_code";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Counts the number of lines of code in source files";
+        return "cloc";
     }
 
     @Override
     protected InspectorResult analyzeSourceFile(Clazz clazz, ResourceLocation sourceLocation) throws IOException {
         try {
             long lineCount = countLines(sourceLocation);
-            return new InspectorResult(getName(), lineCount);
+            return new InspectorResult(getColumnName(), lineCount);
         } catch (IOException e) {
-            return InspectorResult.error(getName(), "Error counting lines: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error counting lines: " + e.getMessage());
         }
     }
 }

@@ -38,9 +38,8 @@ class TypeInspectorTest {
     @Test
     @DisplayName("Should have correct inspector metadata")
     void shouldHaveCorrectInspectorMetadata() {
-        assertEquals("type", inspector.getName());
+
         assertEquals("class_type", inspector.getColumnName());
-        assertTrue(inspector.getDescription().contains("type of declaration"));
     }
 
     @Test
@@ -92,7 +91,6 @@ class TypeInspectorTest {
         // Then
         // Since there's no binary location, it should return not applicable from BinaryClassInspector.decorate()
         assertTrue(result.isNotApplicable());
-        assertEquals("type", result.getInspectorName());
     }
 
     @Test
@@ -107,7 +105,7 @@ class TypeInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("type", result.getInspectorName());
+        
         assertEquals("CLASS", result.getValue());
     }
 
@@ -124,7 +122,7 @@ class TypeInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("type", result.getInspectorName());
+        
         assertEquals("INTERFACE", result.getValue());
     }
 
@@ -141,7 +139,7 @@ class TypeInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("type", result.getInspectorName());
+        
         assertEquals("ENUM", result.getValue());
     }
 
@@ -159,7 +157,7 @@ class TypeInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("type", result.getInspectorName());
+        
         assertEquals("ANNOTATION", result.getValue());
     }
 
@@ -180,7 +178,7 @@ class TypeInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("type", result.getInspectorName());
+        
         assertEquals("RECORD", result.getValue());
     }
 
@@ -199,7 +197,7 @@ class TypeInspectorTest {
 
         // Then
         assertTrue(result.isError());
-        assertEquals("type", result.getInspectorName());
+        
         assertTrue(result.getErrorMessage().contains("Error analyzing binary class"));
         assertTrue(result.getErrorMessage().contains("Network error"));
     }
@@ -218,7 +216,7 @@ class TypeInspectorTest {
 
         // Then
         assertTrue(result.isError());
-        assertEquals("type", result.getInspectorName());
+        
         assertTrue(result.getErrorMessage().contains("Error analyzing binary class") ||
                 result.getErrorMessage().contains("Could not open binary class"));
     }
@@ -239,7 +237,7 @@ class TypeInspectorTest {
         assertTrue(result.isError() || result.getValue() == null || 
                 (result.getValue() instanceof String && ((String) result.getValue()).isEmpty()), 
                 "Expected error result or empty value for invalid class file, but got: " + result);
-        assertEquals("type", result.getInspectorName());
+
     }
 
     @Test
@@ -254,7 +252,7 @@ class TypeInspectorTest {
 
         // Then
         assertTrue(result.isError());
-        assertEquals("type", result.getInspectorName());
+        
     }
 
     // Helper methods

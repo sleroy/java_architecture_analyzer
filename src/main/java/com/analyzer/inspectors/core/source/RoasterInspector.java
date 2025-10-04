@@ -41,7 +41,7 @@ public abstract class RoasterInspector extends SourceFileInspector {
             Object parsedSource = Roaster.parse(content);
             
             if (parsedSource == null) {
-                return InspectorResult.error(getName(), "Failed to parse source file with Roaster");
+                return InspectorResult.error(getColumnName(), "Failed to parse source file with Roaster");
             }
             
             // Cast to JavaSource if it's a source representation
@@ -49,13 +49,13 @@ public abstract class RoasterInspector extends SourceFileInspector {
                 JavaSource<?> javaSource = (JavaSource<?>) parsedSource;
                 return analyzeJavaSource(javaSource, clazz);
             } else {
-                return InspectorResult.error(getName(), "Roaster did not return a JavaSource object");
+                return InspectorResult.error(getColumnName(), "Roaster did not return a JavaSource object");
             }
             
         } catch (IOException e) {
-            return InspectorResult.error(getName(), "Error reading source file: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error reading source file: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "Roaster analysis error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Roaster analysis error: " + e.getMessage());
         }
     }
 

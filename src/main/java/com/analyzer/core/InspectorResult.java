@@ -11,7 +11,7 @@ public class InspectorResult {
     public static final String NOT_APPLICABLE = "N/A";
     public static final String ERROR = "ERROR";
 
-    private final String inspectorName;
+    private final String tagName;
     private final Object value;
     private final boolean successful;
     private final String errorMessage;
@@ -19,11 +19,11 @@ public class InspectorResult {
     /**
      * Creates a successful inspector result.
      * 
-     * @param inspectorName the name of the inspector that produced this result
+     * @param tagName the name of the inspector that produced this result
      * @param value         the result value
      */
-    public InspectorResult(String inspectorName, Object value) {
-        this.inspectorName = Objects.requireNonNull(inspectorName, "Inspector name cannot be null");
+    public InspectorResult(String tagName, Object value) {
+        this.tagName = Objects.requireNonNull(tagName, "Inspector name cannot be null");
         this.value = value;
         this.successful = true;
         this.errorMessage = null;
@@ -32,11 +32,11 @@ public class InspectorResult {
     /**
      * Creates a failed inspector result.
      * 
-     * @param inspectorName the name of the inspector that produced this result
+     * @param tagName the name of the inspector that produced this result
      * @param errorMessage  the error message
      */
-    public InspectorResult(String inspectorName, String errorMessage) {
-        this.inspectorName = Objects.requireNonNull(inspectorName, "Inspector name cannot be null");
+    public InspectorResult(String tagName, String errorMessage) {
+        this.tagName = Objects.requireNonNull(tagName, "Inspector name cannot be null");
         this.value = ERROR;
         this.successful = false;
         this.errorMessage = errorMessage;
@@ -64,8 +64,8 @@ public class InspectorResult {
         return new InspectorResult(inspectorName, errorMessage);
     }
 
-    public String getInspectorName() {
-        return inspectorName;
+    public String getTagName() {
+        return tagName;
     }
 
     public Object getValue() {
@@ -108,20 +108,20 @@ public class InspectorResult {
             return false;
         InspectorResult that = (InspectorResult) o;
         return successful == that.successful &&
-                Objects.equals(inspectorName, that.inspectorName) &&
+                Objects.equals(tagName, that.tagName) &&
                 Objects.equals(value, that.value) &&
                 Objects.equals(errorMessage, that.errorMessage);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(inspectorName, value, successful, errorMessage);
+        return Objects.hash(tagName, value, successful, errorMessage);
     }
 
     @Override
     public String toString() {
         return "InspectorResult{" +
-                "inspectorName='" + inspectorName + '\'' +
+                "inspectorName='" + tagName + '\'' +
                 ", value=" + value +
                 ", successful=" + successful +
                 ", errorMessage='" + errorMessage + '\'' +

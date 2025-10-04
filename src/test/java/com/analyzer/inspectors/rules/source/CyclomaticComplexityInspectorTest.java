@@ -25,16 +25,6 @@ class CyclomaticComplexityInspectorTest {
     }
 
     @Test
-    void testGetName() {
-        assertEquals("cyclomatic-complexity", inspector.getName());
-    }
-
-    @Test
-    void testGetColumnName() {
-        assertEquals("Cyclomatic Complexity", inspector.getColumnName());
-    }
-
-    @Test
     void testSimpleMethodComplexity() throws IOException {
         // Single method with no decision points - complexity should be 1
         String sourceCode = """
@@ -53,7 +43,7 @@ class CyclomaticComplexityInspectorTest {
 
         assertTrue(result.isSuccessful());
         assertEquals(1, result.getValue());
-        assertEquals("cyclomatic-complexity", result.getInspectorName());
+        assertEquals("cyclomatic-complexity", result.getTagName());
     }
 
     @Test
@@ -408,7 +398,7 @@ class CyclomaticComplexityInspectorTest {
 
         // Then
         assertTrue(result.isNotApplicable());
-        assertEquals("cyclomatic-complexity", result.getInspectorName());
+        assertEquals("cyclomatic-complexity", result.getTagName());
     }
 
     @Test

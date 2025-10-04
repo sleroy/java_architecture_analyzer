@@ -32,9 +32,9 @@ public abstract class TextFileInspector extends SourceFileInspector {
             String content = readFileContent(sourceLocation);
             return processContent(content, clazz);
         } catch (IOException e) {
-            return InspectorResult.error(getName(), "Error reading source file: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error reading source file: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "Error processing file content: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error processing file content: " + e.getMessage());
         }
     }
 

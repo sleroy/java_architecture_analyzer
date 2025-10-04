@@ -15,7 +15,7 @@ public class Clazz {
     private final ClassType classType;
     private final ResourceLocation sourceLocation;
     private final ResourceLocation binaryLocation;
-    private final Map<String, Object> inspectorResults;
+    private final Map<String, Object> tags;
 
     public Clazz(String className, String packageName, ClassType classType,
             ResourceLocation sourceLocation, ResourceLocation binaryLocation) {
@@ -24,7 +24,7 @@ public class Clazz {
         this.classType = Objects.requireNonNull(classType, "Class type cannot be null");
         this.sourceLocation = sourceLocation;
         this.binaryLocation = binaryLocation;
-        this.inspectorResults = new HashMap<>();
+        this.tags = new HashMap<>();
     }
 
     public String getClassName() {
@@ -59,15 +59,15 @@ public class Clazz {
         return binaryLocation != null;
     }
 
-    public Map<String, Object> getInspectorResults() {
-        return inspectorResults;
+    public Map<String, Object> getTags() {
+        return tags;
     }
 
-    public void addInspectorResult(String inspectorName, Object result) {
+    public void addInspectorResult(String tagName, Object result) {
         // Smart merging: replace NA/null/error values with better values
-        Object currentValue = inspectorResults.get(inspectorName);
+        Object currentValue = tags.get(tagName);
         Object valueToStore = mergeInspectorResults(currentValue, result);
-        inspectorResults.put(inspectorName, valueToStore);
+        tags.put(tagName, valueToStore);
     }
 
     /**
@@ -156,7 +156,7 @@ public class Clazz {
     }
 
     public Object getInspectorResult(String inspectorName) {
-        return inspectorResults.get(inspectorName);
+        return tags.get(inspectorName);
     }
 
     @Override
