@@ -18,9 +18,9 @@ public class InspectorResult {
 
     /**
      * Creates a successful inspector result.
-     * 
+     *
      * @param tagName the name of the inspector that produced this result
-     * @param value         the result value
+     * @param value   the result value
      */
     public InspectorResult(String tagName, Object value) {
         this.tagName = Objects.requireNonNull(tagName, "Inspector name cannot be null");
@@ -31,9 +31,9 @@ public class InspectorResult {
 
     /**
      * Creates a failed inspector result.
-     * 
-     * @param tagName the name of the inspector that produced this result
-     * @param errorMessage  the error message
+     *
+     * @param tagName      the name of the inspector that produced this result
+     * @param errorMessage the error message
      */
     public InspectorResult(String tagName, String errorMessage) {
         this.tagName = Objects.requireNonNull(tagName, "Inspector name cannot be null");
@@ -43,25 +43,45 @@ public class InspectorResult {
     }
 
     /**
+     * Creates an inspector result.
+     *
+     * @param tagName      the tag name
+     * @param value        the value
+     * @param successful   what the result successful
+     * @param errorMessage optional error message
+     */
+    public InspectorResult(String tagName, Object value, boolean successful, String errorMessage) {
+        this.tagName = tagName;
+        this.value = value;
+        this.successful = successful;
+        this.errorMessage = errorMessage;
+    }
+
+
+    /**
      * Creates a not applicable result (when inspector doesn't support the analyzed
      * object).
-     * 
-     * @param inspectorName the name of the inspector
+     *
+     * @param tagName the tag name
      * @return a not applicable result
      */
-    public static InspectorResult notApplicable(String inspectorName) {
-        return new InspectorResult(inspectorName, (Object) NOT_APPLICABLE);
+    public static InspectorResult notApplicable(String tagName) {
+        return new InspectorResult(tagName, (Object) NOT_APPLICABLE, false, "");
     }
 
     /**
      * Creates an error result.
-     * 
-     * @param inspectorName the name of the inspector
+     *
+     * @param tagName the tag name
      * @param errorMessage  the error message
      * @return an error result
      */
-    public static InspectorResult error(String inspectorName, String errorMessage) {
-        return new InspectorResult(inspectorName, errorMessage);
+    public static InspectorResult error(String tagName, String errorMessage) {
+        return new InspectorResult(tagName, errorMessage);
+    }
+
+    public static InspectorResult notApplicable(String tagName, Throwable e) {
+        return new InspectorResult(tagName, ERROR, false, e.getMessage());
     }
 
     public String getTagName() {
@@ -73,7 +93,7 @@ public class InspectorResult {
     }
 
     public boolean isSuccessful() {
-        return successful;
+        return successful && !(ERROR.equals(value));
     }
 
     public boolean isNotApplicable() {
@@ -81,7 +101,7 @@ public class InspectorResult {
     }
 
     public boolean isError() {
-        return ERROR.equals(value);
+        return !isSuccessful();
     }
 
     public String getErrorMessage() {
@@ -90,7 +110,7 @@ public class InspectorResult {
 
     /**
      * Gets the string representation of the value for CSV output.
-     * 
+     *
      * @return string representation of the value
      */
     public String getStringValue() {

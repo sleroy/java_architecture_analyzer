@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.rules.source;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.inspectors.core.source.JavaParserInspector;
 import com.analyzer.resource.ResourceResolver;
@@ -49,7 +49,7 @@ public class CyclomaticComplexityInspector extends JavaParserInspector {
 
 
     @Override
-    protected InspectorResult analyzeCompilationUnit(CompilationUnit cu, Clazz clazz) {
+    protected InspectorResult analyzeCompilationUnit(CompilationUnit cu, ProjectFile clazz) {
         ComplexityCalculator calculator = new ComplexityCalculator();
         cu.accept(calculator, null);
         

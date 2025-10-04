@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.binary;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.Inspector;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.resource.ResourceLocation;
@@ -8,13 +8,14 @@ import com.analyzer.resource.ResourceResolver;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 
 /**
  * Base class for all binary class inspectors.
  * Provides common functionality for analyzing compiled Java class files.
  * Uses ResourceResolver for unified access to class files in various locations.
  */
-public abstract class BinaryClassInspector implements Inspector<Clazz> {
+public abstract class BinaryClassInspector implements Inspector<ProjectFile> {
 
     private final ResourceResolver resourceResolver;
 
@@ -28,18 +29,21 @@ public abstract class BinaryClassInspector implements Inspector<Clazz> {
     }
 
     @Override
-    public final InspectorResult decorate(Clazz clazz) {
-        if (!supports(clazz)) {
+    public final InspectorResult decorate(ProjectFile projectFile) {
+        if (!supports(projectFile)) {
+            return InspectorResult.notApplicable(getColumnName());
+        }
+
+        // If the project file doesn't actually have binary code, return not applicable
+        if (!projectFile.hasBinaryCode() && !projectFile.getFilePath().toString().endsWith(".class")) {
             return InspectorResult.notApplicable(getColumnName());
         }
 
         try {
-            ResourceLocation binaryLocation = clazz.getBinaryLocation();
-            if (binaryLocation == null) {
-                return InspectorResult.notApplicable(getColumnName());
-            }
+            // For ProjectFile, create ResourceLocation from the file path
+            ResourceLocation binaryLocation = new ResourceLocation(projectFile.getFilePath().toUri());
 
-            return analyzeBinaryClass(clazz, binaryLocation);
+            return analyzeBinaryClass(projectFile, binaryLocation);
 
         } catch (Exception e) {
             return InspectorResult.error(getColumnName(), "Error analyzing binary class: " + e.getMessage());
@@ -47,19 +51,24 @@ public abstract class BinaryClassInspector implements Inspector<Clazz> {
     }
 
     @Override
-    public boolean supports(Clazz clazz) {
-        return clazz != null && clazz.hasBinaryCode();
+    public boolean supports(ProjectFile projectFile) {
+        return projectFile != null &&
+                (projectFile.hasBinaryCode() ||
+                        projectFile.getFileExtension().equals("class") ||
+                        projectFile.getFilePath().toString().endsWith(".class"));
     }
 
     /**
      * Analyzes a binary class using the ResourceResolver.
      */
-    private InspectorResult analyzeBinaryClass(Clazz clazz, ResourceLocation binaryLocation) throws IOException {
+    private InspectorResult analyzeBinaryClass(ProjectFile projectFile, ResourceLocation binaryLocation)
+            throws IOException {
         try (InputStream classStream = resourceResolver.openStream(binaryLocation)) {
             if (classStream == null) {
-                return InspectorResult.error(getColumnName(), "Could not open binary class: " + binaryLocation.getUri());
+                return InspectorResult.error(getColumnName(),
+                        "Could not open binary class: " + binaryLocation);
             }
-            return analyzeClassFile(clazz, binaryLocation, classStream);
+            return analyzeClassFile(projectFile, binaryLocation, classStream);
         }
     }
 
@@ -67,12 +76,12 @@ public abstract class BinaryClassInspector implements Inspector<Clazz> {
      * Analyzes the binary class file for the given class.
      * Subclasses must implement this method to provide specific analysis logic.
      * 
-     * @param clazz            the class to analyze
+     * @param projectFile      the project file to analyze
      * @param binaryLocation   the location of the binary class file
      * @param classInputStream the input stream to the class file
      * @return the result of the analysis
      * @throws IOException if there's an error reading the class file
      */
-    protected abstract InspectorResult analyzeClassFile(Clazz clazz, ResourceLocation binaryLocation,
+    protected abstract InspectorResult analyzeClassFile(ProjectFile projectFile, ResourceLocation binaryLocation,
             InputStream classInputStream) throws IOException;
 }

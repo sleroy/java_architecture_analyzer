@@ -1,54 +1,41 @@
 package com.analyzer.inspectors.source;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ClassType;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.inspectors.rules.source.ClocInspector;
 import com.analyzer.resource.ResourceLocation;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.test.stubs.StubProjectFile;
+import com.analyzer.test.stubs.StubResourceLocation;
+import com.analyzer.test.stubs.StubResourceResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for ClocInspector (Lines of Code Inspector).
  * Tests CLOC-specific line counting functionality.
  * Base SourceFileInspector functionality is tested in SourceFileInspectorTest.
  */
-@ExtendWith(MockitoExtension.class)
 @DisplayName("ClocInspector Unit Tests")
 class ClocInspectorTest {
 
-    @Mock
-    private ResourceResolver mockResourceResolver;
-
-    @Mock
-    private Clazz mockClazz;
-
-    @Mock
-    private ResourceLocation mockSourceLocation;
-
+    private StubResourceResolver stubResourceResolver;
     private ClocInspector clocInspector;
 
     @BeforeEach
     void setUp() {
-        clocInspector = new ClocInspector(mockResourceResolver);
+        stubResourceResolver = new StubResourceResolver();
+        clocInspector = new ClocInspector(stubResourceResolver);
     }
 
     @Test
     @DisplayName("Should return correct inspector metadata")
     void shouldReturnCorrectInspectorMetadata() {
-
         assertEquals("cloc", clocInspector.getColumnName());
     }
 
@@ -67,10 +54,10 @@ class ClocInspectorTest {
                 "    }\n" +
                 "}";
 
-        setupMockForSuccessfulAnalysis(javaCode);
+        StubProjectFile projectFile = setupStubForSuccessfulAnalysis(javaCode);
 
         // When
-        InspectorResult result = clocInspector.decorate(mockClazz);
+        InspectorResult result = clocInspector.decorate(projectFile);
 
         // Then
         assertTrue(result.isSuccessful());
@@ -83,10 +70,10 @@ class ClocInspectorTest {
     void shouldCountLinesCorrectlyForSingleLineFile() throws IOException {
         // Given
         String javaCode = "public class SingleLine {}";
-        setupMockForSuccessfulAnalysis(javaCode);
+        StubProjectFile projectFile = setupStubForSuccessfulAnalysis(javaCode);
 
         // When
-        InspectorResult result = clocInspector.decorate(mockClazz);
+        InspectorResult result = clocInspector.decorate(projectFile);
 
         // Then
         assertTrue(result.isSuccessful());
@@ -98,10 +85,10 @@ class ClocInspectorTest {
     void shouldCountZeroLinesForEmptyFile() throws IOException {
         // Given
         String javaCode = "";
-        setupMockForSuccessfulAnalysis(javaCode);
+        StubProjectFile projectFile = setupStubForSuccessfulAnalysis(javaCode);
 
         // When
-        InspectorResult result = clocInspector.decorate(mockClazz);
+        InspectorResult result = clocInspector.decorate(projectFile);
 
         // Then
         assertTrue(result.isSuccessful());
@@ -113,12 +100,13 @@ class ClocInspectorTest {
     void shouldHandleDifferentLineEndingsCorrectly() throws IOException {
         // Given - File with mixed line endings (Windows CRLF, Unix LF)
         String javaCode = "line1\r\nline2\nline3\r\nline4";
-        setupMockForSuccessfulAnalysis(javaCode);
+        StubProjectFile projectFile = setupStubForSuccessfulAnalysis(javaCode);
 
         // When
-        InspectorResult result = clocInspector.decorate(mockClazz);
+        InspectorResult result = clocInspector.decorate(projectFile);
 
         // Then
+        System.out.println(result.getErrorMessage());
         assertTrue(result.isSuccessful());
         assertEquals(4L, result.getValue());
     }
@@ -128,10 +116,10 @@ class ClocInspectorTest {
     void shouldHandleFilesWithOnlyWhitespaceLines() throws IOException {
         // Given
         String javaCode = "\n  \n\t\n   \n";
-        setupMockForSuccessfulAnalysis(javaCode);
+        StubProjectFile projectFile = setupStubForSuccessfulAnalysis(javaCode);
 
         // When
-        InspectorResult result = clocInspector.decorate(mockClazz);
+        InspectorResult result = clocInspector.decorate(projectFile);
 
         // Then
         assertTrue(result.isSuccessful());
@@ -151,10 +139,10 @@ class ClocInspectorTest {
                 "    }\n" +
                 "}";
 
-        setupMockForSuccessfulAnalysis(javaCode);
+        StubProjectFile projectFile = setupStubForSuccessfulAnalysis(javaCode);
 
         // When
-        InspectorResult result = clocInspector.decorate(mockClazz);
+        InspectorResult result = clocInspector.decorate(projectFile);
 
         // Then
         assertTrue(result.isSuccessful());
@@ -172,11 +160,11 @@ class ClocInspectorTest {
             largeContent.append("// Line ").append(i + 1).append("\n");
         }
 
-        setupMockForSuccessfulAnalysis(largeContent.toString());
+        StubProjectFile projectFile = setupStubForSuccessfulAnalysis(largeContent.toString());
 
         // When
         long startTime = System.currentTimeMillis();
-        InspectorResult result = clocInspector.decorate(mockClazz);
+        InspectorResult result = clocInspector.decorate(projectFile);
         long duration = System.currentTimeMillis() - startTime;
 
         // Then
@@ -218,25 +206,73 @@ class ClocInspectorTest {
                 "    }\n" +
                 "}";
 
-        setupMockForSuccessfulAnalysis(javaCode);
+        StubProjectFile projectFile = setupStubForSuccessfulAnalysis(javaCode);
 
         // When
-        InspectorResult result = clocInspector.decorate(mockClazz);
+        InspectorResult result = clocInspector.decorate(projectFile);
 
         // Then
         assertTrue(result.isSuccessful());
         assertEquals(35L, result.getValue()); // Count all lines including comments and blank lines
     }
 
-    /**
-     * Helper method to set up mocks for successful analysis scenarios.
-     */
-    private void setupMockForSuccessfulAnalysis(String content) throws IOException {
-        when(mockClazz.hasSourceCode()).thenReturn(true);
-        when(mockClazz.getSourceLocation()).thenReturn(mockSourceLocation);
-        when(mockResourceResolver.exists(mockSourceLocation)).thenReturn(true);
+    @Test
+    @DisplayName("Should handle file not found error")
+    void shouldHandleFileNotFoundError() {
+        // Given
+        ResourceLocation sourceLocation = new StubResourceLocation("/test/TestClass.java");
+        StubProjectFile projectFile = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        projectFile.setHasSourceCode(true);
+        projectFile.setSourceLocationUri(sourceLocation.toString());
 
-        InputStream inputStream = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
-        when(mockResourceResolver.openStream(mockSourceLocation)).thenReturn(inputStream);
+        // Don't set file to exist in stub resolver (default is false)
+
+        // When
+        InspectorResult result = clocInspector.decorate(projectFile);
+
+        // Then
+        assertTrue(result.isError());
+        assertEquals("cloc", result.getTagName());
+        assertTrue(result.getErrorMessage().contains("Source file not found"));
+    }
+
+    @Test
+    @DisplayName("Should handle IOException during analysis")
+    void shouldHandleIOExceptionDuringAnalysis() throws IOException {
+        // Given
+        StubProjectFile projectFile = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        projectFile.setHasSourceCode(true);
+
+        // SourceFileInspector creates ResourceLocation from the ProjectFile's path
+        // So we need to set up the exception under that path
+        ResourceLocation actualLocation = new ResourceLocation(projectFile.getFilePath().toUri());
+        stubResourceResolver.setFileExists(actualLocation, true);
+        stubResourceResolver.setIOException(actualLocation, new IOException("File read error"));
+
+        // When
+        InspectorResult result = clocInspector.decorate(projectFile);
+
+        // Then
+        assertTrue(result.isError());
+        assertEquals("cloc", result.getTagName());
+        assertTrue(result.getErrorMessage().contains("Error counting lines"));
+    }
+
+    /**
+     * Helper method to set up stubs for successful analysis scenarios.
+     */
+    private StubProjectFile setupStubForSuccessfulAnalysis(String content) throws IOException {
+        ResourceLocation sourceLocation = new StubResourceLocation("/test/TestClass.java");
+        StubProjectFile projectFile = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        projectFile.setHasSourceCode(true);
+        projectFile.setSourceLocationUri(sourceLocation.toString());
+
+        // SourceFileInspector creates ResourceLocation from the ProjectFile's path
+        // So we need to set up the content under that path too
+        ResourceLocation actualLocation = new ResourceLocation(projectFile.getFilePath().toUri());
+        stubResourceResolver.setFileExists(actualLocation, true);
+        stubResourceResolver.setFileContent(actualLocation, content);
+
+        return projectFile;
     }
 }

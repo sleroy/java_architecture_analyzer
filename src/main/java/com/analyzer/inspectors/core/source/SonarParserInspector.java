@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
@@ -33,7 +33,7 @@ public abstract class SonarParserInspector extends SourceFileInspector {
     }
 
     @Override
-    protected final InspectorResult analyzeSourceFile(Clazz clazz, ResourceLocation sourceLocation) 
+    protected final InspectorResult analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation)
             throws IOException {
         try {
             String content = readFileContent(sourceLocation);
@@ -65,5 +65,6 @@ public abstract class SonarParserInspector extends SourceFileInspector {
      * @param sourceLocation the location of the source file
      * @return the result of SonarSource analysis
      */
-    protected abstract InspectorResult analyzeSonarSource(String content, Clazz clazz, ResourceLocation sourceLocation);
+    protected abstract InspectorResult analyzeSonarSource(String content, ProjectFile clazz,
+            ResourceLocation sourceLocation);
 }

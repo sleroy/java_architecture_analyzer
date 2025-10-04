@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.bedrock;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.inspectors.core.source.TextFileInspector;
 import com.analyzer.resource.ResourceResolver;
@@ -63,7 +63,7 @@ public abstract class BedrockInspector extends TextFileInspector {
     }
 
     @Override
-    protected final InspectorResult processContent(String content, Clazz clazz) {
+    protected final InspectorResult processContent(String content, ProjectFile clazz) {
         // Check if Bedrock integration is enabled
         if (!config.isEnabled()) {
             logger.debug("Bedrock integration disabled for inspector: {}", getName());
@@ -128,7 +128,7 @@ public abstract class BedrockInspector extends TextFileInspector {
      *                package, etc.)
      * @return the prompt string for the AI model
      */
-    protected abstract String buildPrompt(String content, Clazz clazz);
+    protected abstract String buildPrompt(String content, ProjectFile clazz);
 
     /**
      * Parse the response from the AI model and extract the analysis result.
@@ -140,7 +140,7 @@ public abstract class BedrockInspector extends TextFileInspector {
      * @param clazz    the class being analyzed
      * @return the parsed inspector result
      */
-    protected abstract InspectorResult parseResponse(String response, Clazz clazz);
+    protected abstract InspectorResult parseResponse(String response, ProjectFile clazz);
 
     /**
      * Check if this inspector supports the given class.
@@ -151,7 +151,7 @@ public abstract class BedrockInspector extends TextFileInspector {
      * @return true if this inspector can analyze the class
      */
     @Override
-    public boolean supports(Clazz clazz) {
+    public boolean supports(ProjectFile clazz) {
         // Only analyze classes with source code
         return clazz.hasSourceCode();
     }
@@ -186,7 +186,7 @@ public abstract class BedrockInspector extends TextFileInspector {
      * @param clazz      the class being analyzed
      * @return a context-enriched prompt
      */
-    protected String buildContextualPrompt(String basePrompt, String content, Clazz clazz) {
+    protected String buildContextualPrompt(String basePrompt, String content, ProjectFile clazz) {
         StringBuilder promptBuilder = new StringBuilder();
 
         promptBuilder.append(basePrompt).append("\n\n");
@@ -217,7 +217,8 @@ public abstract class BedrockInspector extends TextFileInspector {
      * @param clazz              the class being analyzed
      * @return a well-structured prompt
      */
-    protected String buildStructuredPrompt(String systemInstructions, String userQuery, String content, Clazz clazz) {
+    protected String buildStructuredPrompt(String systemInstructions, String userQuery, String content,
+            ProjectFile clazz) {
         StringBuilder promptBuilder = new StringBuilder();
 
         // For models that support it, the BedrockApiClient will separate system and

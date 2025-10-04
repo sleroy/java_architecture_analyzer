@@ -24,19 +24,19 @@ public class ClassCsvRecord implements CsvRecord {
         this.lineCount = lineCount;
     }
 
-    public ClassCsvRecord(Clazz clazz) {
+    public ClassCsvRecord(ProjectFile clazz) {
         this(
-                clazz.getClassName(),
-                clazz.getPackageName(),
-                clazz.getClassType() != null ? clazz.getClassType().toString() : "",
-                clazz.getSourceLocation() != null ? clazz.getSourceLocation().getUri().toString() : "",
+                (String) clazz.getTag("java.className", ""),
+                (String) clazz.getTag("java.packageName", ""),
+                (String) clazz.getTag("java.classType", ""),
+                clazz.getFilePath().toString(),
                 extractLineCount(clazz));
     }
 
     /**
      * Extracts line count from inspector results, defaults to 0 if not available.
      */
-    private static int extractLineCount(Clazz clazz) {
+    private static int extractLineCount(ProjectFile clazz) {
         Object lineCountResult = clazz.getInspectorResult("lineCount");
         if (lineCountResult instanceof Integer) {
             return (Integer) lineCountResult;

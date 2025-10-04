@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.Inspector;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.resource.ResourceLocation;
@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets;
  * Provides common functionality for analyzing Java source files from various
  * sources.
  */
-public abstract class SourceFileInspector implements Inspector<Clazz> {
+public abstract class SourceFileInspector implements Inspector<ProjectFile> {
 
     private final ResourceResolver resourceResolver;
 
@@ -24,22 +24,20 @@ public abstract class SourceFileInspector implements Inspector<Clazz> {
     }
 
     @Override
-    public final InspectorResult decorate(Clazz clazz) {
-        if (!supports(clazz)) {
+    public final InspectorResult decorate(ProjectFile projectFile) {
+        if (!supports(projectFile)) {
             return InspectorResult.notApplicable(getColumnName());
         }
 
         try {
-            ResourceLocation sourceLocation = clazz.getSourceLocation();
-            if (sourceLocation == null) {
-                return InspectorResult.notApplicable(getColumnName());
-            }
+            // Create ResourceLocation from the project file path
+            ResourceLocation sourceLocation = new ResourceLocation(projectFile.getFilePath().toUri());
 
             if (!resourceResolver.exists(sourceLocation)) {
                 return InspectorResult.error(getColumnName(), "Source file not found: " + sourceLocation);
             }
 
-            return analyzeSourceFile(clazz, sourceLocation);
+            return analyzeSourceFile(projectFile, sourceLocation);
 
         } catch (Exception e) {
             return InspectorResult.error(getColumnName(), "Error analyzing source file: " + e.getMessage());
@@ -47,20 +45,20 @@ public abstract class SourceFileInspector implements Inspector<Clazz> {
     }
 
     @Override
-    public boolean supports(Clazz clazz) {
-        return clazz != null && clazz.hasSourceCode();
+    public boolean supports(ProjectFile projectFile) {
+        return projectFile != null && projectFile.hasSourceCode();
     }
 
     /**
      * Analyzes the source file for the given class.
      * Subclasses must implement this method to provide specific analysis logic.
      * 
-     * @param clazz          the class to analyze
+     * @param projectFile    the project file to analyze
      * @param sourceLocation the ResourceLocation of the source file
      * @return the result of the analysis
      * @throws IOException if there's an error reading the source file
      */
-    protected abstract InspectorResult analyzeSourceFile(Clazz clazz, ResourceLocation sourceLocation)
+    protected abstract InspectorResult analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation)
             throws IOException;
 
     /**

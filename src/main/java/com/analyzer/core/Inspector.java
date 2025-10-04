@@ -4,10 +4,11 @@ package com.analyzer.core;
  * Generic interface for all inspectors.
  * Inspectors analyze objects and return results that are stored in columns.
  *
- * @param <T> the type of object this inspector can analyze (Clazz or Package)
+ * @param <T> the type of object this inspector can analyze (ProjectFile,
+ *            Package, or legacy ProjectFile)
  */
 public interface Inspector<T> {
-    
+
     /**
      * Analyzes the given object and returns a result.
      * 
@@ -15,7 +16,7 @@ public interface Inspector<T> {
      * @return the result of the analysis
      */
     InspectorResult decorate(T objectToAnalyze);
-    
+
     /**
      * Gets the unique name of this inspector.
      * This is used for configuration and logging.
@@ -23,7 +24,7 @@ public interface Inspector<T> {
      * @return the inspector name
      */
     String getName();
-    
+
     /**
      * Gets the column name where results from this inspector will be stored.
      * 

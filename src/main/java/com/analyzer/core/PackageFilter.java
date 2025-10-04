@@ -64,7 +64,8 @@ public class PackageFilter {
      * @return Filtered map containing only classes from packages that match any of
      *         the filters
      */
-    public static Map<String, Clazz> filterClasses(Map<String, Clazz> classes, List<String> packageFilters) {
+    public static Map<String, ProjectFile> filterClasses(Map<String, ProjectFile> classes,
+            List<String> packageFilters) {
         if (classes == null || classes.isEmpty()) {
             return new HashMap<>();
         }
@@ -85,10 +86,10 @@ public class PackageFilter {
             return new HashMap<>(classes);
         }
 
-        Map<String, Clazz> filteredClasses = new HashMap<>();
+        Map<String, ProjectFile> filteredClasses = new HashMap<>();
 
-        for (Map.Entry<String, Clazz> entry : classes.entrySet()) {
-            Clazz clazz = entry.getValue();
+        for (Map.Entry<String, ProjectFile> entry : classes.entrySet()) {
+            ProjectFile clazz = entry.getValue();
             String packageName = clazz.getPackageName();
 
             if (matchesAnyFilter(packageName, cleanFilters)) {

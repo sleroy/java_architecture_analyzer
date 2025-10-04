@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
@@ -26,7 +26,7 @@ public abstract class TextFileInspector extends SourceFileInspector {
     }
 
     @Override
-    protected final InspectorResult analyzeSourceFile(Clazz clazz, ResourceLocation sourceLocation) 
+    protected final InspectorResult analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation)
             throws IOException {
         try {
             String content = readFileContent(sourceLocation);
@@ -50,5 +50,5 @@ public abstract class TextFileInspector extends SourceFileInspector {
      * @param clazz the class being analyzed
      * @return the result of content processing
      */
-    protected abstract InspectorResult processContent(String content, Clazz clazz);
+    protected abstract InspectorResult processContent(String content, ProjectFile clazz);
 }

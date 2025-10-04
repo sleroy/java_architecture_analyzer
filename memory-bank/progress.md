@@ -35,15 +35,29 @@
 
 ## 🔧 Current Status
 
+### 🚧 MAJOR ARCHITECTURAL REFACTORING IN PROGRESS
+**Current Focus**: Migrating from Clazz-based to ProjectFile-based architecture
+
+#### ✅ Recently Completed (Jan 4, 2025)
+- **ProjectFile Architecture**: Complete replacement for Clazz with flexible tagging system
+- **FileDetector System**: Extensible file detection with priority-based matching  
+- **Analysis Framework**: Project-level analysis operations distinct from Inspectors
+- **AnalysisEngine Rewrite**: New workflow supporting project-based analysis
+- **InventoryCommand Migration**: Updated CLI to use new project-based parameters
+- **Compilation Success**: System compiles without errors after parameter updates
+
 ### Working Components
 - All core systems functional and tested
 - Sample analysis runs successfully on test projects
 - Error handling provides graceful degradation
 - Memory management handles large projects efficiently
+- **NEW**: Project-based analysis architecture operational
 
 ### Known Issues
-- None identified in core functionality
-- Test coverage good but could be expanded for edge cases
+- CsvExporter needs updating to work with ProjectFile instead of Clazz
+- Discovery engines need migration from Clazz to ProjectFile
+- Remaining test files need updates for new architecture
+- 184+ Clazz references still need migration to ProjectFile
 
 ## 📋 Remaining Work
 

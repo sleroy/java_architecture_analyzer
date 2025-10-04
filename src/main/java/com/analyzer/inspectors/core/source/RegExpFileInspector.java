@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
@@ -50,7 +50,7 @@ public abstract class RegExpFileInspector extends SourceFileInspector {
     }
 
     @Override
-    protected final InspectorResult analyzeSourceFile(Clazz clazz, ResourceLocation sourceLocation) 
+    protected final InspectorResult analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation)
             throws IOException {
         try {
             String content = readFileContent(sourceLocation);

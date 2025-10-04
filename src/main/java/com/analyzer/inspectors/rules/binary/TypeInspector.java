@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.rules.binary;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.inspectors.core.binary.ASMInspector;
 import com.analyzer.resource.ResourceResolver;
@@ -35,12 +35,11 @@ public class TypeInspector extends ASMInspector {
         return "class_type";
     }
 
-
     @Override
-    protected ASMClassVisitor createClassVisitor(Clazz clazz) {
+    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile) {
         // Always analyze bytecode to determine Java language type (CLASS, INTERFACE,
         // ENUM, etc.)
-        // Note: clazz.getClassType() returns discovery type (SOURCE_ONLY, BINARY_ONLY,
+        // Note: projectFile may have discovery type tags (SOURCE_ONLY, BINARY_ONLY,
         // BOTH)
         // which is different from Java language type, so we always use bytecode
         // analysis
@@ -105,8 +104,12 @@ public class TypeInspector extends ASMInspector {
     }
 
     @Override
-    public boolean supports(Clazz clazz) {
-        // Supports classes that have binary locations OR already have type information
-        return clazz != null && (clazz.getBinaryLocation() != null || clazz.getClassType() != null);
+    public boolean supports(ProjectFile projectFile) {
+        // Supports project files that have binary code or are Java class files
+        // Also supports source-only files that have class type information
+        return projectFile != null && (projectFile.hasBinaryCode() ||
+                projectFile.getFileExtension().equals("class") ||
+                projectFile.getFilePath().toString().endsWith(".class") ||
+                projectFile.hasTag("class_type"));
     }
 }

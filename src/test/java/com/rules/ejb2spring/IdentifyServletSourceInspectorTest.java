@@ -1,9 +1,10 @@
 package com.rules.ejb2spring;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ClassType;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.resource.ResourceLocation;
-import com.analyzer.test.stubs.StubClazz;
+import com.analyzer.test.stubs.StubProjectFile;
 import com.analyzer.test.stubs.StubResourceLocation;
 import com.analyzer.test.stubs.StubResourceResolver;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +56,7 @@ class IdentifyServletSourceInspectorTest {
                 }
                 """;
 
-        Clazz clazz = setupStubCall(javaCode, "TestServlet");
+        ProjectFile clazz = setupStubCall(javaCode, "TestServlet");
         InspectorResult result = inspector.decorate(clazz);
 
         assertTrue(result.isSuccessful());
@@ -74,7 +75,7 @@ class IdentifyServletSourceInspectorTest {
                 }
                 """;
 
-        Clazz clazz = setupStubCall(javaCode, "TestServlet");
+        ProjectFile clazz = setupStubCall(javaCode, "TestServlet");
         InspectorResult result = inspector.decorate(clazz);
 
         assertTrue(result.isSuccessful());
@@ -93,7 +94,7 @@ class IdentifyServletSourceInspectorTest {
                 }
                 """;
 
-        Clazz clazz = setupStubCall(javaCode, "TestServlet");
+        ProjectFile clazz = setupStubCall(javaCode, "TestServlet");
         InspectorResult result = inspector.decorate(clazz);
 
         assertTrue(result.isSuccessful());
@@ -111,7 +112,7 @@ class IdentifyServletSourceInspectorTest {
                 }
                 """;
 
-        Clazz clazz = setupStubCall(javaCode, "SimpleServlet");
+        ProjectFile clazz = setupStubCall(javaCode, "SimpleServlet");
         InspectorResult result = inspector.decorate(clazz);
 
         assertTrue(result.isSuccessful());
@@ -128,7 +129,7 @@ class IdentifyServletSourceInspectorTest {
                 }
                 """;
 
-        Clazz clazz = setupStubCall(javaCode, "SimpleServlet");
+        ProjectFile clazz = setupStubCall(javaCode, "SimpleServlet");
         InspectorResult result = inspector.decorate(clazz);
 
         assertTrue(result.isSuccessful());
@@ -149,7 +150,7 @@ class IdentifyServletSourceInspectorTest {
                 }
                 """;
 
-        Clazz clazz = setupStubCall(javaCode, "RegularClass");
+        ProjectFile clazz = setupStubCall(javaCode, "RegularClass");
         InspectorResult result = inspector.decorate(clazz);
 
         assertTrue(result.isSuccessful());
@@ -166,7 +167,7 @@ class IdentifyServletSourceInspectorTest {
                 }
                 """;
 
-        Clazz clazz = setupStubCall(javaCode, "TestInterface");
+        ProjectFile clazz = setupStubCall(javaCode, "TestInterface");
         InspectorResult result = inspector.decorate(clazz);
 
         assertTrue(result.isSuccessful());
@@ -185,19 +186,21 @@ class IdentifyServletSourceInspectorTest {
                 }
                 """;
 
-        Clazz clazz = setupStubCall(javaCode, "ServiceClass");
+        ProjectFile clazz = setupStubCall(javaCode, "ServiceClass");
         InspectorResult result = inspector.decorate(clazz);
 
         assertTrue(result.isSuccessful());
         assertEquals(false, result.getValue());
     }
 
-    private StubClazz setupStubCall(String sourceCode, String className) throws IOException {
-        ResourceLocation sourceLocation = new StubResourceLocation("/test/" + className + ".java");
-        StubClazz clazz = new StubClazz(className, "com.example", Clazz.ClassType.SOURCE_ONLY, sourceLocation, null);
+    private StubProjectFile setupStubCall(String sourceCode, String className) throws IOException {
+        StubProjectFile clazz = new StubProjectFile(className, "com.example", ClassType.SOURCE_ONLY);
+        clazz.setHasSourceCode(true);
 
-        stubResourceResolver.setFileExists(sourceLocation, true);
-        stubResourceResolver.setFileContent(sourceLocation, sourceCode);
+        // SourceFileInspector creates ResourceLocation from the ProjectFile's path
+        ResourceLocation actualLocation = new ResourceLocation(clazz.getFilePath().toUri());
+        stubResourceResolver.setFileExists(actualLocation, true);
+        stubResourceResolver.setFileContent(actualLocation, sourceCode);
 
         return clazz;
     }
