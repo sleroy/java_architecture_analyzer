@@ -9,6 +9,7 @@ import com.analyzer.inspectors.rules.binary.AnnotationCountInspector;
 import com.analyzer.inspectors.rules.source.ClocInspector;
 import com.analyzer.inspectors.rules.source.CyclomaticComplexityInspector;
 import com.analyzer.resource.ResourceResolver;
+import com.rules.ejb2spring.IdentifyServletSourceInspector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,12 +38,16 @@ public class InspectorRegistry {
     private final File pluginsDirectory;
     private final ResourceResolver resourceResolver;
     private final JARClassLoaderService jarClassLoaderService;
+    private final ClasspathInspectorScanner classpathScanner;
 
     public InspectorRegistry(File pluginsDirectory, ResourceResolver resourceResolver) {
         this.pluginsDirectory = pluginsDirectory;
         this.resourceResolver = resourceResolver;
         this.jarClassLoaderService = new JARClassLoaderService();
+        this.classpathScanner = new ClasspathInspectorScanner(resourceResolver, jarClassLoaderService);
+
         loadDefaultInspectors();
+        loadClasspathInspectors();
         loadPluginInspectors();
     }
 
@@ -57,18 +62,36 @@ public class InspectorRegistry {
     private void loadDefaultInspectors() {
         logger.info("Loading default inspectors...");
 
-        // Load the default inspectors with ResourceResolver
-        registerInspector(new ClocInspector(resourceResolver));
-        registerInspector(new TypeInspector(resourceResolver));
-        registerInspector(new MethodCountInspector(resourceResolver));
-        registerInspector(new CyclomaticComplexityInspector(resourceResolver));
-
-        // Load ClassLoader-based inspectors with both ResourceResolver and
-        // JARClassLoaderService
-        registerInspector(new AnnotationCountInspector(resourceResolver, jarClassLoaderService));
-        registerInspector(new CodeQualityInspector(resourceResolver));
-
         logger.info("Default inspectors loaded: {}", inspectors.size());
+    }
+
+    /**
+     * Loads inspectors automatically discovered from the classpath.
+     * This method scans for inspector classes in the com.analyzer.inspectors and
+     * com.rules packages.
+     * Manual registration takes precedence over auto-discovered inspectors.
+     */
+    private void loadClasspathInspectors() {
+        List<Inspector> discoveredInspectors = classpathScanner.scanForInspectors();
+
+        int autoRegistered = 0;
+        for (Inspector inspector : discoveredInspectors) {
+            String name = inspector.getName();
+
+            // Only register if not already manually registered (manual takes precedence)
+            if (!inspectors.containsKey(name)) {
+                inspectors.put(name, inspector);
+                autoRegistered++;
+                logger.debug("Auto-registered inspector: {}", name);
+            } else {
+                logger.debug("Skipping auto-discovered inspector '{}' - already manually registered", name);
+            }
+        }
+
+        logger.info(
+                "Auto-discovery completed: {} inspectors discovered, {} registered ({} skipped due to manual registration)",
+                discoveredInspectors.size(), autoRegistered, discoveredInspectors.size() - autoRegistered);
+        logger.info("Total inspectors after auto-discovery: {}", inspectors.size());
     }
 
     /**

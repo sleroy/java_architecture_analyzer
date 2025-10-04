@@ -1,0 +1,1 @@
+https://devblogs.microsoft.com/all-things-azure/converting-an-ejb-application-to-spring-boot-using-github-copilot/

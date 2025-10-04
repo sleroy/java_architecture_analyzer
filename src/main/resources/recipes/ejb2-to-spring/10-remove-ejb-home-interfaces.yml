@@ -1,0 +1,27 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.byoskill.ejb2tospring.RemoveEjbHome
+displayName: Remove EJBHome/EJBObject implements
+description: Remove EJB 2.x Home and Remote interface implementations
+recipeList:
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: javax.ejb.EJBHome
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: javax.ejb.EJBObject
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: javax.ejb.EJBLocalHome
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: javax.ejb.EJBLocalObject
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: com.byoskill.ejb2tospring.RemoveEjbMethods
+displayName: Remove EJB lifecycle methods
+description: Remove EJB-specific lifecycle method implementations
+recipeList:
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbCreate(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbRemove(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbActivate(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbPassivate(..)"
