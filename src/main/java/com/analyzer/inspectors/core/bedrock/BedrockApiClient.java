@@ -2,27 +2,34 @@ package com.analyzer.inspectors.core.bedrock;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import okhttp3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
+import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelRequest;
+import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelResponse;
+import software.amazon.awssdk.services.bedrockruntime.model.BedrockRuntimeException;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 /**
- * HTTP client for AWS Bedrock API integration.
+ * AWS SDK-based client for AWS Bedrock API integration.
  * Handles authentication, rate limiting, request/response serialization,
- * and error handling for Bedrock model invocations.
+ * and error handling for Bedrock model invocations using proper AWS SDK.
  */
 public class BedrockApiClient {
 
     private static final Logger logger = LoggerFactory.getLogger(BedrockApiClient.class);
-    private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
     private final BedrockConfig config;
-    private final OkHttpClient httpClient;
+    private final BedrockRuntimeClient bedrockClient;
     private final ObjectMapper objectMapper;
     private final Semaphore rateLimiter;
     private volatile long lastRequestTime = 0;
@@ -37,15 +44,66 @@ public class BedrockApiClient {
         this.objectMapper = new ObjectMapper();
         this.rateLimiter = new Semaphore(config.getRateLimitRpm());
 
-        // Build HTTP client with timeout settings
-        this.httpClient = new OkHttpClient.Builder()
-                .connectTimeout(Duration.ofSeconds(config.getTimeoutSeconds()))
-                .readTimeout(Duration.ofSeconds(config.getTimeoutSeconds()))
-                .writeTimeout(Duration.ofSeconds(config.getTimeoutSeconds()))
-                .retryOnConnectionFailure(true)
-                .build();
+        // Build AWS Bedrock Runtime client
+        this.bedrockClient = createBedrockClient(config);
 
-        logger.info("Initialized Bedrock API client for model: {}", config.getModelId());
+        logger.info("Initialized Bedrock API client for model: {} in region: {}",
+                config.getModelId(), config.getAwsRegion());
+    }
+
+    /**
+     * Create AWS Bedrock Runtime client with proper authentication.
+     */
+    private BedrockRuntimeClient createBedrockClient(BedrockConfig config) {
+        Region region = Region.of(config.getAwsRegion());
+
+        // Create credentials provider
+        AwsCredentialsProvider credentialsProvider;
+
+        if (config.getAwsAccessKeyId() != null && !config.getAwsAccessKeyId().trim().isEmpty() &&
+                config.getAwsSecretAccessKey() != null && !config.getAwsSecretAccessKey().trim().isEmpty()) {
+            // Use credentials from configuration
+            credentialsProvider = () -> AwsBasicCredentials.create(
+                    config.getAwsAccessKeyId(),
+                    config.getAwsSecretAccessKey());
+            logger.info("Using configured AWS credentials for Bedrock authentication");
+        } else {
+            // Use default AWS credentials chain (recommended)
+            credentialsProvider = DefaultCredentialsProvider.create();
+            logger.info("Using default AWS credentials chain for Bedrock authentication");
+        }
+
+        return BedrockRuntimeClient.builder()
+                .region(region)
+                .credentialsProvider(credentialsProvider)
+                .overrideConfiguration(builder -> builder
+                        .apiCallTimeout(Duration.ofSeconds(config.getTimeoutSeconds()))
+                        .apiCallAttemptTimeout(Duration.ofSeconds(config.getTimeoutSeconds())))
+                .build();
+    }
+
+    /**
+     * Create a custom credentials provider for token-based authentication.
+     * Note: This is for special setups - standard AWS uses access key/secret key.
+     */
+    private AwsCredentialsProvider createTokenBasedCredentialsProvider(String token) {
+        return () -> {
+            // For token-based authentication, we might need to parse the token
+            // or use it as a temporary credential. This depends on your specific setup.
+            // For now, we'll treat it as if it contains access key and secret key
+
+            if (token.contains(":")) {
+                // Format: accessKey:secretKey
+                String[] parts = token.split(":", 2);
+                return AwsBasicCredentials.create(parts[0], parts[1]);
+            } else {
+                // Single token - this is unusual for AWS, but we'll handle it
+                // You might need to adjust this based on your specific authentication setup
+                logger.warn("Single token provided - this is unusual for AWS Bedrock. " +
+                        "Consider using AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.");
+                return AwsBasicCredentials.create(token, "dummy-secret");
+            }
+        };
     }
 
     /**
@@ -72,8 +130,8 @@ public class BedrockApiClient {
                 logger.debug("Bedrock request: {}", requestJson);
             }
 
-            // Make HTTP call
-            String responseJson = makeHttpRequest(requestJson);
+            // Make AWS SDK call
+            String responseJson = makeBedrockRequest(requestJson);
 
             if (config.isLogResponses()) {
                 logger.debug("Bedrock response: {}", responseJson);
@@ -215,34 +273,30 @@ public class BedrockApiClient {
         return request;
     }
 
-    private String makeHttpRequest(String requestJson) throws BedrockApiException {
+    /**
+     * Make the actual AWS Bedrock API request using AWS SDK.
+     */
+    private String makeBedrockRequest(String requestJson) throws BedrockApiException {
         try {
-            // Build URL for model invocation
-            String url = config.getBaseUrl() + "/model/" + config.getModelId() + "/invoke";
-
-            RequestBody body = RequestBody.create(requestJson, JSON);
-            Request request = new Request.Builder()
-                    .url(url)
-                    .post(body)
-                    .addHeader("Authorization", "Bearer " + config.getApiToken())
-                    .addHeader("Content-Type", "application/json")
-                    .addHeader("Accept", "application/json")
+            // Create AWS SDK request
+            InvokeModelRequest invokeRequest = InvokeModelRequest.builder()
+                    .modelId(config.getModelId())
+                    .body(SdkBytes.fromUtf8String(requestJson))
+                    .contentType("application/json")
+                    .accept("application/json")
                     .build();
 
-            try (Response response = httpClient.newCall(request).execute()) {
-                String responseBody = response.body() != null ? response.body().string() : "";
+            // Make the call using AWS SDK
+            InvokeModelResponse response = bedrockClient.invokeModel(invokeRequest);
 
-                if (!response.isSuccessful()) {
-                    String errorMsg = String.format("Bedrock API call failed with status %d: %s",
-                            response.code(), responseBody);
-                    throw new BedrockApiException(errorMsg);
-                }
+            // Extract response body
+            return response.body().asUtf8String();
 
-                return responseBody;
-            }
-
-        } catch (IOException e) {
-            throw new BedrockApiException("HTTP request failed", e);
+        } catch (BedrockRuntimeException e) {
+            String errorMsg = String.format("AWS Bedrock API call failed: %s", e.getMessage());
+            throw new BedrockApiException(errorMsg, e);
+        } catch (Exception e) {
+            throw new BedrockApiException("AWS SDK request failed", e);
         } finally {
             // Release rate limiter permit
             rateLimiter.release();
@@ -334,16 +388,16 @@ public class BedrockApiClient {
                 message.contains("connection") ||
                 message.contains("503") ||
                 message.contains("502") ||
-                message.contains("rate limit");
+                message.contains("rate limit") ||
+                message.contains("throttle");
     }
 
     /**
-     * Close the HTTP client and release resources.
+     * Close the AWS SDK client and release resources.
      */
     public void close() {
-        if (httpClient != null) {
-            httpClient.dispatcher().executorService().shutdown();
-            httpClient.connectionPool().evictAll();
+        if (bedrockClient != null) {
+            bedrockClient.close();
         }
     }
 
@@ -351,7 +405,7 @@ public class BedrockApiClient {
      * Get configuration information for debugging.
      */
     public String getConfigSummary() {
-        return String.format("BedrockApiClient{model=%s, baseUrl=%s, rateLimitRpm=%d, timeoutSeconds=%d}",
-                config.getModelId(), config.getBaseUrl(), config.getRateLimitRpm(), config.getTimeoutSeconds());
+        return String.format("BedrockApiClient{model=%s, region=%s, rateLimitRpm=%d, timeoutSeconds=%d}",
+                config.getModelId(), config.getAwsRegion(), config.getRateLimitRpm(), config.getTimeoutSeconds());
     }
 }
