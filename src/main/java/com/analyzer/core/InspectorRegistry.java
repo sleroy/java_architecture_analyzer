@@ -2,9 +2,12 @@ package com.analyzer.core;
 
 import com.analyzer.inspectors.core.binary.BinaryClassInspector;
 import com.analyzer.inspectors.core.source.SourceFileInspector;
+import com.analyzer.inspectors.rules.bedrock.CodeQualityInspector;
 import com.analyzer.inspectors.rules.binary.TypeInspector;
 import com.analyzer.inspectors.rules.binary.MethodCountInspector;
+import com.analyzer.inspectors.rules.binary.AnnotationCountInspector;
 import com.analyzer.inspectors.rules.source.ClocInspector;
+import com.analyzer.inspectors.rules.source.CyclomaticComplexityInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,10 +36,12 @@ public class InspectorRegistry {
     private final Map<String, Inspector> inspectors = new HashMap<>();
     private final File pluginsDirectory;
     private final ResourceResolver resourceResolver;
+    private final JARClassLoaderService jarClassLoaderService;
 
     public InspectorRegistry(File pluginsDirectory, ResourceResolver resourceResolver) {
         this.pluginsDirectory = pluginsDirectory;
         this.resourceResolver = resourceResolver;
+        this.jarClassLoaderService = new JARClassLoaderService();
         loadDefaultInspectors();
         loadPluginInspectors();
     }
@@ -46,7 +51,8 @@ public class InspectorRegistry {
      * - cloc: returns the number of lines of codes (using a source inspector)
      * - type: returns the type of declaration using a binary inspector (class,
      * interface, record, enum etc)
-     * - method-count: returns the number of methods in a class (using binary inspector)
+     * - method-count: returns the number of methods in a class (using binary
+     * inspector)
      */
     private void loadDefaultInspectors() {
         logger.info("Loading default inspectors...");
@@ -56,6 +62,11 @@ public class InspectorRegistry {
         registerInspector(new TypeInspector(resourceResolver));
         registerInspector(new MethodCountInspector(resourceResolver));
         registerInspector(new CyclomaticComplexityInspector(resourceResolver));
+
+        // Load ClassLoader-based inspectors with both ResourceResolver and
+        // JARClassLoaderService
+        registerInspector(new AnnotationCountInspector(resourceResolver, jarClassLoaderService));
+        registerInspector(new CodeQualityInspector(resourceResolver));
 
         logger.info("Default inspectors loaded: {}", inspectors.size());
     }

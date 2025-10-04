@@ -26,7 +26,7 @@ public class ClocInspector extends SourceFileInspector {
 
     @Override
     public String getName() {
-        return "cloc";
+        return "Number of lines of code";
     }
 
     @Override

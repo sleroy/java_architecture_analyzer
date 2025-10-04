@@ -1,6 +1,5 @@
 package com.analyzer.core;
 
-import com.analyzer.resource.ResourceResolver;
 import me.tongfei.progressbar.ProgressBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,11 +19,9 @@ public class AnalysisEngine {
 
     private static final Logger logger = LoggerFactory.getLogger(AnalysisEngine.class);
     private final InspectorRegistry inspectorRegistry;
-    private final ResourceResolver resourceResolver;
 
-    public AnalysisEngine(InspectorRegistry inspectorRegistry, ResourceResolver resourceResolver) {
+    public AnalysisEngine(InspectorRegistry inspectorRegistry) {
         this.inspectorRegistry = inspectorRegistry;
-        this.resourceResolver = resourceResolver;
     }
 
     /**
@@ -45,6 +42,14 @@ public class AnalysisEngine {
     public Map<String, Clazz> analyze(Map<String, Clazz> discoveredClasses, List<String> requestedInspectors) {
         // Get inspectors to execute
         List<Inspector> inspectors = getInspectorsToExecute(requestedInspectors);
+
+        // Calculate and log class statistics
+        ClassStatistics classStats = calculateClassStatistics(discoveredClasses);
+        logger.info("Found {} classes: {} source-only, {} binary-only, {} both",
+                classStats.getTotalClasses(),
+                classStats.getSourceOnlyCount(),
+                classStats.getBinaryOnlyCount(),
+                classStats.getBothCount());
 
         logger.info("Starting analysis with {} inspectors...", inspectors.size());
 
@@ -135,6 +140,31 @@ public class AnalysisEngine {
     }
 
     /**
+     * Calculates statistics about the discovered classes by type.
+     */
+    private ClassStatistics calculateClassStatistics(Map<String, Clazz> discoveredClasses) {
+        int sourceOnly = 0;
+        int binaryOnly = 0;
+        int both = 0;
+
+        for (Clazz clazz : discoveredClasses.values()) {
+            switch (clazz.getClassType()) {
+                case SOURCE_ONLY:
+                    sourceOnly++;
+                    break;
+                case BINARY_ONLY:
+                    binaryOnly++;
+                    break;
+                case BOTH:
+                    both++;
+                    break;
+            }
+        }
+
+        return new ClassStatistics(sourceOnly, binaryOnly, both);
+    }
+
+    /**
      * Gets statistics about the analysis.
      */
     public AnalysisStatistics getStatistics() {
@@ -142,6 +172,45 @@ public class AnalysisEngine {
                 inspectorRegistry.getInspectorCount(),
                 inspectorRegistry.getSourceInspectorCount(),
                 inspectorRegistry.getBinaryInspectorCount());
+    }
+
+    /**
+     * Statistics about the discovered classes by type.
+     */
+    public static class ClassStatistics {
+        private final int sourceOnlyCount;
+        private final int binaryOnlyCount;
+        private final int bothCount;
+        private final int totalClasses;
+
+        public ClassStatistics(int sourceOnlyCount, int binaryOnlyCount, int bothCount) {
+            this.sourceOnlyCount = sourceOnlyCount;
+            this.binaryOnlyCount = binaryOnlyCount;
+            this.bothCount = bothCount;
+            this.totalClasses = sourceOnlyCount + binaryOnlyCount + bothCount;
+        }
+
+        public int getSourceOnlyCount() {
+            return sourceOnlyCount;
+        }
+
+        public int getBinaryOnlyCount() {
+            return binaryOnlyCount;
+        }
+
+        public int getBothCount() {
+            return bothCount;
+        }
+
+        public int getTotalClasses() {
+            return totalClasses;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("Class Statistics: %d total classes (%d source-only, %d binary-only, %d both)",
+                    totalClasses, sourceOnlyCount, binaryOnlyCount, bothCount);
+        }
     }
 
     /**

@@ -115,7 +115,7 @@ public class InventoryCommand implements Callable<Integer> {
             logger.info("{}", inspectorRegistry.getStatistics());
 
             // 2. Initialize Analysis Engine
-            AnalysisEngine analysisEngine = new AnalysisEngine(inspectorRegistry, resolver);
+            AnalysisEngine analysisEngine = new AnalysisEngine(inspectorRegistry);
             logger.info("{}", analysisEngine.getStatistics());
 
             // 3. Discover classes

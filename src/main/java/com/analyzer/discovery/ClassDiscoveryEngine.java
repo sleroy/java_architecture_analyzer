@@ -89,6 +89,9 @@ public class ClassDiscoveryEngine {
                     } else if (binaryLocation.getType() == ResourceLocation.ResourceType.NESTED_JAR) {
                         logger.debug("Calling discoverFromNestedJar");
                         discoverFromNestedJar(binaryLocation);
+                    } else if (binaryLocation.getType() == ResourceLocation.ResourceType.FILE) {
+                        logger.debug("Binary location is a directory, scanning for JAR files");
+                        discoverFromDirectory(binaryLocation);
                     } else {
                         logger.warn("Unknown binary location type: {}", binaryLocation.getType());
                     }
@@ -217,6 +220,46 @@ public class ClassDiscoveryEngine {
                 }
             }
         }
+    }
+
+    /**
+     * Discover classes from a directory by scanning for JAR files recursively.
+     */
+    private void discoverFromDirectory(ResourceLocation directoryLocation) throws IOException {
+        logger.debug("Scanning directory for JAR files: {}", directoryLocation);
+
+        ResourceMetadata metadata = resourceResolver.getMetadata(directoryLocation);
+        if (!metadata.isDirectory()) {
+            logger.warn("Location is not a directory: {}", directoryLocation);
+            return;
+        }
+
+        List<ResourceLocation> children = new ArrayList<>(resourceResolver.listChildren(directoryLocation));
+        int jarCount = 0;
+
+        for (ResourceLocation child : children) {
+            ResourceMetadata childMetadata = resourceResolver.getMetadata(child);
+            String childUri = child.getUri().toString();
+
+            if (childMetadata.isDirectory()) {
+                // Recursively scan subdirectories
+                logger.trace("Recursing into subdirectory: {}", childUri);
+                discoverFromDirectory(child);
+            } else if (childUri.toLowerCase().endsWith(".jar") || childUri.toLowerCase().endsWith(".war")) {
+                // Found a JAR/WAR file, create a JAR ResourceLocation and process it
+                logger.debug("Found JAR file: {}", childUri);
+                try {
+                    ResourceLocation jarResourceLocation = new ResourceLocation("jar:" + childUri + "!/");
+                    logger.debug("Created JAR ResourceLocation: {}", jarResourceLocation);
+                    discoverFromJar(jarResourceLocation);
+                    jarCount++;
+                } catch (Exception e) {
+                    logger.warn("Failed to process JAR file {}: {}", childUri, e.getMessage());
+                }
+            }
+        }
+
+        logger.debug("Directory scan completed. Found {} JAR files in: {}", jarCount, directoryLocation);
     }
 
     /**

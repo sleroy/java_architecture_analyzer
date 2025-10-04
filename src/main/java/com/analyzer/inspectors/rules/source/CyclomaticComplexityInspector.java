@@ -39,12 +39,12 @@ public class CyclomaticComplexityInspector extends JavaParserInspector {
 
     @Override
     public String getName() {
-        return "cyclomatic-complexity";
+        return "Cyclomatic Complexity";
     }
 
     @Override
     public String getColumnName() {
-        return "Cyclomatic Complexity";
+        return "cyclomatic-complexity";
     }
 
     @Override

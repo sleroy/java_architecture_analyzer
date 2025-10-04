@@ -27,7 +27,7 @@ public class TypeInspector extends ASMInspector {
 
     @Override
     public String getName() {
-        return "type";
+        return "Type Declaration Inspector";
     }
 
     @Override

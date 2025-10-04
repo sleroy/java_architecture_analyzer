@@ -16,10 +16,21 @@ public interface Inspector<T> {
 }
 ```
 
-#### 2. Base Inspector Classes
-- **`SourceFileInspector`**: Base for source code analysis
-- **`BinaryClassInspector`**: Base for bytecode analysis  
-- **`ASMInspector`**: Specialized ASM-based bytecode analysis
+#### 2. Enhanced Inspector Hierarchy ✅ COMPLETE
+**Binary Analysis Base Classes:**
+- **`BinaryClassInspector`**: Core base for all bytecode analysis
+- **`ASMInspector`**: Template method pattern for ASM-based analysis
+- **`BCELInspector`**: Apache BCEL bytecode analysis foundation
+- **`JavassistInspector`**: Runtime bytecode manipulation base
+
+**Source Analysis Base Classes:**
+- **`SourceFileInspector`**: Core base for all source code analysis
+- **`RegExpFileInspector`**: Pattern matching with validation and error handling
+- **`CountRegexpInspector`**: Pattern occurrence counting with robust logic
+- **`TextFileInspector`**: Full content extraction with abstract processContent
+- **`JavaParserInspector`**: AST-based Java parsing foundation
+- **`RoasterInspector`**: Code generation and manipulation base
+- **`SonarParserInspector`**: Advanced parsing with SonarSource integration
 
 #### 3. Resource Resolution Pattern
 **Unified Resource Access**: URI-based system supporting multiple sources
@@ -27,6 +38,30 @@ public interface Inspector<T> {
 - `FileResourceResolver`: File system access
 - `JarResourceResolver`: JAR/WAR/ZIP file access
 - `CompositeResourceResolver`: Combines multiple resolvers
+
+#### 4. Package Structure Enhancement ✅ NEW
+**Organized Inspector Hierarchy**: Moved from flat structure to organized core packages
+```
+src/main/java/com/analyzer/inspectors/
+├── core/
+│   ├── binary/          # Binary analysis base classes
+│   │   ├── ASMInspector.java
+│   │   ├── BCELInspector.java
+│   │   ├── BinaryClassInspector.java
+│   │   └── JavassistInspector.java
+│   └── source/          # Source analysis base classes
+│       ├── CountRegexpInspector.java
+│       ├── JavaParserInspector.java
+│       ├── RegExpFileInspector.java
+│       ├── RoasterInspector.java
+│       ├── SonarParserInspector.java
+│       ├── SourceFileInspector.java
+│       └── TextFileInspector.java
+├── packages/            # Package-level inspectors
+└── rules/              # Concrete rule implementations
+    ├── binary/
+    └── source/
+```
 
 ### Analysis Workflow
 
@@ -82,10 +117,26 @@ flowchart TD
 
 ## Extension Points
 
-### 1. Custom Inspectors
-- Extend `SourceFileInspector` or `BinaryClassInspector`
-- Implement `decorate()` method
-- Package as JAR in plugins directory
+### 1. Custom Inspectors ✅ ENHANCED
+**Binary Analysis Extensions:**
+- Extend `ASMInspector` for specialized ASM-based analysis
+- Extend `BCELInspector` for Apache BCEL bytecode inspection
+- Extend `JavassistInspector` for runtime manipulation analysis
+- Extend base `BinaryClassInspector` for custom bytecode approaches
+
+**Source Analysis Extensions:**
+- Extend `RegExpFileInspector` for pattern-based analysis
+- Extend `CountRegexpInspector` for occurrence counting
+- Extend `TextFileInspector` for full content processing
+- Extend `JavaParserInspector` for AST-based analysis
+- Extend `RoasterInspector` for code generation analysis
+- Extend `SonarParserInspector` for advanced parsing
+- Extend base `SourceFileInspector` for custom source approaches
+
+**Implementation Requirements:**
+- Implement required abstract methods (getName(), getColumnName())
+- Follow error handling patterns (return InspectorResult.error() vs throwing)
+- Package as JAR in plugins directory for dynamic loading
 
 ### 2. Custom Resource Resolvers
 - Implement `ResourceResolver` interface

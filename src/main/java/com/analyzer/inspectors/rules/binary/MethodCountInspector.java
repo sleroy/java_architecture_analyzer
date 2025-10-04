@@ -32,7 +32,7 @@ public class MethodCountInspector extends ASMInspector {
 
     @Override
     public String getName() {
-        return "method-count";
+        return "Method count inspector (BINARY)";
     }
 
     @Override
