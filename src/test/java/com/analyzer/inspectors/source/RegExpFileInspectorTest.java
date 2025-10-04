@@ -1,45 +1,35 @@
 package com.analyzer.inspectors.source;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ClassType;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.inspectors.core.source.RegExpFileInspector;
 import com.analyzer.resource.ResourceLocation;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.test.stubs.StubProjectFile;
+import com.analyzer.test.stubs.StubResourceLocation;
+import com.analyzer.test.stubs.StubResourceResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 class RegExpFileInspectorTest {
 
-    @Mock
-    private ResourceResolver resourceResolver;
-
-    @Mock
-    private Clazz clazz;
-
-    @Mock
-    private ResourceLocation sourceLocation;
-
+    private StubResourceResolver stubResourceResolver;
     private TestRegExpFileInspector inspector;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-        inspector = new TestRegExpFileInspector(resourceResolver, "@\\w+");
+        stubResourceResolver = new StubResourceResolver();
+        inspector = new TestRegExpFileInspector(stubResourceResolver, "@\\w+");
     }
 
     @Test
     void testConstructorWithStringPattern() {
-        TestRegExpFileInspector inspector = new TestRegExpFileInspector(resourceResolver, "@\\w+");
+        TestRegExpFileInspector inspector = new TestRegExpFileInspector(stubResourceResolver, "@\\w+");
         assertNotNull(inspector.getPattern());
         assertEquals("@\\w+", inspector.getPattern().pattern());
     }
@@ -47,47 +37,52 @@ class RegExpFileInspectorTest {
     @Test
     void testConstructorWithCompiledPattern() {
         Pattern pattern = Pattern.compile("@\\w+");
-        TestRegExpFileInspector inspector = new TestRegExpFileInspector(resourceResolver, pattern);
+        TestRegExpFileInspector inspector = new TestRegExpFileInspector(stubResourceResolver, pattern);
         assertNotNull(inspector.getPattern());
         assertEquals("@\\w+", inspector.getPattern().pattern());
     }
 
     @Test
     void testConstructorWithNullStringPattern() {
-        assertThrows(IllegalArgumentException.class, () -> 
-            new TestRegExpFileInspector(resourceResolver, (String) null));
+        assertThrows(IllegalArgumentException.class,
+                () -> new TestRegExpFileInspector(stubResourceResolver, (String) null));
     }
 
     @Test
     void testConstructorWithEmptyStringPattern() {
-        assertThrows(IllegalArgumentException.class, () -> 
-            new TestRegExpFileInspector(resourceResolver, ""));
+        assertThrows(IllegalArgumentException.class, () -> new TestRegExpFileInspector(stubResourceResolver, ""));
     }
 
     @Test
     void testConstructorWithNullCompiledPattern() {
-        assertThrows(IllegalArgumentException.class, () -> 
-            new TestRegExpFileInspector(resourceResolver, (Pattern) null));
+        assertThrows(IllegalArgumentException.class,
+                () -> new TestRegExpFileInspector(stubResourceResolver, (Pattern) null));
     }
 
     @Test
     void testSupportsClass() {
-        when(clazz.hasSourceCode()).thenReturn(true);
+        // Test with source code available
+        StubProjectFile clazz = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        clazz.setHasSourceCode(true);
         assertTrue(inspector.supports(clazz));
 
-        when(clazz.hasSourceCode()).thenReturn(false);
-        assertFalse(inspector.supports(clazz));
+        // Test without source code
+        StubProjectFile clazz2 = new StubProjectFile("TestClass", "com.test", ClassType.BINARY_ONLY);
+        clazz2.setHasSourceCode(false);
+        assertFalse(inspector.supports(clazz2));
     }
 
     @Test
     void testDecorateWithMatchingPattern() throws IOException {
         // Setup
         String sourceCode = "@Override\npublic void test() {}";
-        when(clazz.hasSourceCode()).thenReturn(true);
-        when(clazz.getSourceLocation()).thenReturn(sourceLocation);
-        when(resourceResolver.exists(sourceLocation)).thenReturn(true);
-        when(resourceResolver.openStream(sourceLocation))
-            .thenReturn(new ByteArrayInputStream(sourceCode.getBytes()));
+        StubProjectFile clazz = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        clazz.setHasSourceCode(true);
+
+        // SourceFileInspector creates ResourceLocation from the ProjectFile's path
+        ResourceLocation actualLocation = new ResourceLocation(clazz.getFilePath().toUri());
+        stubResourceResolver.setFileExists(actualLocation, true);
+        stubResourceResolver.setFileContent(actualLocation, sourceCode);
 
         // Execute
         InspectorResult result = inspector.decorate(clazz);
@@ -102,11 +97,13 @@ class RegExpFileInspectorTest {
     void testDecorateWithNonMatchingPattern() throws IOException {
         // Setup
         String sourceCode = "public void test() {}";
-        when(clazz.hasSourceCode()).thenReturn(true);
-        when(clazz.getSourceLocation()).thenReturn(sourceLocation);
-        when(resourceResolver.exists(sourceLocation)).thenReturn(true);
-        when(resourceResolver.openStream(sourceLocation))
-            .thenReturn(new ByteArrayInputStream(sourceCode.getBytes()));
+        StubProjectFile clazz = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        clazz.setHasSourceCode(true);
+
+        // SourceFileInspector creates ResourceLocation from the ProjectFile's path
+        ResourceLocation actualLocation = new ResourceLocation(clazz.getFilePath().toUri());
+        stubResourceResolver.setFileExists(actualLocation, true);
+        stubResourceResolver.setFileContent(actualLocation, sourceCode);
 
         // Execute
         InspectorResult result = inspector.decorate(clazz);
@@ -119,20 +116,26 @@ class RegExpFileInspectorTest {
 
     @Test
     void testDecorateWithNullSourceLocation() {
-        when(clazz.hasSourceCode()).thenReturn(true);
-        when(clazz.getSourceLocation()).thenReturn(null);
+        StubProjectFile clazz = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        clazz.setHasSourceCode(true);
+        // Don't set any file content in stub resolver, so it will generate a "file not
+        // found" error
 
         InspectorResult result = inspector.decorate(clazz);
 
-        assertTrue(result.isNotApplicable());
+        assertTrue(result.isError());
         assertEquals("test-regexp", result.getTagName());
+        assertTrue(result.getErrorMessage().contains("Source file not found"));
     }
 
     @Test
     void testDecorateWithNonExistentSourceFile() {
-        when(clazz.hasSourceCode()).thenReturn(true);
-        when(clazz.getSourceLocation()).thenReturn(sourceLocation);
-        when(resourceResolver.exists(sourceLocation)).thenReturn(false);
+        ResourceLocation sourceLocation = new StubResourceLocation("/test/TestClass.java");
+        StubProjectFile clazz = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        clazz.setHasSourceCode(true);
+        clazz.setSourceLocationUri(sourceLocation.toString());
+
+        // Don't set file to exist in stub resolver (default is false)
 
         InspectorResult result = inspector.decorate(clazz);
 
@@ -142,11 +145,13 @@ class RegExpFileInspectorTest {
 
     @Test
     void testDecorateWithIOException() throws IOException {
-        when(clazz.hasSourceCode()).thenReturn(true);
-        when(clazz.getSourceLocation()).thenReturn(sourceLocation);
-        when(resourceResolver.exists(sourceLocation)).thenReturn(true);
-        when(resourceResolver.openStream(sourceLocation))
-            .thenThrow(new IOException("File read error"));
+        StubProjectFile clazz = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        clazz.setHasSourceCode(true);
+
+        // SourceFileInspector creates ResourceLocation from the ProjectFile's path
+        ResourceLocation actualLocation = new ResourceLocation(clazz.getFilePath().toUri());
+        stubResourceResolver.setFileExists(actualLocation, true);
+        stubResourceResolver.setIOException(actualLocation, new IOException("File read error"));
 
         InspectorResult result = inspector.decorate(clazz);
 
@@ -179,11 +184,11 @@ class RegExpFileInspectorTest {
     // Test implementation of RegExpFileInspector
     private static class TestRegExpFileInspector extends RegExpFileInspector {
 
-        public TestRegExpFileInspector(ResourceResolver resourceResolver, String regexPattern) {
+        public TestRegExpFileInspector(StubResourceResolver resourceResolver, String regexPattern) {
             super(resourceResolver, regexPattern);
         }
 
-        public TestRegExpFileInspector(ResourceResolver resourceResolver, Pattern pattern) {
+        public TestRegExpFileInspector(StubResourceResolver resourceResolver, Pattern pattern) {
             super(resourceResolver, pattern);
         }
 
@@ -196,7 +201,6 @@ class RegExpFileInspectorTest {
         public String getName() {
             return "Test RegExp";
         }
-
 
         // Expose protected method for testing
         public Pattern getPattern() {

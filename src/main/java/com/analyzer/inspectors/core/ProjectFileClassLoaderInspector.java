@@ -1,9 +1,8 @@
 package com.analyzer.inspectors.core;
 
-import com.analyzer.core.ProjectFile;
-import com.analyzer.core.Inspector;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.core.JARClassLoaderService;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,34 +10,40 @@ import org.slf4j.LoggerFactory;
 import java.net.URLClassLoader;
 
 /**
- * Abstract base class for inspectors that need to load classes at runtime
+ * Abstract base class for ProjectFile inspectors that need to load classes at
+ * runtime
  * using a shared ClassLoader containing all discovered JAR files.
  * 
- * This inspector provides a template method pattern where:
- * 1. The base class attempts to load the class using the shared ClassLoader
- * 2. If successful, it delegates to the concrete implementation's
+ * This is the ProjectFile equivalent of ClassLoaderBasedInspector, providing
+ * the same template method pattern but working with ProjectFile objects instead
+ * of ProjectFile.
+ * 
+ * The inspector:
+ * 1. Extracts class information from ProjectFile tags (using migration helpers)
+ * 2. Attempts to load the class using the shared ClassLoader
+ * 3. If successful, delegates to the concrete implementation's
  * analyzeLoadedClass() method
- * 3. If loading fails, it returns notApplicable without calling the analysis
+ * 4. If loading fails, returns notApplicable without calling the analysis
  * method
  * 
  * Concrete inspectors extending this class can use reflection on the loaded
  * Class<?> object to perform runtime analysis that would not be possible
- * with static bytecode analysis alone.
+ * with static analysis alone.
  */
-public abstract class ClassLoaderBasedInspector implements Inspector<ProjectFile> {
+public abstract class ProjectFileClassLoaderInspector extends ProjectFileInspector {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClassLoaderBasedInspector.class);
+    private static final Logger logger = LoggerFactory.getLogger(ProjectFileClassLoaderInspector.class);
 
     protected final ResourceResolver resourceResolver;
     protected final JARClassLoaderService classLoaderService;
 
     /**
-     * Creates a new ClassLoaderBasedInspector with the required dependencies.
+     * Creates a new ProjectFileClassLoaderInspector with the required dependencies.
      * 
      * @param resourceResolver   the resolver for accessing resources
      * @param classLoaderService the service providing the shared ClassLoader
      */
-    protected ClassLoaderBasedInspector(ResourceResolver resourceResolver,
+    protected ProjectFileClassLoaderInspector(ResourceResolver resourceResolver,
             JARClassLoaderService classLoaderService) {
         this.resourceResolver = resourceResolver;
         this.classLoaderService = classLoaderService;
@@ -50,8 +55,17 @@ public abstract class ClassLoaderBasedInspector implements Inspector<ProjectFile
     }
 
     @Override
-    public final InspectorResult decorate(ProjectFile projectFile) {
-        if (!supports(projectFile)) {
+    protected final InspectorResult analyzeProjectFile(ProjectFile projectFile) {
+        // First, check if this ProjectFile represents a Java class
+        if (!isJavaClass(projectFile)) {
+            return InspectorResult.notApplicable(getColumnName());
+        }
+
+        // Get the fully qualified class name
+        String fullyQualifiedName = getClassName(projectFile);
+        if (fullyQualifiedName == null || fullyQualifiedName.isEmpty()) {
+            logger.debug("ProjectFile {} does not have a fully qualified class name",
+                    projectFile.getRelativePath());
             return InspectorResult.notApplicable(getColumnName());
         }
 
@@ -60,7 +74,6 @@ public abstract class ClassLoaderBasedInspector implements Inspector<ProjectFile
             URLClassLoader sharedClassLoader = classLoaderService.getSharedClassLoader();
 
             // Attempt to load the class by its fully qualified name
-            String fullyQualifiedName = projectFile.getFullyQualifiedName();
             logger.debug("Attempting to load class: {}", fullyQualifiedName);
 
             Class<?> loadedClass = sharedClassLoader.loadClass(fullyQualifiedName);
@@ -72,31 +85,31 @@ public abstract class ClassLoaderBasedInspector implements Inspector<ProjectFile
         } catch (ClassNotFoundException e) {
             // Class not found - this is expected for many classes
             logger.debug("Class not found in ClassLoader: {} ({})",
-                    projectFile.getFullyQualifiedName(), e.getMessage());
-            return InspectorResult.notApplicable(getColumnName(), e);
+                    fullyQualifiedName, e.getMessage());
+            return InspectorResult.notApplicable(getColumnName());
 
         } catch (NoClassDefFoundError e) {
             // Missing dependencies - also expected
             logger.debug("Missing dependencies for class: {} ({})",
-                    projectFile.getFullyQualifiedName(), e.getMessage());
-            return InspectorResult.notApplicable(getColumnName(), e);
+                    fullyQualifiedName, e.getMessage());
+            return InspectorResult.notApplicable(getColumnName());
 
         } catch (LinkageError e) {
             // Linkage issues - treat as not applicable
             logger.debug("Linkage error loading class: {} ({})",
-                    projectFile.getFullyQualifiedName(), e.getMessage());
-            return InspectorResult.notApplicable(getColumnName(), e);
+                    fullyQualifiedName, e.getMessage());
+            return InspectorResult.notApplicable(getColumnName());
 
         } catch (SecurityException e) {
             // Security restrictions - treat as not applicable
             logger.debug("Security restriction loading class: {} ({})",
-                    projectFile.getFullyQualifiedName(), e.getMessage());
-            return InspectorResult.notApplicable(getColumnName(), e);
+                    fullyQualifiedName, e.getMessage());
+            return InspectorResult.notApplicable(getColumnName());
 
         } catch (Exception e) {
             // Unexpected errors - return as error
             logger.warn("Unexpected error loading class: {} ({})",
-                    projectFile.getFullyQualifiedName(), e.getMessage());
+                    fullyQualifiedName, e.getMessage());
             return InspectorResult.error(getColumnName(),
                     "Unexpected error loading class: " + e.getMessage());
         }
@@ -104,10 +117,10 @@ public abstract class ClassLoaderBasedInspector implements Inspector<ProjectFile
 
     @Override
     public boolean supports(ProjectFile projectFile) {
-        // By default, support any project file that represents a Java class
-        return projectFile != null && (projectFile.hasSourceCode() ||
-                projectFile.hasBinaryCode() ||
-                projectFile.getFileExtension().equals("class"));
+        // Support ProjectFiles that represent Java classes with fully qualified names
+        return projectFile != null &&
+                isJavaClass(projectFile) &&
+                getClassName(projectFile) != null;
     }
 
     /**
@@ -125,6 +138,7 @@ public abstract class ClassLoaderBasedInspector implements Inspector<ProjectFile
      * 
      * @param loadedClass the successfully loaded Class<?> object
      * @param projectFile the ProjectFile metadata object containing file locations
+     *                    and tags
      * @return the result of the analysis
      */
     protected abstract InspectorResult analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile);

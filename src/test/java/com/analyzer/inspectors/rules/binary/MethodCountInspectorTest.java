@@ -1,9 +1,10 @@
 package com.analyzer.inspectors.rules.binary;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ClassType;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.resource.ResourceLocation;
-import com.analyzer.test.stubs.StubClazz;
+import com.analyzer.test.stubs.StubProjectFile;
 import com.analyzer.test.stubs.StubResourceLocation;
 import com.analyzer.test.stubs.StubResourceResolver;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,14 +34,13 @@ class MethodCountInspectorTest {
         inspector = new MethodCountInspector(stubResourceResolver);
     }
 
-
-
     @Test
     @DisplayName("Should support classes with binary location")
     void shouldSupportClassesWithBinaryLocation() {
         // Given
         ResourceLocation binaryLocation = new StubResourceLocation("/test/TestClass.class");
-        StubClazz clazz = new StubClazz("TestClass", "com.test", Clazz.ClassType.BINARY_ONLY, null, binaryLocation);
+        StubProjectFile clazz = new StubProjectFile("TestClass", "com.test", ClassType.BINARY_ONLY, null,
+                binaryLocation);
 
         // When
         boolean supports = inspector.supports(clazz);
@@ -64,7 +64,7 @@ class MethodCountInspectorTest {
     void shouldCountSimpleMethods() throws IOException {
         // Given
         byte[] classBytes = createClassWithMethods("TestClass", 3);
-        StubClazz clazz = setupClassForAnalysis("TestClass", classBytes);
+        StubProjectFile clazz = setupClassForAnalysis("TestClass", classBytes);
 
         // When
         InspectorResult result = inspector.decorate(clazz);
@@ -80,7 +80,7 @@ class MethodCountInspectorTest {
     void shouldCountConstructorAsMethod() throws IOException {
         // Given
         byte[] classBytes = createClassWithConstructorAndMethods("TestClass", 2);
-        StubClazz clazz = setupClassForAnalysis("TestClass", classBytes);
+        StubProjectFile clazz = setupClassForAnalysis("TestClass", classBytes);
 
         // When
         InspectorResult result = inspector.decorate(clazz);
@@ -96,7 +96,7 @@ class MethodCountInspectorTest {
     void shouldCountStaticMethods() throws IOException {
         // Given
         byte[] classBytes = createClassWithStaticMethods("TestClass", 2, 1);
-        StubClazz clazz = setupClassForAnalysis("TestClass", classBytes);
+        StubProjectFile clazz = setupClassForAnalysis("TestClass", classBytes);
 
         // When
         InspectorResult result = inspector.decorate(clazz);
@@ -112,7 +112,7 @@ class MethodCountInspectorTest {
     void shouldCountZeroMethodsInEmptyClass() throws IOException {
         // Given
         byte[] classBytes = createEmptyClass("EmptyClass");
-        StubClazz clazz = setupClassForAnalysis("EmptyClass", classBytes);
+        StubProjectFile clazz = setupClassForAnalysis("EmptyClass", classBytes);
 
         // When
         InspectorResult result = inspector.decorate(clazz);
@@ -128,7 +128,7 @@ class MethodCountInspectorTest {
     void shouldCountMethodsWithDifferentAccessModifiers() throws IOException {
         // Given
         byte[] classBytes = createClassWithVariousAccessModifiers("TestClass");
-        StubClazz clazz = setupClassForAnalysis("TestClass", classBytes);
+        StubProjectFile clazz = setupClassForAnalysis("TestClass", classBytes);
 
         // When
         InspectorResult result = inspector.decorate(clazz);
@@ -144,10 +144,13 @@ class MethodCountInspectorTest {
     void shouldHandleIOExceptionDuringAnalysis() throws IOException {
         // Given
         ResourceLocation binaryLocation = new StubResourceLocation("/test/TestClass.class");
-        StubClazz clazz = new StubClazz("TestClass", "com.test", Clazz.ClassType.BINARY_ONLY, null, binaryLocation);
-        
-        // Set up resource resolver to throw IOException
-        stubResourceResolver.setIOException(binaryLocation, new IOException("Network error"));
+        StubProjectFile clazz = new StubProjectFile("TestClass", "com.test", ClassType.BINARY_ONLY, null,
+                binaryLocation);
+
+        // BinaryClassInspector creates ResourceLocation from the ProjectFile's path
+        // So we need to set up the exception under that path too
+        ResourceLocation actualLocation = new ResourceLocation(clazz.getFilePath().toUri());
+        stubResourceResolver.setIOException(actualLocation, new IOException("Network error"));
 
         // When
         InspectorResult result = inspector.decorate(clazz);
@@ -164,7 +167,7 @@ class MethodCountInspectorTest {
     void shouldHandleInvalidClassFile() throws IOException {
         // Given
         byte[] invalidBytes = "not a class file".getBytes();
-        StubClazz clazz = setupClassForAnalysis("InvalidClass", invalidBytes);
+        StubProjectFile clazz = setupClassForAnalysis("InvalidClass", invalidBytes);
 
         // When
         InspectorResult result = inspector.decorate(clazz);
@@ -178,7 +181,8 @@ class MethodCountInspectorTest {
     @DisplayName("Should return not applicable when class is not supported")
     void shouldReturnNotApplicableWhenClassIsNotSupported() {
         // Given - class with SOURCE_ONLY type and no binary location
-        StubClazz clazz = new StubClazz("TestClass", "com.test", Clazz.ClassType.SOURCE_ONLY, null, null);
+        StubProjectFile clazz = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY, null,
+                null);
 
         // When
         InspectorResult result = inspector.decorate(clazz);
@@ -211,7 +215,8 @@ class MethodCountInspectorTest {
     }
 
     /**
-     * Creates bytecode for a class with a constructor and specified number of methods.
+     * Creates bytecode for a class with a constructor and specified number of
+     * methods.
      */
     private byte[] createClassWithConstructorAndMethods(String className, int methodCount) {
         ClassWriter cw = new ClassWriter(0);
@@ -257,7 +262,8 @@ class MethodCountInspectorTest {
 
         // Add static methods
         for (int i = 0; i < staticMethods; i++) {
-            MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "staticMethod" + i, "()V", null, null);
+            MethodVisitor mv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "staticMethod" + i, "()V", null,
+                    null);
             mv.visitCode();
             mv.visitInsn(Opcodes.RETURN);
             mv.visitMaxs(0, 0);
@@ -318,14 +324,17 @@ class MethodCountInspectorTest {
     }
 
     /**
-     * Sets up a StubClazz for class analysis with the given bytecode.
+     * Sets up a StubProjectFile for class analysis with the given bytecode.
      */
-    private StubClazz setupClassForAnalysis(String className, byte[] classBytes) throws IOException {
+    private StubProjectFile setupClassForAnalysis(String className, byte[] classBytes) throws IOException {
         ResourceLocation binaryLocation = new StubResourceLocation("/test/" + className + ".class");
-        StubClazz clazz = new StubClazz(className, "com.test", Clazz.ClassType.BINARY_ONLY, null, binaryLocation);
+        StubProjectFile clazz = new StubProjectFile(className, "com.test", ClassType.BINARY_ONLY, null,
+                binaryLocation);
 
-        // Set up the resource resolver to return the class bytes as an InputStream
-        stubResourceResolver.setBinaryContent(binaryLocation, classBytes);
+        // BinaryClassInspector creates ResourceLocation from the ProjectFile's path
+        // So we need to register the binary content under that path too
+        ResourceLocation actualLocation = new ResourceLocation(clazz.getFilePath().toUri());
+        stubResourceResolver.setBinaryContent(actualLocation, classBytes);
 
         return clazz;
     }

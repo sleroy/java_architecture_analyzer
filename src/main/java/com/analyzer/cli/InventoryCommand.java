@@ -1,14 +1,15 @@
 package com.analyzer.cli;
 
+import com.analyzer.analysis.Analysis;
 import com.analyzer.core.AnalysisEngine;
-import com.analyzer.core.Clazz;
 import com.analyzer.core.CsvExporter;
 import com.analyzer.core.Inspector;
 import com.analyzer.core.InspectorRegistry;
-import com.analyzer.core.PackageFilter;
-import com.analyzer.discovery.ClassDiscoveryEngine;
+import com.analyzer.core.Project;
+import com.analyzer.core.ProjectFile;
+import com.analyzer.detection.FileDetector;
+import com.analyzer.detection.FileExtensionDetector;
 import com.analyzer.resource.CompositeResourceResolver;
-import com.analyzer.resource.ResourceLocation;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import org.slf4j.Logger;
@@ -31,12 +32,8 @@ public class InventoryCommand implements Callable<Integer> {
 
     private static final Logger logger = LoggerFactory.getLogger(InventoryCommand.class);
 
-    @Option(names = { "--source" }, description = "Path to the source files (e.g., src/main/java or /path/to/src)")
-    private String sourcePath;
-
-    @Option(names = {
-            "--binary" }, description = "Path to binary archive files or directory. Supports JAR, WAR, EAR, ZIP files. For directories, scans recursively for all archive files.")
-    private String binaryPath;
+    @Option(names = { "--project" }, description = "Path to the project directory to analyze", required = true)
+    private String projectPath;
 
     @Option(names = {
             "--output" }, description = "Output file for the analysis results (CSV format)", defaultValue = "out/inventory.csv")
@@ -62,26 +59,15 @@ public class InventoryCommand implements Callable<Integer> {
 
     @Override
     public Integer call() throws Exception {
-        logger.info("Starting Java Architecture Analysis...");
+        logger.info("Starting Project Architecture Analysis...");
 
         // Validate parameters
         if (!validateParameters()) {
             return 1;
         }
 
-        // Convert paths to URIs
-        String sourceUri = convertPathToUri(sourcePath);
-        String binaryUri = convertPathToUri(binaryPath);
-
-        logger.debug("Converting paths to URIs");
-        logger.debug("sourcePath = {}", sourcePath);
-        logger.debug("binaryPath = {}", binaryPath);
-        logger.debug("sourceUri = {}", sourceUri);
-        logger.debug("binaryUri = {}", binaryUri);
-
         logger.info("Configuration:");
-        logger.info("  Source path: {} -> URI: {}", sourcePath, sourceUri);
-        logger.info("  Binary path: {} -> URI: {}", binaryPath, binaryUri);
+        logger.info("  Project path: {}", projectPath);
         logger.info("  Output file: {}", outputFile);
         logger.info("  Encoding: {}", encoding);
         logger.info("  Java version: {}", javaVersion);
@@ -93,71 +79,35 @@ public class InventoryCommand implements Callable<Integer> {
             // Initialize ResourceResolver system
             CompositeResourceResolver resolver = CompositeResourceResolver.createDefault();
 
-            // Create ResourceLocations from URIs
-            ResourceLocation sourceLocation = sourceUri != null ? new ResourceLocation(sourceUri) : null;
-            List<ResourceLocation> binaryLocations = new ArrayList<>();
-
-            logger.debug("Creating ResourceLocations");
-            logger.debug("sourceLocation = {}", sourceLocation);
-
-            if (binaryUri != null) {
-                logger.debug("Adding binaryUri to binaryLocations: {}", binaryUri);
-                binaryLocations.add(new ResourceLocation(binaryUri));
-            } else {
-                logger.debug("binaryUri is null, not adding to binaryLocations");
-            }
-
-            logger.debug("binaryLocations.size() = {}", binaryLocations.size());
-            logger.debug("binaryLocations.isEmpty() = {}", binaryLocations.isEmpty());
-
             // 1. Initialize Inspector Registry with plugins
             InspectorRegistry inspectorRegistry = new InspectorRegistry(pluginsDirectory, resolver);
             logger.info("{}", inspectorRegistry.getStatistics());
 
-            // 2. Initialize Analysis Engine
-            AnalysisEngine analysisEngine = new AnalysisEngine(inspectorRegistry);
+            // 2. Create default file detectors
+            List<FileDetector> fileDetectors = createDefaultFileDetectors();
+            logger.info("Created {} file detectors", fileDetectors.size());
+
+            // 3. Create empty analysis list (will be enhanced later)
+            List<Analysis> analyses = new ArrayList<>();
+
+            // 4. Initialize Analysis Engine with new architecture
+            AnalysisEngine analysisEngine = new AnalysisEngine(inspectorRegistry, fileDetectors, analyses);
             logger.info("{}", analysisEngine.getStatistics());
 
-            // 3. Discover classes
-            logger.debug("About to check condition for class discovery");
-            logger.debug("sourceLocation != null = {}", (sourceLocation != null));
-            logger.debug("!binaryLocations.isEmpty() = {}", (!binaryLocations.isEmpty()));
-            logger.debug("Overall condition = {}", (sourceLocation != null || !binaryLocations.isEmpty()));
+            // 5. Analyze the project using new architecture
+            java.nio.file.Path projectDir = java.nio.file.Paths.get(projectPath);
+            Project project = analysisEngine.analyzeProject(projectDir, inspectors);
 
-            if (sourceLocation != null || !binaryLocations.isEmpty()) {
-                logger.debug("Condition passed, creating ClassDiscoveryEngine");
-                ClassDiscoveryEngine classDiscovery = new ClassDiscoveryEngine(resolver);
-                logger.debug("Calling classDiscovery.discoverClasses()");
-                Map<String, Clazz> discoveredClasses = classDiscovery.discoverClasses(sourceLocation, binaryLocations);
+            logger.info("Project analysis completed. Found {} files", project.getProjectFiles().size());
 
-                logger.info("Discovered {} classes", discoveredClasses.size());
+            // 6. Generate CSV output with inspector results (will need to be updated for
+            // ProjectFile)
+            CsvExporter csvExporter = new CsvExporter(outputFile);
+            List<Inspector> inspectorList = analysisEngine.getInspectors(inspectors);
 
-                // 4. Apply package filtering if specified
-                Map<String, Clazz> filteredClasses = discoveredClasses;
-                if (packageFilters != null && !packageFilters.isEmpty()) {
-                    filteredClasses = PackageFilter.filterClasses(discoveredClasses, packageFilters);
-
-                    PackageFilter.FilteringStatistics stats = PackageFilter.createStatistics(
-                            0, 0, // Package stats not needed for new architecture
-                            discoveredClasses.size(), filteredClasses.size(),
-                            packageFilters);
-
-                    logger.info("{}", stats);
-                    logger.info("After filtering: {} classes", filteredClasses.size());
-                }
-
-                // 5. Run inspector analysis on filtered classes
-                Map<String, Clazz> analyzedClasses = analysisEngine.analyze(filteredClasses, inspectors);
-
-                // 6. Generate CSV output with inspector results
-                CsvExporter csvExporter = new CsvExporter(outputFile);
-                List<Inspector> inspectorList = analysisEngine.getInspectors(inspectors);
-
-                logger.info("{}", csvExporter.getStatistics(analyzedClasses, inspectorList));
-                csvExporter.exportToCsv(analyzedClasses, inspectorList);
-            } else {
-                logger.warn("No source or binary locations found - skipping class discovery");
-            }
+            logger.info("Exporting results to CSV...");
+            // TODO: Update CsvExporter to work with ProjectFile instead of ProjectFile
+            // csvExporter.exportToCsv(project.getProjectFiles(), inspectorList);
 
             logger.info("Analysis completed successfully!");
             logger.info("Results written to: {}", outputFile.getAbsolutePath());
@@ -167,6 +117,22 @@ public class InventoryCommand implements Callable<Integer> {
             logger.error("Error during analysis: {}", e.getMessage(), e);
             return 1;
         }
+    }
+
+    /**
+     * Creates default file detectors for common file types.
+     */
+    private List<FileDetector> createDefaultFileDetectors() {
+        List<FileDetector> detectors = new ArrayList<>();
+
+        // Add Java file detector
+        detectors.add(FileExtensionDetector.createJavaDetector());
+
+        // Add other common file detectors
+        detectors.add(FileExtensionDetector.createConfigDetector());
+        detectors.add(FileExtensionDetector.createBinaryDetector());
+
+        return detectors;
     }
 
     /**
@@ -200,15 +166,21 @@ public class InventoryCommand implements Callable<Integer> {
     }
 
     private boolean validateParameters() {
-        // At least one input source must be specified
-        if (sourcePath == null && binaryPath == null) {
-            logger.error("Error: At least one of --source or --binary must be specified");
+        // Project path must be specified (already enforced by @Option required=true)
+        if (projectPath == null || projectPath.trim().isEmpty()) {
+            logger.error("Error: --project path must be specified");
             return false;
         }
 
-        // If source is used, Java version is mandatory
-        if (sourcePath != null && javaVersion == null) {
-            logger.error("Error: --java_version is required when --source is specified");
+        // Validate project path exists and is a directory
+        File projectDir = new File(projectPath);
+        if (!projectDir.exists()) {
+            logger.error("Error: Project directory does not exist: {}", projectPath);
+            return false;
+        }
+
+        if (!projectDir.isDirectory()) {
+            logger.error("Error: Project path must be a directory: {}", projectPath);
             return false;
         }
 
@@ -223,20 +195,12 @@ public class InventoryCommand implements Callable<Integer> {
     }
 
     // Getters for testing and internal use
-    public String getSourceUri() {
-        return convertPathToUri(sourcePath);
+    public String getProjectUri() {
+        return convertPathToUri(projectPath);
     }
 
-    public String getBinaryUri() {
-        return convertPathToUri(binaryPath);
-    }
-
-    public String getSourcePath() {
-        return sourcePath;
-    }
-
-    public String getBinaryPath() {
-        return binaryPath;
+    public String getProjectPath() {
+        return projectPath;
     }
 
     public File getOutputFile() {

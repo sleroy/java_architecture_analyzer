@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.rules.bedrock;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.inspectors.core.bedrock.BedrockInspector;
 import com.analyzer.resource.ResourceResolver;
@@ -44,7 +44,7 @@ public class CodeQualityInspector extends BedrockInspector {
 
 
     @Override
-    protected String buildPrompt(String content, Clazz clazz) {
+    protected String buildPrompt(String content, ProjectFile clazz) {
         String basePrompt = "You are a senior Java developer performing a code quality assessment. " +
                 "Please analyze the provided Java code and give it a quality score from 1 to 10, where:\n" +
                 "- 1-3: Poor quality (major issues with readability, structure, or best practices)\n" +
@@ -64,7 +64,7 @@ public class CodeQualityInspector extends BedrockInspector {
     }
 
     @Override
-    protected InspectorResult parseResponse(String response, Clazz clazz) {
+    protected InspectorResult parseResponse(String response, ProjectFile clazz) {
         if (response == null || response.trim().isEmpty()) {
             return InspectorResult.error(getColumnName(), "Empty response from AI model");
         }

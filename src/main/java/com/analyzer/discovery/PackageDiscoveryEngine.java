@@ -1,6 +1,6 @@
 package com.analyzer.discovery;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.Package;
 import com.analyzer.resource.ResourceLocation;
 
@@ -23,15 +23,16 @@ public class PackageDiscoveryEngine {
     /**
      * Build package hierarchy from the discovered classes.
      * 
-     * @param discoveredClasses Map of fully qualified class names to Clazz objects
+     * @param discoveredClasses Map of fully qualified class names to ProjectFile
+     *                          objects
      * @return Map of package names to Package objects
      */
-    public Map<String, Package> discoverPackages(Map<String, Clazz> discoveredClasses) {
+    public Map<String, Package> discoverPackages(Map<String, ProjectFile> discoveredClasses) {
         // Clear previous results
         discoveredPackages.clear();
 
         // First pass: create all packages and collect their classes
-        for (Clazz clazz : discoveredClasses.values()) {
+        for (ProjectFile clazz : discoveredClasses.values()) {
             String packageName = clazz.getPackageName();
 
             // Handle default package (empty package name)

@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.rules.source;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.inspectors.core.source.SourceFileInspector;
 import com.analyzer.resource.ResourceLocation;
@@ -35,7 +35,7 @@ public class ClocInspector extends SourceFileInspector {
     }
 
     @Override
-    protected InspectorResult analyzeSourceFile(Clazz clazz, ResourceLocation sourceLocation) throws IOException {
+    protected InspectorResult analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation) throws IOException {
         try {
             long lineCount = countLines(sourceLocation);
             return new InspectorResult(getColumnName(), lineCount);

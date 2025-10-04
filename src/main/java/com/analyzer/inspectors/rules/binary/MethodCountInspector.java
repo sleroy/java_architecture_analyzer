@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.rules.binary;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.inspectors.core.binary.ASMInspector;
 import com.analyzer.resource.ResourceResolver;
@@ -9,10 +9,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Inspector that counts the number of method declarations in a Java class using bytecode analysis.
- * This rule helps assess class complexity and identify classes with too many methods.
+ * Inspector that counts the number of method declarations in a Java class using
+ * bytecode analysis.
+ * This rule helps assess class complexity and identify classes with too many
+ * methods.
  * 
- * Uses ASM to analyze compiled bytecode instead of source code, providing more accurate
+ * Uses ASM to analyze compiled bytecode instead of source code, providing more
+ * accurate
  * method counting that includes:
  * - Regular methods
  * - Constructors
@@ -40,9 +43,8 @@ public class MethodCountInspector extends ASMInspector {
         return "method_count";
     }
 
-
     @Override
-    protected ASMClassVisitor createClassVisitor(Clazz clazz) {
+    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile) {
         return new MethodCountVisitor(getColumnName());
     }
 
@@ -69,7 +71,7 @@ public class MethodCountInspector extends ASMInspector {
                 String[] exceptions) {
             methodCount++;
             logger.debug("Found method: {} with descriptor: {} (count: {})", name, descriptor, methodCount);
-            
+
             // Return null as we don't need to analyze method bodies
             return null;
         }

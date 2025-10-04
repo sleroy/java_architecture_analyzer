@@ -10,7 +10,7 @@ import java.util.*;
 public class Package {
     private final String packageName;
     private final ResourceLocation sourceLocation;
-    private final List<Clazz> classes;
+    private final List<ProjectFile> classes;
     private final Map<String, Object> inspectorResults;
 
     public Package(String packageName, ResourceLocation sourceLocation) {
@@ -28,19 +28,19 @@ public class Package {
         return sourceLocation;
     }
 
-    public List<Clazz> getClasses() {
+    public List<ProjectFile> getClasses() {
         return Collections.unmodifiableList(classes);
     }
 
-    public void addClass(Clazz clazz) {
+    public void addClass(ProjectFile clazz) {
         if (clazz != null && !classes.contains(clazz)) {
             classes.add(clazz);
         }
     }
 
-    public void addClasses(Collection<Clazz> classesToAdd) {
+    public void addClasses(Collection<ProjectFile> classesToAdd) {
         if (classesToAdd != null) {
-            for (Clazz clazz : classesToAdd) {
+            for (ProjectFile clazz : classesToAdd) {
                 addClass(clazz);
             }
         }

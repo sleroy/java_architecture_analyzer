@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.binary;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
@@ -52,8 +52,8 @@ public abstract class JavassistInspector extends BinaryClassInspector {
     }
 
     @Override
-    protected final InspectorResult analyzeClassFile(Clazz clazz, ResourceLocation binaryLocation,
-            InputStream classInputStream) throws IOException {
+    protected final InspectorResult analyzeClassFile(ProjectFile clazz, ResourceLocation binaryLocation,
+                    InputStream classInputStream) throws IOException {
         try {
             // Read class bytes and create CtClass
             byte[] classBytes = classInputStream.readAllBytes();
@@ -88,7 +88,7 @@ public abstract class JavassistInspector extends BinaryClassInspector {
      * @param clazz the class being analyzed
      * @return the result of bytecode analysis
      */
-    protected abstract InspectorResult analyzeCtClass(CtClass ctClass, Clazz clazz);
+    protected abstract InspectorResult analyzeCtClass(CtClass ctClass, ProjectFile clazz);
 
     /**
      * Gets the ClassPool used by this inspector.

@@ -1,56 +1,46 @@
 package com.analyzer.inspectors.source;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ClassType;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.inspectors.core.source.SourceFileInspector;
 import com.analyzer.resource.ResourceLocation;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.test.stubs.StubProjectFile;
+import com.analyzer.test.stubs.StubResourceLocation;
+import com.analyzer.test.stubs.StubResourceResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for SourceFileInspector base class functionality.
  * Tests common behavior for all source file inspectors.
  */
-@ExtendWith(MockitoExtension.class)
 @DisplayName("SourceFileInspector Unit Tests")
 class SourceFileInspectorTest {
 
-    @Mock
-    private ResourceResolver mockResourceResolver;
-
-    @Mock
-    private Clazz mockClazz;
-
-    @Mock
-    private ResourceLocation mockSourceLocation;
-
+    private StubResourceResolver stubResourceResolver;
     private TestSourceFileInspector inspector;
 
     @BeforeEach
     void setUp() {
-        inspector = new TestSourceFileInspector(mockResourceResolver);
+        stubResourceResolver = new StubResourceResolver();
+        inspector = new TestSourceFileInspector(stubResourceResolver);
     }
 
     @Test
     @DisplayName("Should support classes with source code")
     void shouldSupportClassesWithSourceCode() {
         // Given
-        when(mockClazz.hasSourceCode()).thenReturn(true);
+        StubProjectFile projectFile = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        projectFile.setHasSourceCode(true);
 
         // When
-        boolean supports = inspector.supports(mockClazz);
+        boolean supports = inspector.supports(projectFile);
 
         // Then
         assertTrue(supports);
@@ -60,10 +50,11 @@ class SourceFileInspectorTest {
     @DisplayName("Should not support classes without source code")
     void shouldNotSupportClassesWithoutSourceCode() {
         // Given
-        when(mockClazz.hasSourceCode()).thenReturn(false);
+        StubProjectFile projectFile = new StubProjectFile("TestClass", "com.test", ClassType.BINARY_ONLY);
+        projectFile.setHasSourceCode(false);
 
         // When
-        boolean supports = inspector.supports(mockClazz);
+        boolean supports = inspector.supports(projectFile);
 
         // Then
         assertFalse(supports);
@@ -83,10 +74,11 @@ class SourceFileInspectorTest {
     @DisplayName("Should return not applicable when class is not supported")
     void shouldReturnNotApplicableWhenClassIsNotSupported() {
         // Given
-        when(mockClazz.hasSourceCode()).thenReturn(false);
+        StubProjectFile projectFile = new StubProjectFile("TestClass", "com.test", ClassType.BINARY_ONLY);
+        projectFile.setHasSourceCode(false);
 
         // When
-        InspectorResult result = inspector.decorate(mockClazz);
+        InspectorResult result = inspector.decorate(projectFile);
 
         // Then
         assertTrue(result.isNotApplicable());
@@ -94,30 +86,36 @@ class SourceFileInspectorTest {
     }
 
     @Test
-    @DisplayName("Should return not applicable when class has no source location")
-    void shouldReturnNotApplicableWhenClassHasNoSourceLocation() {
+    @DisplayName("Should return error when class has no source location")
+    void shouldReturnErrorWhenClassHasNoSourceLocation() {
         // Given
-        when(mockClazz.hasSourceCode()).thenReturn(true);
-        when(mockClazz.getSourceLocation()).thenReturn(null);
+        StubProjectFile projectFile = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        projectFile.setHasSourceCode(true);
+        // Don't set source location - will be null, but ProjectFile still generates a
+        // file path
 
         // When
-        InspectorResult result = inspector.decorate(mockClazz);
+        InspectorResult result = inspector.decorate(projectFile);
 
         // Then
-        assertTrue(result.isNotApplicable());
+        assertTrue(result.isError());
         assertEquals("test", result.getTagName());
+        assertTrue(result.getErrorMessage().contains("Source file not found"));
     }
 
     @Test
     @DisplayName("Should return error when source file does not exist")
     void shouldReturnErrorWhenSourceFileDoesNotExist() {
         // Given
-        when(mockClazz.hasSourceCode()).thenReturn(true);
-        when(mockClazz.getSourceLocation()).thenReturn(mockSourceLocation);
-        when(mockResourceResolver.exists(mockSourceLocation)).thenReturn(false);
+        ResourceLocation sourceLocation = new StubResourceLocation("/test/TestClass.java");
+        StubProjectFile projectFile = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        projectFile.setHasSourceCode(true);
+        projectFile.setSourceLocationUri(sourceLocation.toString());
+
+        // Don't set file to exist in stub resolver (default is false)
 
         // When
-        InspectorResult result = inspector.decorate(mockClazz);
+        InspectorResult result = inspector.decorate(projectFile);
 
         // Then
         assertTrue(result.isError());
@@ -129,14 +127,19 @@ class SourceFileInspectorTest {
     @DisplayName("Should return error when IOException occurs during analysis")
     void shouldReturnErrorWhenIOExceptionOccursDuringAnalysis() throws IOException {
         // Given
-        when(mockClazz.hasSourceCode()).thenReturn(true);
-        when(mockClazz.getSourceLocation()).thenReturn(mockSourceLocation);
-        when(mockResourceResolver.exists(mockSourceLocation)).thenReturn(true);
-        when(mockResourceResolver.openStream(mockSourceLocation))
-                .thenThrow(new IOException("Network error"));
+        ResourceLocation sourceLocation = new StubResourceLocation("/test/TestClass.java");
+        StubProjectFile projectFile = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        projectFile.setHasSourceCode(true);
+        projectFile.setSourceLocationUri(sourceLocation.toString());
+
+        // SourceFileInspector creates ResourceLocation from the ProjectFile's path
+        // So we need to set up the exception under that path too
+        ResourceLocation actualLocation = new ResourceLocation(projectFile.getFilePath().toUri());
+        stubResourceResolver.setFileExists(actualLocation, true);
+        stubResourceResolver.setIOException(actualLocation, new IOException("Network error"));
 
         // When
-        InspectorResult result = inspector.decorate(mockClazz);
+        InspectorResult result = inspector.decorate(projectFile);
 
         // Then
         assertTrue(result.isError());
@@ -150,16 +153,19 @@ class SourceFileInspectorTest {
     void shouldCallAnalyzeSourceFileWhenPreconditionsAreMet() throws IOException {
         // Given
         String content = "test content";
-        when(mockClazz.hasSourceCode()).thenReturn(true);
-        when(mockClazz.getSourceLocation()).thenReturn(mockSourceLocation);
-        when(mockResourceResolver.exists(mockSourceLocation)).thenReturn(true);
+        ResourceLocation sourceLocation = new StubResourceLocation("/test/TestClass.java");
+        StubProjectFile projectFile = new StubProjectFile("TestClass", "com.test", ClassType.SOURCE_ONLY);
+        projectFile.setHasSourceCode(true);
+        projectFile.setSourceLocationUri(sourceLocation.toString());
 
-        // Create a new InputStream each time the method is called
-        when(mockResourceResolver.openStream(mockSourceLocation))
-                .thenAnswer(invocation -> new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
+        // SourceFileInspector creates ResourceLocation from the ProjectFile's path
+        // So we need to set up the content under that path too
+        ResourceLocation actualLocation = new ResourceLocation(projectFile.getFilePath().toUri());
+        stubResourceResolver.setFileExists(actualLocation, true);
+        stubResourceResolver.setFileContent(actualLocation, content);
 
         // When
-        InspectorResult result = inspector.decorate(mockClazz);
+        InspectorResult result = inspector.decorate(projectFile);
 
         // Then
         assertTrue(result.isSuccessful());
@@ -172,11 +178,12 @@ class SourceFileInspectorTest {
     void shouldHandleReadFileContentCorrectly() throws IOException {
         // Given
         String content = "Hello\nWorld\n";
-        when(mockResourceResolver.openStream(mockSourceLocation))
-                .thenReturn(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
+        ResourceLocation sourceLocation = new StubResourceLocation("/test/TestClass.java");
+
+        stubResourceResolver.setFileContent(sourceLocation, content);
 
         // When
-        String result = inspector.testReadFileContent(mockSourceLocation);
+        String result = inspector.testReadFileContent(sourceLocation);
 
         // Then
         assertEquals(content, result);
@@ -187,14 +194,47 @@ class SourceFileInspectorTest {
     void shouldHandleCountLinesCorrectly() throws IOException {
         // Given
         String content = "line1\nline2\nline3\n";
-        when(mockResourceResolver.openStream(mockSourceLocation))
-                .thenReturn(new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8)));
+        ResourceLocation sourceLocation = new StubResourceLocation("/test/TestClass.java");
+
+        stubResourceResolver.setFileContent(sourceLocation, content);
 
         // When
-        long result = inspector.testCountLines(mockSourceLocation);
+        long result = inspector.testCountLines(sourceLocation);
 
         // Then
         assertEquals(3L, result);
+    }
+
+    @Test
+    @DisplayName("Should handle empty file content correctly")
+    void shouldHandleEmptyFileContentCorrectly() throws IOException {
+        // Given
+        String content = "";
+        ResourceLocation sourceLocation = new StubResourceLocation("/test/TestClass.java");
+
+        stubResourceResolver.setFileContent(sourceLocation, content);
+
+        // When
+        String result = inspector.testReadFileContent(sourceLocation);
+
+        // Then
+        assertEquals(content, result);
+    }
+
+    @Test
+    @DisplayName("Should handle single line content correctly")
+    void shouldHandleSingleLineContentCorrectly() throws IOException {
+        // Given
+        String content = "single line";
+        ResourceLocation sourceLocation = new StubResourceLocation("/test/TestClass.java");
+
+        stubResourceResolver.setFileContent(sourceLocation, content);
+
+        // When
+        long result = inspector.testCountLines(sourceLocation);
+
+        // Then
+        assertEquals(1L, result);
     }
 
     /**
@@ -202,7 +242,7 @@ class SourceFileInspectorTest {
      */
     private static class TestSourceFileInspector extends SourceFileInspector {
 
-        public TestSourceFileInspector(ResourceResolver resourceResolver) {
+        public TestSourceFileInspector(StubResourceResolver resourceResolver) {
             super(resourceResolver);
         }
 
@@ -217,7 +257,8 @@ class SourceFileInspectorTest {
         }
 
         @Override
-        protected InspectorResult analyzeSourceFile(Clazz clazz, ResourceLocation sourceLocation) throws IOException {
+        protected InspectorResult analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation)
+                throws IOException {
             // Simple test implementation that reads content and returns it
             String content = readFileContent(sourceLocation);
             return new InspectorResult(getColumnName(), (Object) ("analyzed: " + content));

@@ -1,9 +1,9 @@
 package com.analyzer.inspectors.rules.binary;
 
-import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.core.JARClassLoaderService;
-import com.analyzer.inspectors.core.ClassLoaderBasedInspector;
+import com.analyzer.core.ProjectFile;
+import com.analyzer.inspectors.core.ProjectFileClassLoaderInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,42 +11,50 @@ import org.slf4j.LoggerFactory;
 import java.lang.annotation.Annotation;
 
 /**
- * Inspector that counts the total number of annotations present on a class.
+ * ProjectFile-based inspector that counts the total number of annotations
+ * present on a class.
  * This includes both class-level annotations and annotations on methods,
  * fields, and constructors.
  * 
- * This inspector demonstrates the ClassLoaderBasedInspector pattern by:
- * 1. Loading classes at runtime using the shared ClassLoader
- * 2. Using reflection to analyze annotation metadata
- * 3. Gracefully handling classes that cannot be loaded
+ * This is the ProjectFile equivalent of AnnotationCountInspector, demonstrating
+ * how existing ProjectFile-based inspectors can be migrated to the new
+ * architecture.
  * 
- * This type of analysis would not be possible with static bytecode analysis
- * alone, as it requires access to the actual annotation metadata and
- * potentially annotation values that are only available at runtime.
+ * The inspector works by:
+ * 1. Using ProjectFile tags to identify Java class files
+ * 2. Loading classes at runtime using the shared ClassLoader
+ * 3. Using reflection to analyze annotation metadata
+ * 4. Gracefully handling classes that cannot be loaded
+ * 
+ * This type of analysis requires runtime class loading and would not be
+ * possible
+ * with static bytecode analysis alone, as it needs access to actual annotation
+ * metadata and potentially annotation values.
  */
-public class AnnotationCountInspector extends ClassLoaderBasedInspector {
+public class ProjectFileAnnotationCountInspector extends ProjectFileClassLoaderInspector {
 
-    private static final Logger logger = LoggerFactory.getLogger(AnnotationCountInspector.class);
+    private static final Logger logger = LoggerFactory.getLogger(ProjectFileAnnotationCountInspector.class);
 
     /**
-     * Creates a new AnnotationCountInspector with the required dependencies.
+     * Creates a new ProjectFileAnnotationCountInspector with the required
+     * dependencies.
      * 
      * @param resourceResolver   the resolver for accessing resources
      * @param classLoaderService the service providing the shared ClassLoader
      */
-    public AnnotationCountInspector(ResourceResolver resourceResolver,
+    public ProjectFileAnnotationCountInspector(ResourceResolver resourceResolver,
             JARClassLoaderService classLoaderService) {
         super(resourceResolver, classLoaderService);
     }
 
     @Override
     public String getName() {
-        return "Annotation Count";
+        return "ProjectFile Annotation Count";
     }
 
     @Override
     public String getColumnName() {
-        return "annotation-count";
+        return "pf-annotation-count";
     }
 
     @Override
@@ -54,13 +62,14 @@ public class AnnotationCountInspector extends ClassLoaderBasedInspector {
         try {
             int annotationCount = countAllAnnotations(loadedClass);
 
-            logger.debug("Found {} annotations on class {}", annotationCount, loadedClass.getName());
+            logger.debug("Found {} annotations on class {} (ProjectFile: {})",
+                    annotationCount, loadedClass.getName(), projectFile.getRelativePath());
 
             return new InspectorResult(getColumnName(), annotationCount);
 
         } catch (Exception e) {
-            logger.warn("Error analyzing annotations for class {}: {}",
-                    loadedClass.getName(), e.getMessage());
+            logger.warn("Error analyzing annotations for class {} (ProjectFile: {}): {}",
+                    loadedClass.getName(), projectFile.getRelativePath(), e.getMessage());
             return InspectorResult.error(getColumnName(),
                     "Error analyzing annotations: " + e.getMessage());
         }
@@ -136,10 +145,8 @@ public class AnnotationCountInspector extends ClassLoaderBasedInspector {
 
     @Override
     public boolean supports(ProjectFile projectFile) {
-        // Support all project files that represent Java classes - let the base class
-        // handle class loading failures
-        return projectFile != null && (projectFile.hasSourceCode() ||
-                projectFile.hasBinaryCode() ||
-                projectFile.getFileExtension().equals("class"));
+        // Support Java class files that have been detected and tagged appropriately
+        return super.supports(projectFile) &&
+                (hasTag(projectFile, "detect_java") || hasTag(projectFile, "detect_class"));
     }
 }

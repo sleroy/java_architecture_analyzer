@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.binary;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
@@ -11,12 +11,16 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Abstract base class for binary class inspectors that use ASM for bytecode analysis.
- * Implements the template method pattern to provide a consistent framework for ASM-based
+ * Abstract base class for binary class inspectors that use ASM for bytecode
+ * analysis.
+ * Implements the template method pattern to provide a consistent framework for
+ * ASM-based
  * class analysis.
  * 
- * Subclasses must implement createClassVisitor() to provide their specific analysis logic.
- * The class visitor should extend ASMClassVisitor to provide the analysis result.
+ * Subclasses must implement createClassVisitor() to provide their specific
+ * analysis logic.
+ * The class visitor should extend ASMClassVisitor to provide the analysis
+ * result.
  */
 public abstract class ASMInspector extends BinaryClassInspector {
 
@@ -30,21 +34,21 @@ public abstract class ASMInspector extends BinaryClassInspector {
     }
 
     @Override
-    protected final InspectorResult analyzeClassFile(Clazz clazz, ResourceLocation binaryLocation,
+    protected final InspectorResult analyzeClassFile(ProjectFile projectFile, ResourceLocation binaryLocation,
             InputStream classInputStream) throws IOException {
         try {
             // Read the class bytes using ASM
             ClassReader classReader = new ClassReader(classInputStream);
-            
+
             // Create the analysis visitor
-            ASMClassVisitor visitor = createClassVisitor(clazz);
-            
+            ASMClassVisitor visitor = createClassVisitor(projectFile);
+
             // Perform the analysis
             classReader.accept(visitor, 0);
-            
+
             // Return the result from the visitor
             return visitor.getResult();
-            
+
         } catch (IOException e) {
             return InspectorResult.error(getColumnName(), "Error reading class file: " + e.getMessage());
         } catch (Exception e) {
@@ -54,12 +58,13 @@ public abstract class ASMInspector extends BinaryClassInspector {
 
     /**
      * Creates a class visitor for analyzing the bytecode.
-     * Subclasses must implement this method to provide their specific analysis logic.
+     * Subclasses must implement this method to provide their specific analysis
+     * logic.
      * 
-     * @param clazz the class being analyzed
+     * @param projectFile the project file being analyzed
      * @return an ASMClassVisitor that will perform the analysis
      */
-    protected abstract ASMClassVisitor createClassVisitor(Clazz clazz);
+    protected abstract ASMClassVisitor createClassVisitor(ProjectFile projectFile);
 
     /**
      * Base class for ASM class visitors that provide analysis results.
@@ -67,7 +72,7 @@ public abstract class ASMInspector extends BinaryClassInspector {
      * in the various visit methods, then call setResult() to store the result.
      */
     public static abstract class ASMClassVisitor extends ClassVisitor {
-        
+
         private InspectorResult result;
         private final String tagName;
 

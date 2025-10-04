@@ -1,6 +1,6 @@
 package com.rules.ejb2spring;
 
-import com.analyzer.core.Clazz;
+import com.analyzer.core.ProjectFile;
 import com.analyzer.core.InspectorResult;
 import com.analyzer.inspectors.core.source.JavaParserInspector;
 import com.analyzer.resource.ResourceResolver;
@@ -17,7 +17,7 @@ public class IdentifyServletSourceInspector extends JavaParserInspector {
     }
 
     @Override
-    protected InspectorResult analyzeCompilationUnit(CompilationUnit cu, Clazz clazz) {
+    protected InspectorResult analyzeCompilationUnit(CompilationUnit cu, ProjectFile clazz) {
         ServletDetector detector = new ServletDetector();
         cu.accept(detector, null);
 
