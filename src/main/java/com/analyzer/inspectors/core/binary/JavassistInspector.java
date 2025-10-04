@@ -62,11 +62,11 @@ public abstract class JavassistInspector extends BinaryClassInspector {
             return analyzeCtClass(ctClass, clazz);
             
         } catch (IOException e) {
-            return InspectorResult.error(getName(), "Error reading class file: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error reading class file: " + e.getMessage());
         } catch (RuntimeException e) {
-            return InspectorResult.error(getName(), "Javassist runtime error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Javassist runtime error: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "Javassist analysis error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Javassist analysis error: " + e.getMessage());
         }
     }
 

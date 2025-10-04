@@ -59,21 +59,21 @@ public abstract class JavaParserInspector extends SourceFileInspector {
             // Check for parse errors
             if (!parseResult.isSuccessful()) {
                 String problems = parseResult.getProblems().toString();
-                return InspectorResult.error(getName(), "Parse errors: " + problems);
+                return InspectorResult.error(getColumnName(), "Parse errors: " + problems);
             }
             
             // Get the parsed compilation unit
             CompilationUnit cu = parseResult.getResult().orElse(null);
             if (cu == null) {
-                return InspectorResult.error(getName(), "Failed to parse compilation unit");
+                return InspectorResult.error(getColumnName(), "Failed to parse compilation unit");
             }
             
             return analyzeCompilationUnit(cu, clazz);
             
         } catch (IOException e) {
-            return InspectorResult.error(getName(), "Error reading source file: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error reading source file: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "JavaParser error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "JavaParser error: " + e.getMessage());
         }
     }
 

@@ -12,7 +12,6 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.net.URI;
 import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -96,7 +95,7 @@ class RegExpFileInspectorTest {
         // Verify
         assertTrue(result.isSuccessful());
         assertEquals(Boolean.TRUE, result.getValue());
-        assertEquals("test-regexp", result.getInspectorName());
+        assertEquals("test-regexp", result.getTagName());
     }
 
     @Test
@@ -115,7 +114,7 @@ class RegExpFileInspectorTest {
         // Verify
         assertTrue(result.isSuccessful());
         assertEquals(Boolean.FALSE, result.getValue());
-        assertEquals("test-regexp", result.getInspectorName());
+        assertEquals("test-regexp", result.getTagName());
     }
 
     @Test
@@ -126,7 +125,7 @@ class RegExpFileInspectorTest {
         InspectorResult result = inspector.decorate(clazz);
 
         assertTrue(result.isNotApplicable());
-        assertEquals("test-regexp", result.getInspectorName());
+        assertEquals("test-regexp", result.getTagName());
     }
 
     @Test
@@ -189,19 +188,15 @@ class RegExpFileInspectorTest {
         }
 
         @Override
-        public String getName() {
+        public String getColumnName() {
             return "test-regexp";
         }
 
         @Override
-        public String getColumnName() {
+        public String getName() {
             return "Test RegExp";
         }
 
-        @Override
-        public String getDescription() {
-            return "Test regular expression inspector";
-        }
 
         // Expose protected method for testing
         public Pattern getPattern() {

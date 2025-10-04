@@ -48,9 +48,8 @@ class ClocInspectorTest {
     @Test
     @DisplayName("Should return correct inspector metadata")
     void shouldReturnCorrectInspectorMetadata() {
-        assertEquals("cloc", clocInspector.getName());
-        assertEquals("lines_of_code", clocInspector.getColumnName());
-        assertEquals("Counts the number of lines of code in source files", clocInspector.getDescription());
+
+        assertEquals("cloc", clocInspector.getColumnName());
     }
 
     @Test
@@ -75,7 +74,7 @@ class ClocInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("cloc", result.getInspectorName());
+        assertEquals("cloc", result.getTagName());
         assertEquals(13L, result.getValue()); // 13 lines including empty lines
     }
 
@@ -159,7 +158,7 @@ class ClocInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("cloc", result.getInspectorName());
+        assertEquals("cloc", result.getTagName());
         assertEquals(9L, result.getValue());
     }
 

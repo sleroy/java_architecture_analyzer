@@ -77,21 +77,21 @@ public class AnalysisEngine {
 
                     // Store the result in the class object
                     if (result.isSuccessful()) {
-                        clazz.addInspectorResult(inspector.getName(), result.getValue());
+                        clazz.addInspectorResult(inspector.getColumnName(), result.getValue());
                     } else if (result.isNotApplicable()) {
-                        clazz.addInspectorResult(inspector.getName(), "N/A");
+                        clazz.addInspectorResult(inspector.getColumnName(), "N/A");
                     } else if (result.isError()) {
-                        clazz.addInspectorResult(inspector.getName(), "ERROR: " + result.getErrorMessage());
+                        clazz.addInspectorResult(inspector.getColumnName(), "ERROR: " + result.getErrorMessage());
                     }
                 } else {
                     // Inspector doesn't support this class type - store N/A
-                    clazz.addInspectorResult(inspector.getName(), "N/A");
+                    clazz.addInspectorResult(inspector.getColumnName(), "N/A");
                 }
             } catch (Exception e) {
                 // Handle inspector errors gracefully
                 logger.error("Error running inspector '{}' on class '{}': {}",
                         inspector.getName(), clazz.getClassName(), e.getMessage());
-                clazz.addInspectorResult(inspector.getName(), "ERROR: " + e.getMessage());
+                clazz.addInspectorResult(inspector.getColumnName(), "ERROR: " + e.getMessage());
             }
         }
     }

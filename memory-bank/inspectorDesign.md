@@ -110,7 +110,7 @@ public abstract class RegExpFileInspector extends SourceFileInspector {
             throws IOException {
         String content = readFileContent(sourceLocation);
         boolean matches = pattern.matcher(content).find();
-        return new InspectorResult(getName(), matches);
+        return new InspectorResult(getColumnName(), matches);
     }
     
     /**
@@ -146,7 +146,7 @@ public abstract class CountRegexpInspector extends SourceFileInspector {
             throws IOException {
         String content = readFileContent(sourceLocation);
         int count = countMatches(content);
-        return new InspectorResult(getName(), count);
+        return new InspectorResult(getColumnName(), count);
     }
     
     /**
@@ -216,19 +216,19 @@ public abstract class JavaParserInspector extends SourceFileInspector {
             ParseResult<CompilationUnit> parseResult = javaParser.parse(content);
             
             if (!parseResult.isSuccessful()) {
-                return InspectorResult.error(getName(), 
+                return InspectorResult.error(getColumnName(), 
                     "Parse errors: " + parseResult.getProblems().toString());
             }
             
             CompilationUnit cu = parseResult.getResult().orElse(null);
             if (cu == null) {
-                return InspectorResult.error(getName(), "Failed to parse compilation unit");
+                return InspectorResult.error(getColumnName(), "Failed to parse compilation unit");
             }
             
             return analyzeCompilationUnit(cu, clazz);
             
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "JavaParser error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "JavaParser error: " + e.getMessage());
         }
     }
     
@@ -264,9 +264,9 @@ public abstract class BCELInspector extends BinaryClassInspector {
             return analyzeJavaClass(javaClass, clazz);
             
         } catch (ClassFormatException e) {
-            return InspectorResult.error(getName(), "BCEL class format error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "BCEL class format error: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "BCEL analysis error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "BCEL analysis error: " + e.getMessage());
         }
     }
     
@@ -306,9 +306,9 @@ public abstract class JavassistInspector extends BinaryClassInspector {
             return analyzeCtClass(ctClass, clazz);
             
         } catch (RuntimeException e) {
-            return InspectorResult.error(getName(), "Javassist error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Javassist error: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "Javassist analysis error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Javassist analysis error: " + e.getMessage());
         }
     }
     
@@ -387,7 +387,7 @@ public class MethodCountInspector extends JavaParserInspector {
     @Override
     protected InspectorResult analyzeCompilationUnit(CompilationUnit cu, Clazz clazz) {
         int methodCount = cu.findAll(MethodDeclaration.class).size();
-        return new InspectorResult(getName(), methodCount);
+        return new InspectorResult(getColumnName(), methodCount);
     }
     
     @Override

@@ -2,7 +2,6 @@ package com.analyzer.inspectors.rules.binary;
 
 import com.analyzer.core.Clazz;
 import com.analyzer.core.InspectorResult;
-import com.analyzer.inspectors.rules.binary.MethodCountInspector;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.test.stubs.StubClazz;
 import com.analyzer.test.stubs.StubResourceLocation;
@@ -34,13 +33,7 @@ class MethodCountInspectorTest {
         inspector = new MethodCountInspector(stubResourceResolver);
     }
 
-    @Test
-    @DisplayName("Should have correct inspector metadata")
-    void shouldHaveCorrectInspectorMetadata() {
-        assertEquals("method-count", inspector.getName());
-        assertEquals("method_count", inspector.getColumnName());
-        assertTrue(inspector.getDescription().contains("bytecode analysis"));
-    }
+
 
     @Test
     @DisplayName("Should support classes with binary location")
@@ -78,7 +71,7 @@ class MethodCountInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("method-count", result.getInspectorName());
+        assertEquals("method_count", result.getTagName());
         assertEquals(3, result.getValue());
     }
 
@@ -94,7 +87,7 @@ class MethodCountInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("method-count", result.getInspectorName());
+        assertEquals("method_count", result.getTagName());
         assertEquals(3, result.getValue()); // 1 constructor + 2 methods
     }
 
@@ -110,7 +103,7 @@ class MethodCountInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("method-count", result.getInspectorName());
+        assertEquals("method_count", result.getTagName());
         assertEquals(3, result.getValue()); // 2 instance + 1 static method
     }
 
@@ -126,7 +119,7 @@ class MethodCountInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("method-count", result.getInspectorName());
+        assertEquals("method_count", result.getTagName());
         assertEquals(0, result.getValue());
     }
 
@@ -142,7 +135,7 @@ class MethodCountInspectorTest {
 
         // Then
         assertTrue(result.isSuccessful());
-        assertEquals("method-count", result.getInspectorName());
+        assertEquals("method_count", result.getTagName());
         assertEquals(4, result.getValue()); // public, private, protected, package-private
     }
 
@@ -161,7 +154,7 @@ class MethodCountInspectorTest {
 
         // Then
         assertTrue(result.isError());
-        assertEquals("method-count", result.getInspectorName());
+        assertEquals("method_count", result.getTagName());
         assertTrue(result.getErrorMessage().contains("Error analyzing binary class"));
         assertTrue(result.getErrorMessage().contains("Network error"));
     }
@@ -178,7 +171,7 @@ class MethodCountInspectorTest {
 
         // Then
         assertTrue(result.isError());
-        assertEquals("method-count", result.getInspectorName());
+        assertEquals("method_count", result.getTagName());
     }
 
     @Test
@@ -192,7 +185,7 @@ class MethodCountInspectorTest {
 
         // Then
         assertTrue(result.isNotApplicable());
-        assertEquals("method-count", result.getInspectorName());
+        assertEquals("method_count", result.getTagName());
     }
 
     // Helper methods

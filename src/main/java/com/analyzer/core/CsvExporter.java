@@ -101,7 +101,7 @@ public class CsvExporter {
         // Inspector results (dynamic columns) - use inspector getName() for result
         // lookup
         for (Inspector inspector : inspectors) {
-            Object result = clazz.getInspectorResult(inspector.getName());
+            Object result = clazz.getInspectorResult(inspector.getColumnName());
             String resultString = formatInspectorResult(result);
             row.append(",").append(escapeCsvField(resultString));
         }

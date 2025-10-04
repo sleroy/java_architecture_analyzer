@@ -67,24 +67,24 @@ public abstract class BedrockInspector extends TextFileInspector {
         // Check if Bedrock integration is enabled
         if (!config.isEnabled()) {
             logger.debug("Bedrock integration disabled for inspector: {}", getName());
-            return InspectorResult.notApplicable(getName());
+            return InspectorResult.notApplicable(getColumnName());
         }
 
         // Check if content is suitable for AI analysis
         if (content == null || content.trim().isEmpty()) {
-            return InspectorResult.error(getName(), "No source content available for AI analysis");
+            return InspectorResult.error(getColumnName(), "No source content available for AI analysis");
         }
 
         if (content.length() < 10) {
             logger.debug("Content too short for meaningful AI analysis: {} characters", content.length());
-            return InspectorResult.notApplicable(getName());
+            return InspectorResult.notApplicable(getColumnName());
         }
 
         try {
             // Build prompt for AI model
             String prompt = buildPrompt(content, clazz);
             if (prompt == null || prompt.trim().isEmpty()) {
-                return InspectorResult.error(getName(), "Failed to build prompt for AI analysis");
+                return InspectorResult.error(getColumnName(), "Failed to build prompt for AI analysis");
             }
 
             logger.debug("Invoking Bedrock model for class: {} with prompt length: {}",
@@ -95,7 +95,7 @@ public abstract class BedrockInspector extends TextFileInspector {
 
             // Validate response
             if (!response.hasValidText()) {
-                return InspectorResult.error(getName(),
+                return InspectorResult.error(getColumnName(),
                         "Bedrock API returned empty or invalid response");
             }
 
@@ -108,11 +108,11 @@ public abstract class BedrockInspector extends TextFileInspector {
         } catch (BedrockApiException e) {
             logger.warn("Bedrock API call failed for class {}: {}",
                     clazz.getFullyQualifiedName(), e.getMessage());
-            return InspectorResult.error(getName(), "Bedrock API error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Bedrock API error: " + e.getMessage());
         } catch (Exception e) {
             logger.error("Unexpected error during Bedrock analysis for class {}: {}",
                     clazz.getFullyQualifiedName(), e.getMessage(), e);
-            return InspectorResult.error(getName(), "Unexpected error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Unexpected error: " + e.getMessage());
         }
     }
 

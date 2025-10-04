@@ -49,10 +49,6 @@ public class AnnotationCountInspector extends ClassLoaderBasedInspector {
         return "annotation-count";
     }
 
-    @Override
-    public String getDescription() {
-        return "Counts the total number of annotations on a class, including class-level, method, field, and constructor annotations";
-    }
 
     @Override
     protected InspectorResult analyzeLoadedClass(Class<?> loadedClass, Clazz clazz) {
@@ -61,12 +57,12 @@ public class AnnotationCountInspector extends ClassLoaderBasedInspector {
 
             logger.debug("Found {} annotations on class {}", annotationCount, loadedClass.getName());
 
-            return new InspectorResult(getName(), annotationCount);
+            return new InspectorResult(getColumnName(), annotationCount);
 
         } catch (Exception e) {
             logger.warn("Error analyzing annotations for class {}: {}",
                     loadedClass.getName(), e.getMessage());
-            return InspectorResult.error(getName(),
+            return InspectorResult.error(getColumnName(),
                     "Error analyzing annotations: " + e.getMessage());
         }
     }

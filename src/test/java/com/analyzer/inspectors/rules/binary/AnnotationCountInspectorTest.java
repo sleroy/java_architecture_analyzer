@@ -41,22 +41,7 @@ class AnnotationCountInspectorTest {
         inspector = new AnnotationCountInspector(resourceResolver, mockClassLoaderService);
     }
 
-    @Test
-    void testGetName() {
-        assertEquals("annotation-count", inspector.getName());
-    }
 
-    @Test
-    void testGetColumnName() {
-        assertEquals("Annotation Count", inspector.getColumnName());
-    }
-
-    @Test
-    void testGetDescription() {
-        String description = inspector.getDescription();
-        assertNotNull(description);
-        assertTrue(description.contains("annotations"));
-    }
 
     @Test
     void testSupportsValidClazz() {
@@ -82,7 +67,7 @@ class AnnotationCountInspectorTest {
 
         // Assert
         assertTrue(result.isError());
-        assertEquals("annotation-count", result.getInspectorName());
+        assertEquals("annotation-count", result.getTagName());
     }
 
     @Test
@@ -100,7 +85,7 @@ class AnnotationCountInspectorTest {
 
         // Assert
         assertTrue(result.isError());
-        assertEquals("annotation-count", result.getInspectorName());
+        assertEquals("annotation-count", result.getTagName());
         assertTrue(result.getErrorMessage().contains("Unexpected error loading class"));
     }
 

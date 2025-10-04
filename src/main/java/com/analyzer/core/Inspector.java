@@ -30,14 +30,7 @@ public interface Inspector<T> {
      * @return the column name for CSV output
      */
     String getColumnName();
-    
-    /**
-     * Gets a human-readable description of what this inspector does.
-     * 
-     * @return description of the inspector
-     */
-    String getDescription();
-    
+
     /**
      * Checks if this inspector supports analyzing the given object type.
      * 

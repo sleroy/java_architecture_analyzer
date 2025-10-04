@@ -30,19 +30,19 @@ public abstract class BinaryClassInspector implements Inspector<Clazz> {
     @Override
     public final InspectorResult decorate(Clazz clazz) {
         if (!supports(clazz)) {
-            return InspectorResult.notApplicable(getName());
+            return InspectorResult.notApplicable(getColumnName());
         }
 
         try {
             ResourceLocation binaryLocation = clazz.getBinaryLocation();
             if (binaryLocation == null) {
-                return InspectorResult.notApplicable(getName());
+                return InspectorResult.notApplicable(getColumnName());
             }
 
             return analyzeBinaryClass(clazz, binaryLocation);
 
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "Error analyzing binary class: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error analyzing binary class: " + e.getMessage());
         }
     }
 
@@ -57,7 +57,7 @@ public abstract class BinaryClassInspector implements Inspector<Clazz> {
     private InspectorResult analyzeBinaryClass(Clazz clazz, ResourceLocation binaryLocation) throws IOException {
         try (InputStream classStream = resourceResolver.openStream(binaryLocation)) {
             if (classStream == null) {
-                return InspectorResult.error(getName(), "Could not open binary class: " + binaryLocation.getUri());
+                return InspectorResult.error(getColumnName(), "Could not open binary class: " + binaryLocation.getUri());
             }
             return analyzeClassFile(clazz, binaryLocation, classStream);
         }

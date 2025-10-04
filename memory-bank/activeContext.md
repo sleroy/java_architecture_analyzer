@@ -150,7 +150,7 @@ public class MyAIInspector extends BedrockInspector {
     @Override
     protected InspectorResult parseResponse(String response, Clazz clazz) {
         double score = parseNumericResponse(response, 0.0);
-        return new InspectorResult(getName(), score);
+        return new InspectorResult(getColumnName(), score);
     }
 }
 ```

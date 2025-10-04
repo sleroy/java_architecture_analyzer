@@ -42,10 +42,6 @@ public class CodeQualityInspector extends BedrockInspector {
         return COLUMN_NAME;
     }
 
-    @Override
-    public String getDescription() {
-        return "Uses AWS Bedrock AI models to assess Java code quality on a scale from 1-10";
-    }
 
     @Override
     protected String buildPrompt(String content, Clazz clazz) {
@@ -70,7 +66,7 @@ public class CodeQualityInspector extends BedrockInspector {
     @Override
     protected InspectorResult parseResponse(String response, Clazz clazz) {
         if (response == null || response.trim().isEmpty()) {
-            return InspectorResult.error(getName(), "Empty response from AI model");
+            return InspectorResult.error(getColumnName(), "Empty response from AI model");
         }
 
         // Parse numeric response, defaulting to 5 (average) if parsing fails
@@ -89,7 +85,7 @@ public class CodeQualityInspector extends BedrockInspector {
         logger.debug("Code quality assessment for {}: {}/10",
                 clazz.getFullyQualifiedName(), roundedScore);
 
-        return new InspectorResult(getName(), roundedScore);
+        return new InspectorResult(getColumnName(), roundedScore);
     }
 
     @Override

@@ -46,9 +46,9 @@ public abstract class ASMInspector extends BinaryClassInspector {
             return visitor.getResult();
             
         } catch (IOException e) {
-            return InspectorResult.error(getName(), "Error reading class file: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error reading class file: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "ASM analysis error: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "ASM analysis error: " + e.getMessage());
         }
     }
 
@@ -69,16 +69,16 @@ public abstract class ASMInspector extends BinaryClassInspector {
     public static abstract class ASMClassVisitor extends ClassVisitor {
         
         private InspectorResult result;
-        private final String inspectorName;
+        private final String tagName;
 
         /**
          * Creates an ASMClassVisitor with the specified inspector name.
          * 
-         * @param inspectorName the name of the inspector (for result identification)
+         * @param tagName the name of the tag (for result identification)
          */
-        protected ASMClassVisitor(String inspectorName) {
+        protected ASMClassVisitor(String tagName) {
             super(org.objectweb.asm.Opcodes.ASM9);
-            this.inspectorName = inspectorName;
+            this.tagName = tagName;
         }
 
         /**
@@ -87,7 +87,7 @@ public abstract class ASMInspector extends BinaryClassInspector {
          * @param value the analysis result value
          */
         protected void setResult(Object value) {
-            this.result = new InspectorResult(inspectorName, value);
+            this.result = new InspectorResult(tagName, value);
         }
 
         /**
@@ -96,7 +96,7 @@ public abstract class ASMInspector extends BinaryClassInspector {
          * @param errorMessage the error message
          */
         protected void setError(String errorMessage) {
-            this.result = InspectorResult.error(inspectorName, errorMessage);
+            this.result = InspectorResult.error(tagName, errorMessage);
         }
 
         /**
@@ -107,7 +107,7 @@ public abstract class ASMInspector extends BinaryClassInspector {
          */
         public InspectorResult getResult() {
             if (result == null) {
-                return InspectorResult.error(inspectorName, "No result set by visitor");
+                return InspectorResult.error(tagName, "No result set by visitor");
             }
             return result;
         }

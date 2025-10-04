@@ -161,7 +161,7 @@ public class ClassDiscoveryEngine {
                 Clazz updatedClass = new Clazz(className, packageName, ClassType.BOTH,
                         javaFile, existingClass.getBinaryLocation());
                 // Copy over any existing inspector results
-                updatedClass.getInspectorResults().putAll(existingClass.getInspectorResults());
+                updatedClass.getTags().putAll(existingClass.getTags());
                 discoveredClasses.put(fullyQualifiedName, updatedClass);
             } else {
                 // New class from source
@@ -300,7 +300,7 @@ public class ClassDiscoveryEngine {
             Clazz updatedClass = new Clazz(className, packageName, ClassType.BOTH,
                     existingClass.getSourceLocation(), classLocation);
             // Copy over any existing inspector results
-            updatedClass.getInspectorResults().putAll(existingClass.getInspectorResults());
+            updatedClass.getTags().putAll(existingClass.getTags());
             discoveredClasses.put(fullyQualifiedName, updatedClass);
         } else {
             // New class from binary

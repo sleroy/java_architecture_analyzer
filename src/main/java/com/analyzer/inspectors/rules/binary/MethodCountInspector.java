@@ -40,14 +40,10 @@ public class MethodCountInspector extends ASMInspector {
         return "method_count";
     }
 
-    @Override
-    public String getDescription() {
-        return "Counts the number of method declarations in a Java class using bytecode analysis";
-    }
 
     @Override
     protected ASMClassVisitor createClassVisitor(Clazz clazz) {
-        return new MethodCountVisitor(getName());
+        return new MethodCountVisitor(getColumnName());
     }
 
     /**

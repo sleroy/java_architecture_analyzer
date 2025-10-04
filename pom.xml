@@ -10,8 +10,8 @@
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>Java Architecture Analyzer</name>
-    <description>Static analysis tool for Java applications</description>
+    <name>Java Architecture Analyzer - EJB to Spring Boot Migration Toolkit</name>
+    <description>Static analysis and migration tool for Java applications with EJB-to-Spring Boot transformation capabilities</description>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -38,7 +38,27 @@
         <okhttp.version>4.12.0</okhttp.version>
         <jackson.version>2.15.2</jackson.version>
         <commons-configuration.version>2.10.1</commons-configuration.version>
+
+        <!-- OpenRewrite & Migration Tools -->
+        <openrewrite.version>8.15.0</openrewrite.version>
+        <rewrite-spring.version>5.13.0</rewrite-spring.version>
+        <jqassistant.version>2.3.0</jqassistant.version>
+        <jakarta-xml-bind.version>4.0.2</jakarta-xml-bind.version>
+        <jaxb-runtime.version>4.0.5</jaxb-runtime.version>
     </properties>
+
+    <!-- OpenRewrite + Spring recipes -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.openrewrite</groupId>
+                <artifactId>rewrite-bom</artifactId>
+                <version>${openrewrite.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- CLI Framework -->
@@ -148,6 +168,29 @@
             <version>${commons-configuration.version}</version>
         </dependency>
 
+        <!-- OpenRewrite for AST transformations -->
+        <dependency>
+            <groupId>org.openrewrite</groupId>
+            <artifactId>rewrite-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.openrewrite.recipe</groupId>
+            <artifactId>rewrite-spring</artifactId>
+            <version>${rewrite-spring.version}</version>
+        </dependency>
+
+        <!-- XML Binding for ejb-jar.xml parsing -->
+        <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+            <version>${jakarta-xml-bind.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>${jaxb-runtime.version}</version>
+        </dependency>
+
         <!-- Test Dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -189,6 +232,24 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.2</version>
             </plugin>
+
+            <!-- OpenRewrite executor -->
+            <plugin>
+                <groupId>org.openrewrite.maven</groupId>
+                <artifactId>rewrite-maven-plugin</artifactId>
+                <version>5.36.0</version>
+                <configuration>
+                    <activeRecipes>
+                        <!-- we'll activate from CLI, but keep defaults here -->
+                    </activeRecipes>
+                    <plainTextMasks>
+                        <plainTextMask>**/*.xml</plainTextMask>
+                        <plainTextMask>**/*.properties</plainTextMask>
+                        <plainTextMask>**/*.yml</plainTextMask>
+                    </plainTextMasks>
+                </configuration>
+            </plugin>
+
 
             <!-- Application Assembler Plugin -->
             <plugin>

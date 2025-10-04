@@ -55,11 +55,11 @@ public abstract class RegExpFileInspector extends SourceFileInspector {
         try {
             String content = readFileContent(sourceLocation);
             boolean matches = matches(content);
-            return new InspectorResult(getName(), matches);
+            return new InspectorResult(getColumnName(), matches);
         } catch (IOException e) {
-            return InspectorResult.error(getName(), "Error reading source file: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error reading source file: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getName(), "Error analyzing pattern: " + e.getMessage());
+            return InspectorResult.error(getColumnName(), "Error analyzing pattern: " + e.getMessage());
         }
     }
 
