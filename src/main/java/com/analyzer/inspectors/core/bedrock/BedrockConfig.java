@@ -23,12 +23,18 @@ public class BedrockConfig {
     private static final Logger logger = LoggerFactory.getLogger(BedrockConfig.class);
     private static final String DEFAULT_CONFIG_FILE = "bedrock.properties";
 
-    private final String apiToken;
-    private final String baseUrl;
+    // AWS Authentication
+    private final String awsAccessKeyId;
+    private final String awsSecretAccessKey;
+    private final String awsRegion;
+
+    // Model Configuration
     private final String modelId;
     private final int maxTokens;
     private final double temperature;
     private final double topP;
+
+    // API Control
     private final int rateLimitRpm;
     private final int timeoutSeconds;
     private final int retryAttempts;
@@ -39,12 +45,18 @@ public class BedrockConfig {
     private final boolean logResponses;
 
     private BedrockConfig(Properties properties) {
-        this.apiToken = getProperty(properties, "bedrock.api.token", null);
-        this.baseUrl = getProperty(properties, "bedrock.base.url", "https://bedrock-runtime.us-east-1.amazonaws.com");
+        // AWS Authentication
+        this.awsAccessKeyId = getProperty(properties, "bedrock.aws.access.key.id", null);
+        this.awsSecretAccessKey = getProperty(properties, "bedrock.aws.secret.access.key", null);
+        this.awsRegion = getProperty(properties, "bedrock.aws.region", "us-east-1");
+
+        // Model Configuration
         this.modelId = getProperty(properties, "bedrock.model.id", "anthropic.claude-3-sonnet-20240229-v1:0");
         this.maxTokens = getIntProperty(properties, "bedrock.max.tokens", 1000);
         this.temperature = getDoubleProperty(properties, "bedrock.temperature", 0.1);
         this.topP = getDoubleProperty(properties, "bedrock.top.p", 0.9);
+
+        // API Control
         this.rateLimitRpm = getIntProperty(properties, "bedrock.rate.limit.rpm", 60);
         this.timeoutSeconds = getIntProperty(properties, "bedrock.timeout.seconds", 30);
         this.retryAttempts = getIntProperty(properties, "bedrock.retry.attempts", 3);
@@ -171,8 +183,10 @@ public class BedrockConfig {
     }
 
     private static void copyToProperties(BedrockConfig config, Properties properties) {
-        properties.setProperty("bedrock.api.token", config.apiToken != null ? config.apiToken : "");
-        properties.setProperty("bedrock.base.url", config.baseUrl);
+        properties.setProperty("bedrock.aws.access.key.id", config.awsAccessKeyId != null ? config.awsAccessKeyId : "");
+        properties.setProperty("bedrock.aws.secret.access.key",
+                config.awsSecretAccessKey != null ? config.awsSecretAccessKey : "");
+        properties.setProperty("bedrock.aws.region", config.awsRegion);
         properties.setProperty("bedrock.model.id", config.modelId);
         properties.setProperty("bedrock.max.tokens", String.valueOf(config.maxTokens));
         properties.setProperty("bedrock.temperature", String.valueOf(config.temperature));
@@ -232,12 +246,16 @@ public class BedrockConfig {
     }
 
     // Getters
-    public String getApiToken() {
-        return apiToken;
+    public String getAwsAccessKeyId() {
+        return awsAccessKeyId;
     }
 
-    public String getBaseUrl() {
-        return baseUrl;
+    public String getAwsSecretAccessKey() {
+        return awsSecretAccessKey;
+    }
+
+    public String getAwsRegion() {
+        return awsRegion;
     }
 
     public String getModelId() {
@@ -269,7 +287,12 @@ public class BedrockConfig {
     }
 
     public boolean isEnabled() {
-        return enabled && !apiToken.isEmpty();
+        return enabled && hasAwsCredentials();
+    }
+
+    private boolean hasAwsCredentials() {
+        return (awsAccessKeyId != null && !awsAccessKeyId.trim().isEmpty() &&
+                awsSecretAccessKey != null && !awsSecretAccessKey.trim().isEmpty());
     }
 
     public int getBatchSize() {
@@ -292,14 +315,15 @@ public class BedrockConfig {
      * Validate the configuration and throw exceptions if invalid.
      */
     public void validate() throws BedrockConfigurationException {
-        if (apiToken == null || apiToken.trim().isEmpty()) {
+        if (!hasAwsCredentials()) {
             throw new BedrockConfigurationException(
-                    "Bedrock API token is required. Set BEDROCK_API_TOKEN environment variable " +
-                            "or provide --bedrock-token CLI option.");
+                    "AWS credentials are required. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables "
+                            +
+                            "or configure bedrock.aws.access.key.id and bedrock.aws.secret.access.key in properties.");
         }
 
-        if (baseUrl == null || baseUrl.trim().isEmpty()) {
-            throw new BedrockConfigurationException("Bedrock base URL cannot be empty");
+        if (awsRegion == null || awsRegion.trim().isEmpty()) {
+            throw new BedrockConfigurationException("AWS region cannot be empty");
         }
 
         if (modelId == null || modelId.trim().isEmpty()) {
@@ -334,7 +358,7 @@ public class BedrockConfig {
     @Override
     public String toString() {
         return "BedrockConfig{" +
-                "baseUrl='" + baseUrl + '\'' +
+                "awsRegion='" + awsRegion + '\'' +
                 ", modelId='" + modelId + '\'' +
                 ", maxTokens=" + maxTokens +
                 ", temperature=" + temperature +
@@ -345,7 +369,7 @@ public class BedrockConfig {
                 ", enabled=" + enabled +
                 ", batchSize=" + batchSize +
                 ", cacheResults=" + cacheResults +
-                ", apiTokenSet=" + (apiToken != null && !apiToken.isEmpty()) +
+                ", awsCredentialsSet=" + hasAwsCredentials() +
                 '}';
     }
 }
