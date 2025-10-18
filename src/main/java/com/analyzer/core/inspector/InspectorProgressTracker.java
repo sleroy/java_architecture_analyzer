@@ -1,5 +1,7 @@
-package com.analyzer.core;
+package com.analyzer.core.inspector;
+import com.analyzer.core.inspector.InspectorDependencies;
 
+import com.analyzer.core.model.ProjectFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

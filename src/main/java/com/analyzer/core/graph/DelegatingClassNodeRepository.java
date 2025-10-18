@@ -29,4 +29,9 @@ public class DelegatingClassNodeRepository implements ClassNodeRepository {
         return compilationUnit.getPrimaryType()
                 .flatMap(this::getOrCreateClassNode);
     }
+
+    @Override
+    public Optional<JavaClassNode> getOrCreateClassNodeByFqn(String fqn) {
+        return Optional.of((JavaClassNode) graphRepository.getOrCreateNode(new JavaClassNode(fqn)));
+    }
 }

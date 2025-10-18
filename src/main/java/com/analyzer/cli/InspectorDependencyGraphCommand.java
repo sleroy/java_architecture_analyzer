@@ -1,7 +1,8 @@
 package com.analyzer.cli;
 
-import com.analyzer.core.InspectorDependencyGraphBuilder;
-import com.analyzer.core.InspectorRegistry;
+import com.analyzer.core.graph.GraphAnalysisResult;
+import com.analyzer.core.inspector.InspectorDependencyGraphBuilder;
+import com.analyzer.core.inspector.InspectorRegistry;
 import com.analyzer.resource.CompositeResourceResolver;
 import com.analyzer.resource.FileResourceResolver;
 import com.analyzer.resource.JarResourceResolver;
@@ -13,8 +14,6 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.io.File;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 
 /**
@@ -96,15 +95,15 @@ public class InspectorDependencyGraphCommand implements Callable<Integer> {
 
             // Build the dependency graph
             logger.info("Analyzing inspector dependencies...");
-            InspectorDependencyGraphBuilder.GraphAnalysisResult result = graphBuilder.buildDependencyGraph();
+            GraphAnalysisResult result = graphBuilder.buildDependencyGraph();
 
             if (verbose) {
                 logger.info("Graph analysis completed:");
                 logger.info("  - Total inspectors: {}", result.getTotalInspectors());
                 logger.info("  - Total dependencies: {}", result.getTotalDependencies());
-                logger.info("  - Unused tags: {}", result.getUnusedTags().size());
-                logger.info("  - Potential duplicates: {}", result.getPotentialDuplicates().size());
-                logger.info("  - Complex chains: {}", result.getComplexChains().size());
+                logger.info("  - Unused tags: {}", result.unusedTags().size());
+                logger.info("  - Potential duplicates: {}", result.potentialDuplicates().size());
+                logger.info("  - Complex chains: {}", result.complexChains().size());
             }
 
             // Export to specified format
@@ -153,8 +152,8 @@ public class InspectorDependencyGraphCommand implements Callable<Integer> {
     /**
      * Exports the graph analysis result to the specified file and format.
      */
-    private void exportGraph(InspectorDependencyGraphBuilder.GraphAnalysisResult result,
-            File outputFile, GraphFormat format) throws Exception {
+    private void exportGraph(GraphAnalysisResult result,
+                             File outputFile, GraphFormat format) throws Exception {
 
         // Ensure output directory exists
         File parentDir = outputFile.getParentFile();
@@ -180,7 +179,7 @@ public class InspectorDependencyGraphCommand implements Callable<Integer> {
     /**
      * Prints a summary of the analysis results to the console.
      */
-    private void printSummary(InspectorDependencyGraphBuilder.GraphAnalysisResult result) {
+    private void printSummary(GraphAnalysisResult result) {
         System.out.println();
         System.out.println("=== Inspector Dependency Graph Analysis ===");
         System.out.println();
@@ -192,17 +191,17 @@ public class InspectorDependencyGraphCommand implements Callable<Integer> {
         System.out.println();
 
         // Unused tags
-        if (!result.getUnusedTags().isEmpty()) {
-            System.out.printf("⚠️  Unused Tags (%d):%n", result.getUnusedTags().size());
-            result.getUnusedTags().forEach(tag -> System.out.println("   - " + tag));
+        if (!result.unusedTags().isEmpty()) {
+            System.out.printf("⚠️  Unused Tags (%d):%n", result.unusedTags().size());
+            result.unusedTags().forEach(tag -> System.out.println("   - " + tag));
             System.out.println();
         }
 
         // Potential semantic duplicates
-        if (!result.getPotentialDuplicates().isEmpty()) {
+        if (!result.potentialDuplicates().isEmpty()) {
             System.out.printf("🔍 Potential Semantic Duplicates (%d groups):%n",
-                    result.getPotentialDuplicates().size());
-            result.getPotentialDuplicates().forEach((key, tags) -> {
+                    result.potentialDuplicates().size());
+            result.potentialDuplicates().forEach((key, tags) -> {
                 System.out.println("   " + key + ":");
                 tags.forEach(tag -> System.out.println("     - " + tag));
             });
@@ -210,11 +209,9 @@ public class InspectorDependencyGraphCommand implements Callable<Integer> {
         }
 
         // Complex dependency chains
-        if (!result.getComplexChains().isEmpty()) {
-            System.out.printf("🔗 Complex Dependency Chains (%d):%n", result.getComplexChains().size());
-            result.getComplexChains().forEach(chain -> {
-                System.out.println("   Length " + chain.size() + ": " + String.join(" → ", chain));
-            });
+        if (!result.complexChains().isEmpty()) {
+            System.out.printf("🔗 Complex Dependency Chains (%d):%n", result.complexChains().size());
+            result.complexChains().forEach(chain -> System.out.println("   Length " + chain.size() + ": " + String.join(" → ", chain)));
             System.out.println();
         }
 

@@ -1,28 +1,43 @@
-package com.analyzer.inspectors.rules.binary;
+package com.analyzer.rules.std;
 
-import com.analyzer.core.ProjectFile;
-import com.analyzer.core.InspectorTags;
-import com.analyzer.inspectors.core.binary.ASMInspector;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.inspector.InspectorDependencies;
+
+import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.model.ProjectFile;
+import com.analyzer.inspectors.core.binary.AbstractASMInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.Opcodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
+
 /**
  * Type inspector that detects the declaration type of a class from binary
  * files.
  * This is one of the default inspectors specified in purpose.md.
- * 
+ * <p>
  * Detects: class, interface, record, enum, annotation
- * 
- * Extends ASMInspector to use ASM library for bytecode analysis.
+ * <p>
+ * Extends AbstractASMInspector to use ASM library for bytecode analysis.
  */
-public class TypeInspector extends ASMInspector {
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = { TypeInspectorASMInspector.TAGS.TAG_CLASS_TYPE })
+public class TypeInspectorASMInspector extends AbstractASMInspector {
 
-    private static final Logger logger = LoggerFactory.getLogger(TypeInspector.class);
+    private static final Logger logger = LoggerFactory.getLogger(TypeInspectorASMInspector.class);
 
-    public TypeInspector(ResourceResolver resourceResolver) {
+    public static class TAGS {
+        public static final String TAG_CLASS_TYPE = "type_inspector_asm.class_type";
+    }
+
+    private final GraphRepository graphRepository;
+
+    @Inject
+    public TypeInspectorASMInspector(ResourceResolver resourceResolver, GraphRepository graphRepository) {
         super(resourceResolver);
+        this.graphRepository = graphRepository;
     }
 
     @Override
@@ -31,19 +46,14 @@ public class TypeInspector extends ASMInspector {
     }
 
     @Override
-    public String getColumnName() {
-        return "class_type";
-    }
-
-    @Override
-    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile) {
+    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
         // Always analyze bytecode to determine Java language type (CLASS, INTERFACE,
         // ENUM, etc.)
         // Note: projectFile may have discovery type tags (SOURCE_ONLY, BINARY_ONLY,
         // BOTH)
         // which is different from Java language type, so we always use bytecode
         // analysis
-        return new TypeExtractorVisitor(getColumnName());
+        return new TypeExtractorVisitor(projectFile, projectFileDecorator);
     }
 
     /**
@@ -52,20 +62,20 @@ public class TypeInspector extends ASMInspector {
     private static class TypeExtractorVisitor extends ASMClassVisitor {
         private int accessFlags;
 
-        public TypeExtractorVisitor(String inspectorName) {
-            super(inspectorName);
+        public TypeExtractorVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+            super(projectFile, projectFileDecorator);
         }
 
         @Override
         public void visit(int version, int access, String name, String signature, String superName,
-                String[] interfaces) {
+                          String[] interfaces) {
             this.accessFlags = access;
             logger.debug("ASM visit() called - access flags: 0x{}, name: {}, superName: {}",
                     Integer.toHexString(access), name, superName);
 
             // Set the result based on the access flags
             String classType = determineTypeFromAccessFlags(accessFlags);
-            setResult(classType);
+            setTag(TAGS.TAG_CLASS_TYPE, classType);
         }
     }
 
@@ -103,13 +113,4 @@ public class TypeInspector extends ASMInspector {
         }
     }
 
-    @Override
-    public boolean supports(ProjectFile projectFile) {
-        // Supports project files that have binary code or are Java class files
-        // Also supports source-only files that have class type information
-        return projectFile != null && (projectFile.getBooleanTag(InspectorTags.RESOURCE_HAS_JAVA_BINARY, false) ||
-                projectFile.hasFileExtension("class") ||
-                projectFile.getFilePath().toString().endsWith(".class") ||
-                projectFile.hasTag("class_type"));
-    }
 }

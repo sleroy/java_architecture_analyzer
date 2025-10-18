@@ -1,6 +1,10 @@
 package com.analyzer.analysis;
+import com.analyzer.core.inspector.InspectorDependencies;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Result of an analysis execution.

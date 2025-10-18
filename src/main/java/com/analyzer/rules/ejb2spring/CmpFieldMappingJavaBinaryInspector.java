@@ -1,17 +1,23 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ResultDecorator;
-import com.analyzer.core.graph.GraphAwareInspector;
-import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.graph.ClassNodeRepository;
+import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.binary.AbstractASMInspector;
+import com.analyzer.inspectors.core.binary.AbstractBinaryClassNodeInspector;
+import com.analyzer.rules.graph.BinaryJavaClassNodeInspector;
+import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
+import javax.inject.Inject;
+import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,8 +32,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * Phase 1 - Foundation Inspector (P0 Critical Priority)
  */
-@InspectorDependencies(need = {EntityBeanInspector.class},
-        requires = {InspectorTags.TAG_JAVA_DETECTED},
+@InspectorDependencies(
+        need = { BinaryJavaClassNodeInspector.class },
+        requires = { InspectorTags.TAG_JAVA_DETECTED },
         produces = {
                 EjbMigrationTags.EJB_CMP_FIELD_MAPPING,
                 EjbMigrationTags.EJB_CMP_FIELD,
@@ -38,85 +45,55 @@ import java.util.concurrent.ConcurrentHashMap;
                 EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH,
                 EjbMigrationTags.JPA_CONVERSION_CANDIDATE
         })
-public class CmpFieldMappingInspector extends AbstractASMInspector implements GraphAwareInspector {
+public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeInspector {
 
     private static final Set<String> CMP_METHOD_PREFIXES = Set.of("get", "set");
     private static final Set<String> CMR_COLLECTION_TYPES = Set.of(
             "java/util/Collection", "java/util/Set", "java/util/List", "java/util/Vector");
 
-    private GraphRepository graphRepository;
     private final Map<String, CmpEntityMetadata> cmpEntityCache;
 
-    public CmpFieldMappingInspector(ResourceResolver resourceResolver) {
-        super(resourceResolver);
+    @Inject
+    public CmpFieldMappingJavaBinaryInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
+        super(resourceResolver, classNodeRepository);
         this.cmpEntityCache = new ConcurrentHashMap<>();
     }
 
     @Override
-    public void setGraphRepository(GraphRepository graphRepository) {
-        this.graphRepository = graphRepository;
-    }
-
-    @Override
     public boolean supports(ProjectFile projectFile) {
-        // Only process binary Java class files that are Entity Beans
-        if (!super.supports(projectFile) || projectFile == null) {
-            return false;
-        }
-
-
-        // Check if it's been identified as an Entity Bean
-        Object entityBeanTag = projectFile.getTag(EntityBeanInspector.TAGS.TAG_IS_ENTITY_BEAN);
-        boolean isEntityBean = entityBeanTag != null && !entityBeanTag.equals(false)
-                && !entityBeanTag.toString().isEmpty();
-
-        boolean isSupported = isEntityBean;
-
-        // CRITICAL FIX: Set basic tags here for all supported files
-        // This ensures tags are set even if ASM parsing fails with invalid bytecode
-        if (isSupported) {
-            setBasicTagsForSupportedFile(projectFile);
-        }
-
-        return isSupported;
-    }
-
-    /**
-     * Sets basic tags for supported files to ensure they're always present,
-     * even if ASM parsing fails with invalid bytecode in tests.
-     */
-    private void setBasicTagsForSupportedFile(ProjectFile projectFile) {
-        // Set basic tags directly on ProjectFile to ensure they're always present
-        projectFile.setTag(EjbMigrationTags.EJB_CMP_FIELD_MAPPING, true);
-        projectFile.setTag(EjbMigrationTags.EJB_CMP_ENTITY, true);
-        projectFile.setTag(EjbMigrationTags.JPA_CONVERSION_CANDIDATE, true);
-        projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-
-        // Generate basic recommendations
-        List<String> recommendations = List.of("Convert CMP entity to JPA @Entity");
-        projectFile.setTag("cmp_field_mapping.jpa_recommendations", String.join("; ", recommendations));
+        return super.supports(projectFile);
     }
 
     @Override
-    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, ResultDecorator resultDecorator) {
-        return new CmpFieldMappingVisitor(projectFile, resultDecorator);
+    public void analyzeClassNode(ProjectFile projectFile, JavaClassNode classNode, ResourceLocation binaryLocation, InputStream classInputStream, ProjectFileDecorator projectFileDecorator) throws java.io.IOException {
+        classNode.setProjectFileId(projectFile.getId());
+
+        try {
+            ClassReader classReader = new ClassReader(classInputStream);
+            CmpFieldMappingVisitor visitor = new CmpFieldMappingVisitor(projectFile, projectFileDecorator, classNode);
+            classReader.accept(visitor, 0);
+        } catch (Exception e) {
+            projectFileDecorator.error("ASM analysis error: " + e.getMessage());
+        }
     }
 
 
     /**
      * ASM visitor that analyzes CMP field mappings in entity bean classes
      */
-    private class CmpFieldMappingVisitor extends ASMClassVisitor {
+    private class CmpFieldMappingVisitor extends ClassVisitor {
         private final ClassNode classNode;
         private CmpEntityMetadata metadata;
+        private final JavaClassNode graphNode;
+        private final ProjectFile projectFile;
+        private final ProjectFileDecorator projectFileDecorator;
 
-        public CmpFieldMappingVisitor(ProjectFile projectFile, ResultDecorator resultDecorator) {
-            super(projectFile, resultDecorator);
+        public CmpFieldMappingVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator, JavaClassNode graphNode) {
+            super(Opcodes.ASM9);
             this.classNode = new ClassNode();
-
-            // Basic tags are now set in supports() method to ensure they're always present
-            // Still set them here as backup for detailed analysis
-            setBasicTags();
+            this.graphNode = graphNode;
+            this.projectFile = projectFile;
+            this.projectFileDecorator = projectFileDecorator;
         }
 
         @Override
@@ -132,72 +109,84 @@ public class CmpFieldMappingInspector extends AbstractASMInspector implements Gr
 
         @Override
         public void visitEnd() {
-            // Basic tags are already set in supports() method
-            // Set them again here as backup
-            setBasicTags();
-
             // If this is a proper CMP entity bean, do detailed analysis
             if (metadata != null && isCmpEntityBean(classNode, projectFile)) {
                 analyzeCmpMethods();
-                setDetailedAnalysisResults();
+                setAllTagsAndProperties();
             }
             super.visitEnd();
         }
 
-        private void setBasicTags() {
-            // Always set the main tag for supported files
+        private void setProperty(String key, Object value) {
+            graphNode.setProperty(key, value);
+        }
+
+        private void setTag(String tag, Object value) {
+            projectFileDecorator.setTag(tag, value);
+        }
+
+        private void setAllTagsAndProperties() {
+            // Honor produces contract - set ALL produced tags on ProjectFile for dependency chains
             setTag(EjbMigrationTags.EJB_CMP_FIELD_MAPPING, true);
-            setTag(EjbMigrationTags.EJB_CMP_ENTITY, true);
+            setTag(EjbMigrationTags.EJB_CMP_FIELD, true);
+            setTag(EjbMigrationTags.EJB_CMR_RELATIONSHIP, true);
+            setTag(EjbMigrationTags.EJB_PRIMARY_KEY_CLASS, true);
             setTag(EjbMigrationTags.JPA_CONVERSION_CANDIDATE, true);
 
-            // Set default complexity
-            setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+            // Set analysis properties on ClassNode for export data
+            setProperty(EjbMigrationTags.EJB_CMP_FIELD_MAPPING, true);
+            setProperty(EjbMigrationTags.EJB_CMP_ENTITY, true);
+            setProperty(EjbMigrationTags.JPA_CONVERSION_CANDIDATE, true);
 
             // Generate basic recommendations
             List<String> recommendations = List.of("Convert CMP entity to JPA @Entity");
-            setTag("cmp_field_mapping.jpa_recommendations", String.join("; ", recommendations));
+            setProperty("cmp_field_mapping.jpa_recommendations", String.join("; ", recommendations));
+            
+            // Perform detailed analysis if we have proper CMP metadata
+            setDetailedAnalysisResults();
         }
 
         private void setDetailedAnalysisResults() {
-            // Set field and relationship tags
+            // Set field and relationship analysis properties on ClassNode
             if (!metadata.getCmpFields().isEmpty()) {
-                setTag(EjbMigrationTags.EJB_CMP_FIELD, metadata.getCmpFields().size());
+                setProperty(EjbMigrationTags.EJB_CMP_FIELD, metadata.getCmpFields().size());
             }
 
             if (!metadata.getCmrRelationships().isEmpty()) {
-                setTag(EjbMigrationTags.EJB_CMR_RELATIONSHIP, metadata.getCmrRelationships().size());
+                setProperty(EjbMigrationTags.EJB_CMR_RELATIONSHIP, metadata.getCmrRelationships().size());
             }
 
-            // Set primary key tags
+            // Set primary key analysis properties
             boolean hasPrimaryKey = metadata.getCmpFields().stream()
                     .anyMatch(field -> field.getName().toLowerCase().contains("id") ||
                             field.getName().toLowerCase().contains("key"));
             if (hasPrimaryKey) {
-                setTag(EjbMigrationTags.EJB_PRIMARY_KEY_CLASS, true);
+                setProperty(EjbMigrationTags.EJB_PRIMARY_KEY_CLASS, true);
             }
 
-            // Assess migration complexity (override default)
+            // Assess migration complexity and set appropriate tags on ProjectFile
             String complexity = assessMigrationComplexity(metadata);
             switch (complexity) {
                 case "LOW":
                     setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW, true);
-                    setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, false);
+                    setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW, true);
                     break;
                 case "MEDIUM":
                     setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+                    setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
                     break;
                 case "HIGH":
                     setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
-                    setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, false);
+                    setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
                     break;
             }
 
-            // Store detailed metadata as JSON
-            setTag("cmp_field_mapping.metadata", metadata.toJson());
+            // Store detailed metadata as analysis property
+            setProperty("cmp_field_mapping.metadata", metadata.toJson());
 
             // Generate detailed JPA migration recommendations (override basic ones)
             List<String> recommendations = generateJpaRecommendations(metadata);
-            setTag("cmp_field_mapping.jpa_recommendations", String.join("; ", recommendations));
+            setProperty("cmp_field_mapping.jpa_recommendations", String.join("; ", recommendations));
 
             // Cache metadata for graph creation
             cmpEntityCache.put(classNode.name, metadata);

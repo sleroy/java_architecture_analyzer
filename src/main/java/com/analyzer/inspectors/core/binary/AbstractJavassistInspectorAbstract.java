@@ -1,7 +1,7 @@
 package com.analyzer.inspectors.core.binary;
 
-import com.analyzer.core.ProjectFile;
-import com.analyzer.core.InspectorResult;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
 import javassist.ClassPool;
@@ -22,28 +22,28 @@ import java.io.InputStream;
  * 
  * Subclasses must implement getName(), getColumnName(), and analyzeCtClass() methods.
  */
-public abstract class JavassistInspector extends BinaryClassInspector {
+public abstract class AbstractJavassistInspectorAbstract extends AbstractBinaryClassInspector {
 
     private final ClassPool classPool;
 
     /**
-     * Creates a JavassistInspector with the default ClassPool.
+     * Creates a AbstractJavassistInspectorAbstract with the default ClassPool.
      * 
      * @param resourceResolver the resolver for accessing class file resources
      */
-    protected JavassistInspector(ResourceResolver resourceResolver) {
+    protected AbstractJavassistInspectorAbstract(ResourceResolver resourceResolver) {
         super(resourceResolver);
         this.classPool = ClassPool.getDefault();
     }
 
     /**
-     * Creates a JavassistInspector with a custom ClassPool.
+     * Creates a AbstractJavassistInspectorAbstract with a custom ClassPool.
      * This allows subclasses to customize class loading behavior, add classpath entries, etc.
      * 
      * @param resourceResolver the resolver for accessing class file resources
      * @param customClassPool the customized ClassPool instance to use
      */
-    protected JavassistInspector(ResourceResolver resourceResolver, ClassPool customClassPool) {
+    protected AbstractJavassistInspectorAbstract(ResourceResolver resourceResolver, ClassPool customClassPool) {
         super(resourceResolver);
         if (customClassPool == null) {
             throw new IllegalArgumentException("ClassPool cannot be null");
@@ -52,43 +52,44 @@ public abstract class JavassistInspector extends BinaryClassInspector {
     }
 
     @Override
-    protected final InspectorResult analyzeClassFile(ProjectFile clazz, ResourceLocation binaryLocation,
-                    InputStream classInputStream) throws IOException {
+    protected final void analyzeClassFile(ProjectFile clazz, ResourceLocation binaryLocation,
+                                          InputStream classInputStream, ProjectFileDecorator projectFileDecorator) throws IOException {
         try {
             // Read class bytes and create CtClass
             byte[] classBytes = classInputStream.readAllBytes();
             CtClass ctClass = classPool.makeClass(new ByteArrayInputStream(classBytes));
             
-            return analyzeCtClass(ctClass, clazz);
+            analyzeCtClass(ctClass, clazz, projectFileDecorator);
             
         } catch (IOException e) {
-            return InspectorResult.error(getColumnName(), "Error reading class file: " + e.getMessage());
+            projectFileDecorator.error( "Error reading class file: " + e.getMessage());
         } catch (RuntimeException e) {
-            return InspectorResult.error(getColumnName(), "Javassist runtime error: " + e.getMessage());
+            projectFileDecorator.error( "Javassist runtime error: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getColumnName(), "Javassist analysis error: " + e.getMessage());
+            projectFileDecorator.error( "Javassist analysis error: " + e.getMessage());
         }
     }
 
     /**
      * Analyzes the Javassist CtClass representation and returns the analysis result.
      * Subclasses implement specific Javassist analysis logic here.
-     * 
+     * <p>
      * The CtClass provides a high-level, reflection-like interface to bytecode including:
      * - Class metadata and modifiers
      * - Fields and methods with their signatures
      * - Annotations and generic information
      * - Simple bytecode manipulation capabilities
      * - Runtime-oriented analysis features
-     * 
+     * <p>
      * Javassist's CtClass offers the simplest API among bytecode libraries,
      * making it ideal for straightforward analysis tasks and runtime scenarios.
-     * 
-     * @param ctClass the Javassist CtClass representation of the bytecode
-     * @param clazz the class being analyzed
+     *
+     * @param ctClass         the Javassist CtClass representation of the bytecode
+     * @param clazz           the class being analyzed
+     * @param projectFileDecorator
      * @return the result of bytecode analysis
      */
-    protected abstract InspectorResult analyzeCtClass(CtClass ctClass, ProjectFile clazz);
+    protected abstract void analyzeCtClass(CtClass ctClass, ProjectFile clazz, ProjectFileDecorator projectFileDecorator);
 
     /**
      * Gets the ClassPool used by this inspector.

@@ -1,5 +1,10 @@
-package com.analyzer.core;
+package com.analyzer.core.export;
+import com.analyzer.core.inspector.InspectorDependencies;
 
+import com.analyzer.core.inspector.Inspector;
+import com.analyzer.core.inspector.InspectorResult;
+import com.analyzer.core.model.Project;
+import com.analyzer.core.model.ProjectFile;
 import me.tongfei.progressbar.ProgressBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,11 +13,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * Exports analysis results to CSV format with dynamic columns based on

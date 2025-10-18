@@ -1,10 +1,8 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.ProjectFile;
-import com.analyzer.core.Inspector;
-import com.analyzer.core.InspectorResult;
-import com.analyzer.core.InspectorTags;
-import com.analyzer.core.RequiredTags;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.inspector.Inspector;
+import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
 
@@ -16,68 +14,59 @@ import java.nio.charset.StandardCharsets;
  * system.
  * Provides common functionality for analyzing Java source files from various
  * sources.
+ *
+ * <p>
+ * This class automatically requires the SOURCE_FILE tag, ensuring that inspectors
+ * extending this class only run on files that have been validated as supported
+ * source files by the SourceFileTagDetector.
+ * </p>
  */
-public abstract class SourceFileInspector implements Inspector<ProjectFile> {
+public abstract class AbstractSourceFileInspector implements Inspector<ProjectFile> {
 
     private final ResourceResolver resourceResolver;
 
-    protected SourceFileInspector(ResourceResolver resourceResolver) {
+    protected AbstractSourceFileInspector(ResourceResolver resourceResolver) {
         this.resourceResolver = resourceResolver;
     }
 
-    @Override
-    public final InspectorResult decorate(ProjectFile projectFile) {
-        if (!canProcess(projectFile)) {
-            return InspectorResult.notApplicable(getColumnName());
-        }
+    public final void decorate(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
 
         try {
             // Create ResourceLocation from the project file path
             ResourceLocation sourceLocation = new ResourceLocation(projectFile.getFilePath().toUri());
 
             if (!resourceResolver.exists(sourceLocation)) {
-                return InspectorResult.error(getColumnName(), "Source file not found: " + sourceLocation);
+                projectFileDecorator.error("Source file not found: " + sourceLocation);
+                return;
             }
 
-            return analyzeSourceFile(projectFile, sourceLocation);
+            analyzeSourceFile(projectFile, sourceLocation, projectFileDecorator);
 
         } catch (Exception e) {
-            return InspectorResult.error(getColumnName(), "Error analyzing source file: " + e.getMessage());
+            projectFileDecorator.error("Error analyzing source file: " + e.getMessage());
         }
     }
 
-    @Override
     public boolean supports(ProjectFile projectFile) {
-        return projectFile != null ;
+        return projectFile != null;
     }
 
-    /**
-     * Source file inspectors depend on the "source_file" tag by default.
-     * This ensures they only run on files that have been validated as supported
-     * source files.
-     * 
-     * @param tags builder for collecting required dependencies
-     */
-    @Override
-    public void depends(RequiredTags tags) {
-
-    }
 
     /**
      * Analyzes the source file for the given class.
      * Subclasses must implement this method to provide specific analysis logic.
-     * 
-     * @param projectFile    the project file to analyze
-     * @param sourceLocation the ResourceLocation of the source file
-     * @return the result of the analysis
+     *
+     * @param projectFile     the project file to analyze
+     * @param sourceLocation  the ResourceLocation of the source file
+     * @param projectFileDecorator the result decorator for recording analysis results
      * @throws IOException if there's an error reading the source file
      */
-    protected abstract InspectorResult analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation)
+    protected abstract void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation, ProjectFileDecorator projectFileDecorator)
             throws IOException;
 
     /**
      * Reads the entire content of the source file as a string using UTF-8 encoding.
-     * 
+     *
      * @param sourceLocation the ResourceLocation of the source file
      * @return the content of the file
      * @throws IOException if there's an error reading the file
@@ -98,15 +87,15 @@ public abstract class SourceFileInspector implements Inspector<ProjectFile> {
 
     /**
      * Counts the number of lines in the source file.
-     * 
+     *
      * @param sourceLocation the ResourceLocation of the source file
      * @return the number of lines
      * @throws IOException if there's an error reading the file
      */
     protected long countLines(ResourceLocation sourceLocation) throws IOException {
         try (InputStream inputStream = resourceResolver.openStream(sourceLocation);
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+             BufferedReader reader = new BufferedReader(
+                     new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
 
             return reader.lines().count();
         }
@@ -114,7 +103,7 @@ public abstract class SourceFileInspector implements Inspector<ProjectFile> {
 
     /**
      * Gets the ResourceResolver used by this inspector.
-     * 
+     *
      * @return the ResourceResolver instance
      */
     protected ResourceResolver getResourceResolver() {

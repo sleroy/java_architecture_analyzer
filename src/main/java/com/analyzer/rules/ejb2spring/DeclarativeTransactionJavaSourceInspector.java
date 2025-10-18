@@ -1,8 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ResultDecorator;
-import com.analyzer.core.graph.GraphAwareInspector;
-import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
@@ -13,6 +12,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import javax.inject.Inject;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -35,24 +35,23 @@ import java.util.Map;
  * provides Spring migration recommendations with appropriate propagation
  * settings.
  */
-@InspectorDependencies(requires= { EjbMigrationTags.EJB_DEPLOYMENT_DESCRIPTOR }, produces = {
+@InspectorDependencies(requires = { EjbMigrationTags.EJB_DEPLOYMENT_DESCRIPTOR }, produces = {
         EjbMigrationTags.EJB_DECLARATIVE_TRANSACTION,
         EjbMigrationTags.EJB_CONTAINER_MANAGED_TRANSACTION,
         EjbMigrationTags.SPRING_TRANSACTION_CONVERSION
 })
-public class DeclarativeTransactionInspector extends AbstractSourceFileInspector
-        implements GraphAwareInspector {
+public class DeclarativeTransactionJavaSourceInspector extends AbstractSourceFileInspector {
 
-    private GraphRepository graphRepository;
+    private final ClassNodeRepository classNodeRepository;
 
-    public DeclarativeTransactionInspector(ResourceResolver resourceResolver) {
+    @Inject
+    public DeclarativeTransactionJavaSourceInspector(ResourceResolver resourceResolver,
+            ClassNodeRepository classNodeRepository) {
         super(resourceResolver);
+        this.classNodeRepository = classNodeRepository;
     }
 
-    @Override
-    public void setGraphRepository(GraphRepository graphRepository) {
-        this.graphRepository = graphRepository;
-    }
+    
 
     @Override
     public String getName() {
@@ -61,59 +60,51 @@ public class DeclarativeTransactionInspector extends AbstractSourceFileInspector
 
     @Override
     public boolean supports(ProjectFile file) {
-        return file.hasTag(EjbMigrationTags.EJB_DEPLOYMENT_DESCRIPTOR) &&
-                file.getFilePath().toString().endsWith("ejb-jar.xml");
+        return super.supports(file);
     }
 
     @Override
     protected void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation,
-            ResultDecorator resultDecorator) throws IOException {
-        try {
-            String content = readFileContent(sourceLocation);
-            if (content == null || content.trim().isEmpty()) {
-                resultDecorator.notApplicable();
-                return;
+            ProjectFileDecorator projectFileDecorator) throws IOException {
+        classNodeRepository.getOrCreateClassNodeByFqn(projectFile.getFullyQualifiedName()).ifPresent(classNode -> {
+            classNode.setProjectFileId(projectFile.getId());
+            try {
+                String content = readFileContent(sourceLocation);
+                if (content == null || content.trim().isEmpty()) {
+                    projectFileDecorator.notApplicable();
+                    return;
+                }
+
+                Document doc = parseXmlDocument(content);
+                List<TransactionConfiguration> configs = extractTransactionConfigurations(doc);
+
+                if (configs.isEmpty()) {
+                    projectFileDecorator.notApplicable();
+                    return;
+                }
+
+                // Honor produces contract: set tags on ProjectFile
+                projectFile.setTag(EjbMigrationTags.EJB_DECLARATIVE_TRANSACTION, true);
+                projectFile.setTag(EjbMigrationTags.EJB_CONTAINER_MANAGED_TRANSACTION, true);
+                projectFile.setTag(EjbMigrationTags.SPRING_TRANSACTION_CONVERSION, true);
+
+                // Store consolidated analysis data as single property (guideline #5)
+                int totalConfigs = configs.size();
+                DeclarativeTransactionAnalysis analysis = new DeclarativeTransactionAnalysis(
+                    totalConfigs,
+                    assessOverallComplexity(configs),
+                    generateMigrationRecommendations(configs),
+                    configs
+                );
+                classNode.setProperty("declarative_transaction.analysis", analysis.toJson());
+
+                projectFileDecorator.setTag("declarative_transaction.analysis",
+                        "Found " + totalConfigs + " declarative transaction configurations");
+
+            } catch (Exception e) {
+                projectFileDecorator.error("Failed to parse ejb-jar.xml: " + e.getMessage());
             }
-
-            Document doc = parseXmlDocument(content);
-            List<TransactionConfiguration> configs = extractTransactionConfigurations(doc);
-
-            if (configs.isEmpty()) {
-                resultDecorator.notApplicable();
-                return;
-            }
-
-            // Set tags based on found configurations
-            projectFile.setTag(EjbMigrationTags.EJB_DECLARATIVE_TRANSACTION, true);
-            projectFile.setTag(EjbMigrationTags.EJB_CONTAINER_MANAGED_TRANSACTION, true);
-            projectFile.setTag(EjbMigrationTags.SPRING_TRANSACTION_CONVERSION, true);
-
-            // Store transaction configurations count and complexity
-            int totalConfigs = configs.size();
-            int complexConfigs = (int) configs.stream()
-                    .mapToLong(this::calculateComplexityScore)
-                    .sum();
-
-            projectFile.setTag("declarative_transaction.config_count", totalConfigs);
-            projectFile.setTag("declarative_transaction.complexity_score", complexConfigs);
-
-            String overallComplexity = assessOverallComplexity(configs);
-            projectFile.setTag("declarative_transaction.migration_complexity", overallComplexity);
-
-            // Generate and store migration recommendations
-            List<String> recommendations = generateMigrationRecommendations(configs);
-            projectFile.setTag("declarative_transaction.recommendations", String.join("; ", recommendations));
-
-            // Store detailed metadata as JSON
-            String metadataJson = createMetadataJson(configs);
-            projectFile.setTag("declarative_transaction.metadata", metadataJson);
-
-            resultDecorator.success("declarative_transaction.analysis",
-                    "Found " + totalConfigs + " declarative transaction configurations");
-
-        } catch (Exception e) {
-            resultDecorator.error("Failed to parse ejb-jar.xml: " + e.getMessage());
-        }
+        });
     }
 
     private Document parseXmlDocument(String content) throws ParserConfigurationException,
@@ -350,40 +341,62 @@ public class DeclarativeTransactionInspector extends AbstractSourceFileInspector
         return recommendations;
     }
 
-    private String createMetadataJson(List<TransactionConfiguration> configs) {
-        StringBuilder json = new StringBuilder();
-        json.append("{");
-        json.append("\"configCount\":").append(configs.size()).append(",");
-        json.append("\"configurations\":[");
+    /**
+     * Consolidated analysis result for declarative transaction data (guideline #5)
+     */
+    public static class DeclarativeTransactionAnalysis {
+        private final int configCount;
+        private final String migrationComplexity;
+        private final List<String> recommendations;
+        private final List<TransactionConfiguration> configurations;
 
-        for (int i = 0; i < configs.size(); i++) {
-            TransactionConfiguration config = configs.get(i);
-            if (i > 0)
-                json.append(",");
-
-            json.append("{");
-            json.append("\"beanName\":\"").append(config.getBeanName()).append("\",");
-            json.append("\"methodName\":\"").append(config.getMethodName()).append("\",");
-            json.append("\"ejbAttribute\":\"").append(config.getEjbAttribute().name()).append("\",");
-            json.append("\"springPropagation\":\"").append(config.getSpringPropagation().name()).append("\",");
-            json.append("\"readOnly\":").append(config.isReadOnly()).append(",");
-            json.append("\"complexityScore\":").append(calculateComplexityScore(config));
-
-            if (!config.getMethodParams().isEmpty()) {
-                json.append(",\"methodParams\":[");
-                for (int j = 0; j < config.getMethodParams().size(); j++) {
-                    if (j > 0)
-                        json.append(",");
-                    json.append("\"").append(config.getMethodParams().get(j)).append("\"");
-                }
-                json.append("]");
-            }
-
-            json.append("}");
+        public DeclarativeTransactionAnalysis(int configCount, String migrationComplexity, 
+                                            List<String> recommendations, 
+                                            List<TransactionConfiguration> configurations) {
+            this.configCount = configCount;
+            this.migrationComplexity = migrationComplexity;
+            this.recommendations = recommendations;
+            this.configurations = configurations;
         }
 
-        json.append("]}");
-        return json.toString();
+        public String toJson() {
+            StringBuilder json = new StringBuilder();
+            json.append("{");
+            json.append("\"configCount\":").append(configCount).append(",");
+            json.append("\"migrationComplexity\":\"").append(migrationComplexity).append("\",");
+            json.append("\"recommendations\":[");
+            for (int i = 0; i < recommendations.size(); i++) {
+                if (i > 0) json.append(",");
+                json.append("\"").append(recommendations.get(i)).append("\"");
+            }
+            json.append("],");
+            json.append("\"configurations\":[");
+
+            for (int i = 0; i < configurations.size(); i++) {
+                TransactionConfiguration config = configurations.get(i);
+                if (i > 0) json.append(",");
+
+                json.append("{");
+                json.append("\"beanName\":\"").append(config.getBeanName()).append("\",");
+                json.append("\"methodName\":\"").append(config.getMethodName()).append("\",");
+                json.append("\"ejbAttribute\":\"").append(config.getEjbAttribute().name()).append("\",");
+                json.append("\"springPropagation\":\"").append(config.getSpringPropagation().name()).append("\",");
+                json.append("\"readOnly\":").append(config.isReadOnly());
+
+                if (!config.getMethodParams().isEmpty()) {
+                    json.append(",\"methodParams\":[");
+                    for (int j = 0; j < config.getMethodParams().size(); j++) {
+                        if (j > 0) json.append(",");
+                        json.append("\"").append(config.getMethodParams().get(j)).append("\"");
+                    }
+                    json.append("]");
+                }
+                json.append("}");
+            }
+
+            json.append("]}");
+            return json.toString();
+        }
     }
 
     /**

@@ -1,4 +1,5 @@
-package com.analyzer.core;
+package com.analyzer.core.inspector;
+import com.analyzer.core.inspector.InspectorDependencies;
 
 import java.util.Objects;
 

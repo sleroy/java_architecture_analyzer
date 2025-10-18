@@ -1,9 +1,8 @@
 package com.analyzer.inspectors.core.bedrock;
 
-import com.analyzer.core.ProjectFile;
-import com.analyzer.core.InspectorTags;
-import com.analyzer.core.InspectorResult;
-import com.analyzer.inspectors.core.source.TextFileInspector;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.model.ProjectFile;
+import com.analyzer.inspectors.core.source.AbstractTextFileInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,39 +10,40 @@ import org.slf4j.LoggerFactory;
 /**
  * Abstract base class for inspectors that use AWS Bedrock AI models for code
  * analysis.
- * Extends TextFileInspector to leverage source code content processing
+ * Extends AbstractTextFileInspector to leverage source code content processing
  * capabilities.
- * 
+ * <p>
  * Subclasses must implement:
- * - getName() and getColumnName() from Inspector interface
+ * - getName() from Inspector interface
  * - buildPrompt() to create model-specific prompts
- * - parseResponse() to extract results from AI responses
+ * - parseResponse() to process AI responses and set tags via ProjectFileDecorator
  */
-public abstract class BedrockInspector extends TextFileInspector {
+public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileInspector {
 
-    protected static final Logger logger = LoggerFactory.getLogger(BedrockInspector.class);
+    protected static final Logger logger = LoggerFactory.getLogger(AbstractBedrockInspectorAbstract.class);
 
     private final BedrockConfig config;
-    private final BedrockApiClient apiClient;
+    private BedrockApiClient apiClient;
+    private boolean initializedSuccessfully = false;
 
     /**
-     * Creates a BedrockInspector with the specified ResourceResolver and default
+     * Creates a AbstractBedrockInspectorAbstract with the specified ResourceResolver and default
      * configuration.
-     * 
+     *
      * @param resourceResolver the resolver for accessing source file resources
      */
-    protected BedrockInspector(ResourceResolver resourceResolver) {
+    protected AbstractBedrockInspectorAbstract(ResourceResolver resourceResolver) {
         this(resourceResolver, BedrockConfig.load());
     }
 
     /**
-     * Creates a BedrockInspector with the specified ResourceResolver and
+     * Creates a AbstractBedrockInspectorAbstract with the specified ResourceResolver and
      * configuration.
-     * 
+     *
      * @param resourceResolver the resolver for accessing source file resources
      * @param config           the Bedrock configuration to use
      */
-    protected BedrockInspector(ResourceResolver resourceResolver, BedrockConfig config) {
+    protected AbstractBedrockInspectorAbstract(ResourceResolver resourceResolver, BedrockConfig config) {
         super(resourceResolver);
         this.config = config;
 
@@ -56,36 +56,46 @@ public abstract class BedrockInspector extends TextFileInspector {
 
             logger.info("Initialized Bedrock inspector: {} with model: {}",
                     getName(), config.getModelId());
+            this.initializedSuccessfully = true;
 
         } catch (BedrockConfigurationException e) {
-            logger.error("Invalid Bedrock configuration for inspector {}: {}", getName(), e.getMessage());
-            throw new RuntimeException("Failed to initialize Bedrock inspector", e);
+            logger.warn("Invalid Bedrock configuration for inspector {}: {}. The inspector will be disabled.", getName(), e.getMessage());
+            this.initializedSuccessfully = false;
         }
     }
 
     @Override
-    protected final InspectorResult processContent(String content, ProjectFile clazz) {
+    protected final void processContent(String content, ProjectFile clazz, ProjectFileDecorator projectFileDecorator) {
+        if (!initializedSuccessfully) {
+            logger.debug("Bedrock inspector {} is not initialized due to configuration issues.", getName());
+            projectFileDecorator.notApplicable();
+            return;
+        }
         // Check if Bedrock integration is enabled
         if (!config.isEnabled()) {
             logger.debug("Bedrock integration disabled for inspector: {}", getName());
-            return InspectorResult.notApplicable(getColumnName());
+            projectFileDecorator.notApplicable();
+            return;
         }
 
         // Check if content is suitable for AI analysis
         if (content == null || content.trim().isEmpty()) {
-            return InspectorResult.error(getColumnName(), "No source content available for AI analysis");
+            projectFileDecorator.error("No source content available for AI analysis");
+            return;
         }
 
         if (content.length() < 10) {
             logger.debug("Content too short for meaningful AI analysis: {} characters", content.length());
-            return InspectorResult.notApplicable(getColumnName());
+            projectFileDecorator.notApplicable();
+            return;
         }
 
         try {
             // Build prompt for AI model
             String prompt = buildPrompt(content, clazz);
             if (prompt == null || prompt.trim().isEmpty()) {
-                return InspectorResult.error(getColumnName(), "Failed to build prompt for AI analysis");
+                projectFileDecorator.error("Failed to build prompt for AI analysis");
+                return;
             }
 
             logger.debug("Invoking Bedrock model for class: {} with prompt length: {}",
@@ -96,24 +106,25 @@ public abstract class BedrockInspector extends TextFileInspector {
 
             // Validate response
             if (!response.hasValidText()) {
-                return InspectorResult.error(getColumnName(),
+                projectFileDecorator.error(
                         "Bedrock API returned empty or invalid response");
+                return;
             }
 
             logger.debug("Received Bedrock response for class: {} with {} characters",
                     clazz.getFullyQualifiedName(), response.getText().length());
 
             // Parse and return result
-            return parseResponse(response.getText(), clazz);
+            parseResponse(response.getText(), clazz, projectFileDecorator);
 
         } catch (BedrockApiException e) {
             logger.warn("Bedrock API call failed for class {}: {}",
                     clazz.getFullyQualifiedName(), e.getMessage());
-            return InspectorResult.error(getColumnName(), "Bedrock API error: " + e.getMessage());
+            projectFileDecorator.error("Bedrock API error: " + e.getMessage());
         } catch (Exception e) {
             logger.error("Unexpected error during Bedrock analysis for class {}: {}",
                     clazz.getFullyQualifiedName(), e.getMessage(), e);
-            return InspectorResult.error(getColumnName(), "Unexpected error: " + e.getMessage());
+            projectFileDecorator.error("Unexpected error: " + e.getMessage());
         }
     }
 
@@ -123,7 +134,7 @@ public abstract class BedrockInspector extends TextFileInspector {
      * This method should create a clear, specific prompt that will guide the AI to
      * produce
      * the desired analysis result.
-     * 
+     *
      * @param content the complete source code content
      * @param clazz   the class being analyzed (contains metadata like name,
      *                package, etc.)
@@ -133,34 +144,20 @@ public abstract class BedrockInspector extends TextFileInspector {
 
     /**
      * Parse the response from the AI model and extract the analysis result.
-     * This method should interpret the AI's response and convert it into an
-     * appropriate
-     * InspectorResult value (typically a number, boolean, or string).
-     * 
-     * @param response the text response from the AI model
-     * @param clazz    the class being analyzed
-     * @return the parsed inspector result
+     * This method should interpret the AI's response and set appropriate
+     * tags on the ProjectFile via projectFile.setTag() calls.
+     *
+     * @param response        the text response from the AI model
+     * @param clazz           the class being analyzed
+     * @param projectFileDecorator decorator for handling errors and success states
      */
-    protected abstract InspectorResult parseResponse(String response, ProjectFile clazz);
+    protected abstract void parseResponse(String response, ProjectFile clazz, ProjectFileDecorator projectFileDecorator);
 
-    /**
-     * Check if this inspector supports the given class.
-     * Default implementation supports all classes, but subclasses can override
-     * to add specific filtering logic.
-     * 
-     * @param clazz the class to check
-     * @return true if this inspector can analyze the class
-     */
-    @Override
-    public boolean supports(ProjectFile clazz) {
-        // Only analyze classes with source code
-        return clazz.getBooleanTag(InspectorTags.RESOURCE_HAS_JAVA_SOURCE, false);
-    }
 
     /**
      * Get the Bedrock configuration used by this inspector.
      * Useful for debugging and testing.
-     * 
+     *
      * @return the current Bedrock configuration
      */
     protected BedrockConfig getConfig() {
@@ -170,7 +167,7 @@ public abstract class BedrockInspector extends TextFileInspector {
     /**
      * Get the API client used by this inspector.
      * Useful for testing and advanced use cases.
-     * 
+     *
      * @return the current API client
      */
     protected BedrockApiClient getApiClient() {
@@ -181,74 +178,36 @@ public abstract class BedrockInspector extends TextFileInspector {
      * Create a context-aware prompt that includes class metadata.
      * This is a utility method that subclasses can use to build comprehensive
      * prompts.
-     * 
+     *
      * @param basePrompt the base analysis prompt
      * @param content    the source code content
      * @param clazz      the class being analyzed
      * @return a context-enriched prompt
      */
     protected String buildContextualPrompt(String basePrompt, String content, ProjectFile clazz) {
-        StringBuilder promptBuilder = new StringBuilder();
 
-        promptBuilder.append(basePrompt).append("\n\n");
+        String promptBuilder = basePrompt + "\n\n" +
 
-        // Add class context
-        promptBuilder.append("Class Information:\n");
-        promptBuilder.append("- Class Name: ").append(clazz.getClassName()).append("\n");
-        promptBuilder.append("- Package: ").append(clazz.getPackageName()).append("\n");
-        promptBuilder.append("- Fully Qualified Name: ").append(clazz.getFullyQualifiedName()).append("\n");
+                // Add class context
+                "Class Information:\n" +
+                "- Class Name: " + clazz.getClassName() + "\n" +
+                "- Package: " + clazz.getPackageName() + "\n" +
+                "- Fully Qualified Name: " + clazz.getFullyQualifiedName() + "\n" +
 
-        // Add source code
-        promptBuilder.append("\nSource Code:\n");
-        promptBuilder.append("```java\n");
-        promptBuilder.append(content);
-        promptBuilder.append("\n```\n");
+                // Add source code
+                "\nSource Code:\n" +
+                "```java\n" +
+                content +
+                "\n```\n";
 
-        return promptBuilder.toString();
-    }
-
-    /**
-     * Create a system prompt optimized for Claude 3+ models using Messages API.
-     * This method helps build more structured prompts that take advantage of
-     * the system/user message separation in newer Claude models.
-     * 
-     * @param systemInstructions the system-level instructions for the AI
-     * @param userQuery          the user's specific query or task
-     * @param content            the source code content
-     * @param clazz              the class being analyzed
-     * @return a well-structured prompt
-     */
-    protected String buildStructuredPrompt(String systemInstructions, String userQuery, String content,
-            ProjectFile clazz) {
-        StringBuilder promptBuilder = new StringBuilder();
-
-        // For models that support it, the BedrockApiClient will separate system and
-        // user messages
-        // For now, we'll build a single prompt that works with all model types
-        promptBuilder.append("System Instructions: ").append(systemInstructions).append("\n\n");
-
-        promptBuilder.append("Task: ").append(userQuery).append("\n\n");
-
-        // Add class context
-        promptBuilder.append("Class Information:\n");
-        promptBuilder.append("- Class Name: ").append(clazz.getClassName()).append("\n");
-        promptBuilder.append("- Package: ").append(clazz.getPackageName()).append("\n");
-        promptBuilder.append("- Fully Qualified Name: ").append(clazz.getFullyQualifiedName()).append("\n");
-
-        // Add source code
-        promptBuilder.append("\nSource Code:\n");
-        promptBuilder.append("```java\n");
-        promptBuilder.append(content);
-        promptBuilder.append("\n```\n");
-
-        return promptBuilder.toString();
+        return promptBuilder;
     }
 
     /**
      * Check if the configured model supports advanced prompting features.
      * This can be used by subclasses to optimize their prompts based on model
      * capabilities.
-     * 
+     *
      * @return true if the model supports Messages API (Claude 3+), false otherwise
      */
     protected boolean supportsAdvancedPrompting() {
@@ -262,7 +221,7 @@ public abstract class BedrockInspector extends TextFileInspector {
     /**
      * Get the model family for optimization purposes.
      * This helps subclasses understand what type of model they're working with.
-     * 
+     *
      * @return the model family (CLAUDE, TITAN, or GENERIC)
      */
     protected ModelFamily getModelFamily() {
@@ -298,7 +257,7 @@ public abstract class BedrockInspector extends TextFileInspector {
     /**
      * Parse a numeric response from the AI model.
      * This is a utility method for inspectors that expect numeric results.
-     * 
+     *
      * @param response     the AI response text
      * @param defaultValue the default value if parsing fails
      * @return the parsed numeric value
@@ -324,7 +283,7 @@ public abstract class BedrockInspector extends TextFileInspector {
     /**
      * Parse a boolean response from the AI model.
      * This is a utility method for inspectors that expect yes/no results.
-     * 
+     *
      * @param response     the AI response text
      * @param defaultValue the default value if parsing fails
      * @return the parsed boolean value

@@ -1,6 +1,8 @@
-package com.analyzer.core;
+package com.analyzer.core.model;
+import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.resource.ResourceLocation;
+
 import java.util.*;
 
 /**

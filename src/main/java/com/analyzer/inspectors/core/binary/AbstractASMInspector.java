@@ -1,7 +1,7 @@
 package com.analyzer.inspectors.core.binary;
 
-import com.analyzer.core.ProjectFile;
-import com.analyzer.core.InspectorResult;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.ClassReader;
@@ -16,30 +16,32 @@ import java.io.InputStream;
  * Implements the template method pattern to provide a consistent framework for
  * ASM-based
  * class analysis.
- * 
+ * <p>
  * Subclasses must implement createClassVisitor() to provide their specific
  * analysis logic.
  * The class visitor should extend ASMClassVisitor to provide the analysis
  * result.
  */
-public abstract class ASMInspector extends BinaryClassInspector {
+
+public abstract class AbstractASMInspector extends AbstractBinaryClassInspector {
 
     /**
-     * Creates an ASMInspector with the specified ResourceResolver.
-     * 
+     * Creates an AbstractASMInspector with the specified ResourceResolver.
+     *
      * @param resourceResolver the resolver for accessing class file resources
      */
-    protected ASMInspector(ResourceResolver resourceResolver) {
+    protected AbstractASMInspector(ResourceResolver resourceResolver) {
         super(resourceResolver);
     }
 
     @Override
-    protected final InspectorResult analyzeClassFile(ProjectFile projectFile, ResourceLocation binaryLocation,
-            InputStream classInputStream) throws IOException {
+    protected final void analyzeClassFile(ProjectFile projectFile, ResourceLocation binaryLocation,
+                                          InputStream classInputStream, ProjectFileDecorator projectFileDecorator) throws IOException {
         try {
             // Validate input stream before ASM processing
             if (classInputStream == null) {
-                return InspectorResult.error(getColumnName(), "Class input stream is null for: " + binaryLocation);
+                projectFileDecorator.error("Class input stream is null for: " + binaryLocation);
+                return;
             }
 
             // Read all bytes first to validate content exists
@@ -47,36 +49,35 @@ public abstract class ASMInspector extends BinaryClassInspector {
 
             // Check for empty class files
             if (classBytes.length == 0) {
-                return InspectorResult.error(getColumnName(), "Empty class file (0 bytes): " + binaryLocation);
+                projectFileDecorator.error("Empty class file (0 bytes): " + binaryLocation);
+                return;
             }
 
             // Check for minimum valid class file size (basic Java class is at least 100+
             // bytes)
             if (classBytes.length < 50) {
-                return InspectorResult.error(getColumnName(),
+                projectFileDecorator.error(
                         "Class file too small (" + classBytes.length + " bytes), likely corrupted: " + binaryLocation);
+                return;
             }
 
             // Create ClassReader from validated bytes
             ClassReader classReader = new ClassReader(classBytes);
 
             // Create the analysis visitor
-            ASMClassVisitor visitor = createClassVisitor(projectFile);
+            ASMClassVisitor visitor = createClassVisitor(projectFile, projectFileDecorator);
 
             // Perform the analysis
             classReader.accept(visitor, 0);
 
-            // Return the result from the visitor
-            return visitor.getResult();
-
         } catch (IOException e) {
-            return InspectorResult.error(getColumnName(), "Error reading class file: " + e.getMessage());
+            projectFileDecorator.error("Error reading class file: " + e.getMessage());
         } catch (IllegalArgumentException e) {
             // ASM ClassReader throws IllegalArgumentException for invalid bytecode
-            return InspectorResult.error(getColumnName(),
+            projectFileDecorator.error(
                     "Invalid bytecode format in: " + binaryLocation + " - " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getColumnName(), "ASM analysis error: " + e.getMessage());
+            projectFileDecorator.error("ASM analysis error: " + e.getMessage());
         }
     }
 
@@ -84,61 +85,52 @@ public abstract class ASMInspector extends BinaryClassInspector {
      * Creates a class visitor for analyzing the bytecode.
      * Subclasses must implement this method to provide their specific analysis
      * logic.
-     * 
-     * @param projectFile the project file being analyzed
+     *
+     * @param projectFile     the project file being analyzed
+     * @param projectFileDecorator
      * @return an ASMClassVisitor that will perform the analysis
      */
-    protected abstract ASMClassVisitor createClassVisitor(ProjectFile projectFile);
+    protected abstract ASMClassVisitor createClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator);
 
     /**
-     * Base class for ASM class visitors that provide analysis results.
+     * Base class for ASM class visitors that store analysis results using ProjectFileDecorator.
      * Subclasses should extend this class and implement their analysis logic
-     * in the various visit methods, then call setResult() to store the result.
+     * in the various visit methods, then use setTag() to store results or reportError() for errors.
      */
     public static abstract class ASMClassVisitor extends ClassVisitor {
 
-        private InspectorResult result;
-        private final String tagName;
+        protected final ProjectFile projectFile;
+        protected final ProjectFileDecorator projectFileDecorator;
 
         /**
-         * Creates an ASMClassVisitor with the specified inspector name.
-         * 
-         * @param tagName the name of the tag (for result identification)
+         * Creates an ASMClassVisitor with the specified project file and result decorator.
+         *
+         * @param projectFile the project file being analyzed
+         * @param projectFileDecorator the result decorator for storing results
          */
-        protected ASMClassVisitor(String tagName) {
+        protected ASMClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
             super(org.objectweb.asm.Opcodes.ASM9);
-            this.tagName = tagName;
+            this.projectFile = projectFile;
+            this.projectFileDecorator = projectFileDecorator;
         }
 
         /**
-         * Sets the analysis result.
-         * 
-         * @param value the analysis result value
+         * Sets a tag value on the project file.
+         *
+         * @param tagName the tag name
+         * @param value the tag value
          */
-        protected void setResult(Object value) {
-            this.result = InspectorResult.success(tagName, value);
+        protected void setTag(String tagName, Object value) {
+            projectFileDecorator.setTag(tagName, value);
         }
 
         /**
-         * Sets an error result.
-         * 
+         * Reports an error using the result decorator.
+         *
          * @param errorMessage the error message
          */
-        protected void setError(String errorMessage) {
-            this.result = InspectorResult.error(tagName, errorMessage);
-        }
-
-        /**
-         * Gets the analysis result.
-         * Should be called after the visitor has completed its analysis.
-         * 
-         * @return the analysis result
-         */
-        public InspectorResult getResult() {
-            if (result == null) {
-                return InspectorResult.error(tagName, "No result set by visitor");
-            }
-            return result;
+        protected void reportError(String errorMessage) {
+            projectFileDecorator.error(errorMessage);
         }
     }
 }

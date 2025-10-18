@@ -1,10 +1,6 @@
-package com.analyzer.core;
+package com.analyzer.core.inspector;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * Annotation for declaring inspector dependencies in a clean, declarative way.
@@ -12,32 +8,32 @@ import java.lang.annotation.Target;
  * automatic dependency inheritance through the class hierarchy.
  * 
  * <p>
- * The annotation supports both legacy tag-based dependencies and the new
- * inspector-class based dependencies for better type safety and IDE support.
+ * The annotation supports both tag-based dependencies and inspector-class
+ * based dependencies for better type safety and IDE support.
  * </p>
  * 
  * <p>
- * Example usage with new inspector-class based dependencies:
+ * Example usage with inspector-class based dependencies:
  * </p>
  * 
  * <pre>
  * {
  *     &#64;code
- *     &#64;InspectorDependencies(need = { FileExtensionInspector.class, JavaSourceFileInspector.class }, produces = {
+ *     &#64;InspectorDependencies(need = { FileExtensionDetector.class, JavaSourceFileDetector.class }, produces = {
  *             InspectorTags.JAVA_DETECTED, InspectorTags.JAVA_IS_SOURCE })
  *     public class JavaParserInspector extends AbstractSourceFileInspector {
  *         // Depends on specific inspector classes and declares what tags it produces
  *     }
  * 
  *     &#64;InspectorDependencies(need = { JavaParserInspector.class }, produces = { InspectorTags.SESSION_BEAN_DETECTED })
- *     public class SessionBeanInspector extends JavaParserInspector {
+ *     public class SessionBeanJavaSourceInspector extends JavaParserInspector {
  *         // Depends on JavaParserInspector and produces session bean tags
  *     }
  * }
  * </pre>
  * 
  * <p>
- * Legacy tag-based dependencies are still supported:
+ * Tag-based dependencies are also supported:
  * </p>
  * 
  * <pre>
@@ -45,7 +41,7 @@ import java.lang.annotation.Target;
  *     &#64;code
  *     &#64;InspectorDependencies(requires = { InspectorTags.SOURCE_FILE })
  *     public abstract class SourceFileInspector extends ProjectFileInspector {
- *         // Legacy tag-based dependency (still supported)
+ *         // Tag-based dependency
  *     }
  * }
  * </pre>
@@ -56,10 +52,9 @@ import java.lang.annotation.Target;
 public @interface InspectorDependencies {
 
     /**
-     * Required tags for this specific inspector class.
+     * Required tags for this inspector.
      * These will be combined with inherited dependencies from parent classes.
      * 
-     * @deprecated Use {@link #need()} for type-safe inspector class dependencies
      * @return array of required tag constants from InspectorTags
      */
     String[] requires() default {};
@@ -82,30 +77,39 @@ public @interface InspectorDependencies {
      * 
      * @return array of tag constants from InspectorTags that this inspector sets
      */
-    String[] produces() ;
+    String[] produces();
 
     /**
-     * Whether to inherit dependencies from parent inspector classes.
-     * When true (default), this class's dependencies are added to parent
-     * dependencies.
-     * When false, only this class's dependencies are used.
-     * 
-     * @return true to inherit parent dependencies, false to ignore them
-     */
-    boolean inheritParent() default true;
-
-    /**
-     * Whether to override parent dependencies instead of adding to them.
-     * When true, parent dependencies are completely replaced by this class's
-     * dependencies.
-     * Use with caution as this breaks the inheritance chain.
+     * Complex tag-based dependency conditions that provide sophisticated
+     * dependency logic beyond simple tag presence checking.
+     * This enables value-based conditions, comparisons, and pattern matching.
      * 
      * <p>
-     * This is useful for special cases where an inspector needs a completely
-     * different set of dependencies than its parent class.
+     * Example usage:
      * </p>
      * 
-     * @return true to replace parent dependencies, false to add to them
+     * <pre>
+     * {
+     *     &#64;code
+     *     &#64;InspectorDependencies(requires = { "JAVA" }, // Simple tag presence
+     *             complexRequires = {
+     *                     &#64;TagCondition(tag = "migrationComplexity", operator = GREATER_THAN_OR_EQUAL, value = "MEDIUM"),
+     *                     &#64;TagCondition(tag = "fileExtension", operator = EQUALS, value = "XML")
+     *             })
+     *     public class AdvancedInspector extends AbstractInspector {
+     *         // Runs only on Java files with medium+ migration complexity AND XML
+     *         // extension
+     *     }
+     * }
+     * </pre>
+     * 
+     * <p>
+     * Complex conditions are evaluated in addition to simple requires conditions.
+     * ALL conditions (both simple and complex) must be satisfied for the inspector
+     * to run.
+     * </p>
+     * 
+     * @return array of complex tag conditions
      */
-    boolean overrideParent() default false;
+    TagCondition[] complexRequires() default {};
 }

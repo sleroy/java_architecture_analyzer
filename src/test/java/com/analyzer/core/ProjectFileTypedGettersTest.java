@@ -1,5 +1,6 @@
 package com.analyzer.core;
 
+import com.analyzer.core.model.ProjectFile;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -22,7 +23,7 @@ public class ProjectFileTypedGettersTest {
     @BeforeEach
     void setUp() {
         projectRoot = Paths.get("/test/project");
-        testFilePath = Paths.get("/test/project/src/main/java/Example.java");
+        testFilePath = Paths.get("/test/project/src/main/java/InventoryExample.java");
         projectFile = new ProjectFile(testFilePath, projectRoot);
     }
 
@@ -165,7 +166,7 @@ public class ProjectFileTypedGettersTest {
     @Test
     void testMixedTypesInRealScenario() {
         // Simulate real usage scenario with Java file tags
-        projectFile.setTag("java.className", "Example");
+        projectFile.setTag("java.className", "InventoryExample");
         projectFile.setTag("java.packageName", "com.example");
         projectFile.setTag("java.lineCount", 150);
         projectFile.setTag("java.hasMainMethod", true);
@@ -173,7 +174,7 @@ public class ProjectFileTypedGettersTest {
         projectFile.setTag("java.imports", Arrays.asList("java.util.List", "java.io.File"));
 
         // Test retrieval with typed getters
-        assertEquals("Example", projectFile.getStringTag("java.className"));
+        assertEquals("InventoryExample", projectFile.getStringTag("java.className"));
         assertEquals("com.example", projectFile.getStringTag("java.packageName"));
         assertEquals(Integer.valueOf(150), projectFile.getIntegerTag("java.lineCount"));
         assertEquals(Boolean.TRUE, projectFile.getBooleanTag("java.hasMainMethod"));

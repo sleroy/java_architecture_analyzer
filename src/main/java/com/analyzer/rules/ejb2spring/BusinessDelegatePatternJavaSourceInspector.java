@@ -1,8 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ResultDecorator;
-import com.analyzer.core.graph.GraphAwareInspector;
-import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
@@ -15,6 +14,8 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
+import javax.inject.Inject;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -32,16 +33,17 @@ import java.util.Set;
  * <p>
  * Phase 1 - Core EJB Migration Analysis
  */
-@InspectorDependencies(need = {
-        EntityBeanInspector.class
-}, produces = {
-        EjbMigrationTags.EJB_BUSINESS_DELEGATE,
-        EjbMigrationTags.EJB_SERVICE_LOCATOR,
-        EjbMigrationTags.EJB_CLIENT_CODE,
-        EjbMigrationTags.EJB_JNDI_LOOKUP,
-        EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY
-})
-public class BusinessDelegatePatternInspector extends AbstractJavaParserInspector implements GraphAwareInspector {
+@InspectorDependencies(
+        requires = { "JAVA", InspectorTags.TAG_JAVA_IS_SOURCE },
+        need = { EntityBeanJavaSourceInspector.class },
+        produces = {
+                EjbMigrationTags.EJB_BUSINESS_DELEGATE,
+                EjbMigrationTags.EJB_SERVICE_LOCATOR,
+                EjbMigrationTags.EJB_CLIENT_CODE,
+                EjbMigrationTags.EJB_JNDI_LOOKUP,
+                EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY
+        })
+public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaParserInspector  {
 
     private static final String INSPECTOR_ID = "I-0709";
     private static final String INSPECTOR_NAME = "Business Delegate Pattern Inspector";
@@ -58,35 +60,34 @@ public class BusinessDelegatePatternInspector extends AbstractJavaParserInspecto
             "lookup", "lookupLink", "rebind", "bind"
     );
 
-    public BusinessDelegatePatternInspector(ResourceResolver resourceResolver) {
+    private final ClassNodeRepository classNodeRepository;
+
+    @Inject
+    public BusinessDelegatePatternJavaSourceInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
         super(resourceResolver);
+        this.classNodeRepository = classNodeRepository;
     }
 
-    @Override
-    public void setGraphRepository(GraphRepository graphRepository) {
-    }
+
+
+    
 
     @Override
     public boolean supports(ProjectFile projectFile) {
-        if (projectFile == null || !super.supports(projectFile)) {
-            return false;
-        }
-
-        // Only process Java source files - require both the tag and .java extension
-        return projectFile.getBooleanTag(InspectorTags.TAG_JAVA_IS_SOURCE, false) &&
-                projectFile.getFilePath().toString().endsWith(".java");
+        // Trust @InspectorDependencies to handle ALL filtering - never check tags manually
+        return super.supports(projectFile);
     }
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-                                          ResultDecorator resultDecorator) {
+                                          ProjectFileDecorator projectFileDecorator) {
 
         BusinessDelegateDetector detector = new BusinessDelegateDetector();
         cu.accept(detector, null);
 
         BusinessDelegateMetadata metadata = detector.getMetadata();
 
-        // Set pattern detection tags
+        // Set basic detection tags on ProjectFile (for inspector coordination)
         boolean isBusinessDelegate = metadata.isBusinessDelegate();
         boolean isServiceLocator = metadata.isServiceLocator();
         boolean usesBusinessDelegate = metadata.usesBusinessDelegate();
@@ -100,27 +101,37 @@ public class BusinessDelegatePatternInspector extends AbstractJavaParserInspecto
 
         if (isBusinessDelegate || isServiceLocator || usesBusinessDelegate || hasJndiLookup) {
             projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY, true);
-
-            // Set migration complexity
-            String complexity = assessMigrationComplexity(metadata);
-            if ("HIGH".equals(complexity)) {
-                projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_COMPLEX, true);
-            } else if ("MEDIUM".equals(complexity)) {
-                projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_MEDIUM, true);
-            } else {
-                projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_SIMPLE, true);
-            }
-
-            // Store detailed metadata
-            projectFile.setTag("business_delegate.pattern_type", metadata.getPatternType());
-            projectFile.setTag("business_delegate.complexity", complexity);
-            projectFile.setTag("business_delegate.delegate_method_count", String.valueOf(metadata.getDelegateMethodCount()));
-            projectFile.setTag("business_delegate.jndi_lookup_count", String.valueOf(metadata.getJndiLookupCount()));
-
-            // Generate migration recommendations
-            List<String> recommendations = generateMigrationRecommendations(metadata);
-            projectFile.setTag("business_delegate.recommendations", String.join("; ", recommendations));
         }
+
+        // Store detailed analysis metadata on JavaClassNode
+        classNodeRepository.getOrCreateClassNode(cu).ifPresent(classNode -> {
+            classNode.setProjectFileId(projectFile.getId());
+
+            if (isBusinessDelegate || isServiceLocator || usesBusinessDelegate || hasJndiLookup) {
+                // Set migration complexity tags
+                String complexity = assessMigrationComplexity(metadata);
+                if ("HIGH".equals(complexity)) {
+                    classNode.setProperty(EjbMigrationTags.EJB_MIGRATION_COMPLEX, true);
+                } else if ("MEDIUM".equals(complexity)) {
+                    classNode.setProperty(EjbMigrationTags.EJB_MIGRATION_MEDIUM, true);
+                } else {
+                    classNode.setProperty(EjbMigrationTags.EJB_MIGRATION_SIMPLE, true);
+                }
+
+                // Generate migration recommendations
+                List<String> recommendations = generateMigrationRecommendations(metadata);
+
+                // Store all analysis data in a single serializable POJO (Guideline #5)
+                BusinessDelegateAnalysis analysis = new BusinessDelegateAnalysis(
+                        metadata.getPatternType(),
+                        complexity,
+                        metadata.getDelegateMethodCount(),
+                        metadata.getJndiLookupCount(),
+                        recommendations
+                );
+                classNode.setProperty("business_delegate_analysis", analysis);
+            }
+        });
     }
 
     public String assessMigrationComplexity(BusinessDelegateMetadata metadata) {
@@ -408,6 +419,61 @@ public class BusinessDelegatePatternInspector extends AbstractJavaParserInspecto
 
         public void setPatternType(String patternType) {
             this.patternType = patternType;
+        }
+    }
+
+    /**
+     * Serializable POJO to hold complete Business Delegate analysis data
+     * (Guideline #5: Combine multiple properties into single POJO)
+     */
+    public static class BusinessDelegateAnalysis implements Serializable {
+        private static final long serialVersionUID = 1L;
+
+        private final String patternType;
+        private final String complexity;
+        private final int delegateMethodCount;
+        private final int jndiLookupCount;
+        private final List<String> recommendations;
+
+        public BusinessDelegateAnalysis(String patternType, String complexity, 
+                                      int delegateMethodCount, int jndiLookupCount, 
+                                      List<String> recommendations) {
+            this.patternType = patternType;
+            this.complexity = complexity;
+            this.delegateMethodCount = delegateMethodCount;
+            this.jndiLookupCount = jndiLookupCount;
+            this.recommendations = new ArrayList<>(recommendations); // Defensive copy
+        }
+
+        public String getPatternType() {
+            return patternType;
+        }
+
+        public String getComplexity() {
+            return complexity;
+        }
+
+        public int getDelegateMethodCount() {
+            return delegateMethodCount;
+        }
+
+        public int getJndiLookupCount() {
+            return jndiLookupCount;
+        }
+
+        public List<String> getRecommendations() {
+            return new ArrayList<>(recommendations); // Defensive copy
+        }
+
+        @Override
+        public String toString() {
+            return "BusinessDelegateAnalysis{" +
+                    "patternType='" + patternType + '\'' +
+                    ", complexity='" + complexity + '\'' +
+                    ", delegateMethodCount=" + delegateMethodCount +
+                    ", jndiLookupCount=" + jndiLookupCount +
+                    ", recommendations=" + recommendations +
+                    '}';
         }
     }
 }

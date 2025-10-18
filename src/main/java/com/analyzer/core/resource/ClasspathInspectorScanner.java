@@ -1,5 +1,7 @@
-package com.analyzer.core;
+package com.analyzer.core.resource;
+import com.analyzer.core.inspector.InspectorDependencies;
 
+import com.analyzer.core.inspector.Inspector;
 import com.analyzer.inspectors.core.binary.AbstractBinaryClassInspector;
 import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
 import com.analyzer.resource.ResourceResolver;
@@ -11,11 +13,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -255,7 +253,7 @@ public class ClasspathInspectorScanner {
     /**
      * Checks if a class directly implements Inspector interface without extending
      * the standard base classes. This allows for core inspectors like
-     * SourceFileTagInspector that don't need the full framework of the base
+     * SourceFileTagDetector that don't need the full framework of the base
      * classes.
      */
     private boolean isDirectInspectorImplementation(Class<?> clazz) {

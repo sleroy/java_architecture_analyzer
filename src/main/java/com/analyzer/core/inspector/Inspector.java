@@ -1,4 +1,7 @@
-package com.analyzer.core;
+package com.analyzer.core.inspector;
+
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.model.ProjectFile;
 
 /**
  * Generic interface for all inspectors.
@@ -13,10 +16,10 @@ public interface Inspector<T> {
      * Analyzes the given object and returns a result.
      *
      * @param objectToAnalyze the object to analyze
-     * @param resultDecorator the decorator to store the result
+     * @param projectFileDecorator the decorator to store the result
      * @return the result of the analysis
      */
-    void decorate(T objectToAnalyze, ResultDecorator resultDecorator);
+    void decorate(T objectToAnalyze, ProjectFileDecorator projectFileDecorator);
 
     /**
      * Gets the unique name of this inspector.

@@ -1,5 +1,8 @@
-package com.analyzer.core;
+package com.analyzer.core.resource;
+import com.analyzer.core.inspector.InspectorDependencies;
 
+import com.analyzer.core.filter.FileIgnoreFilter;
+import com.analyzer.core.model.ProjectFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,8 +11,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.*;
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 

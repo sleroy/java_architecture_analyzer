@@ -1,4 +1,8 @@
-package com.analyzer.core;
+package com.analyzer.core.filter;
+import com.analyzer.core.inspector.InspectorDependencies;
+
+import com.analyzer.core.model.Package;
+import com.analyzer.core.model.ProjectFile;
 
 import java.util.*;
 import java.util.stream.Collectors;

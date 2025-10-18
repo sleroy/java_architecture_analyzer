@@ -1,8 +1,12 @@
-package com.analyzer.core;
+package com.analyzer.core.model;
+import com.analyzer.core.inspector.InspectorDependencies;
 
+import com.analyzer.core.graph.GraphNode;
+import com.analyzer.core.inspector.InspectorTags;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,8 +15,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.analyzer.core.graph.GraphNode;
 
 /**
  * Represents a file in a project that has been detected by FileDetectors.

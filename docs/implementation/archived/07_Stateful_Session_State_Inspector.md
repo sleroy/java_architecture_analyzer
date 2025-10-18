@@ -73,45 +73,42 @@ public class ShoppingCartService {
 ## Implementation Details
 
 ### Core Inspector Class
+
 ```java
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.graph.GraphAwareInspector;
 import com.analyzer.core.graph.GraphRepository;
 import com.analyzer.inspectors.core.binary.AbstractASMInspector;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.FieldVisitor;
-import org.objectweb.asm.MethodVisitor;
 
 @RequiredTags({"STATEFUL_SESSION_BEAN", "EJB_BEAN"})
-@InspectorTags({"STATEFUL_SESSION_STATE", "CONVERSATIONAL_STATE", 
-                "CROSS_METHOD_DEPENDENCY", "SPRING_SCOPE_MIGRATION"})
-public class StatefulSessionStateInspector extends AbstractASMInspector 
-    implements GraphAwareInspector {
-    
+@InspectorTags({"STATEFUL_SESSION_STATE", "CONVERSATIONAL_STATE",
+        "CROSS_METHOD_DEPENDENCY", "SPRING_SCOPE_MIGRATION"})
+public class StatefulSessionStateInspector extends AbstractASMInspector
+        implements GraphAwareInspector {
+
     private GraphRepository graphRepository;
-    
+
     @Override
     public void setGraphRepository(GraphRepository graphRepository) {
         this.graphRepository = graphRepository;
     }
-    
+
     @Override
     protected InspectorResult doInspection(ProjectFile file) {
         if (!isStatefulSessionBean(file)) {
             return InspectorResult.empty();
         }
-        
+
         try {
             StatefulBeanAnalysis analysis = analyzeStatefulBean(file);
             return createResultWithAnalysis(analysis, file);
-            
+
         } catch (Exception e) {
-            return InspectorResult.error("Failed to analyze stateful bean: " + 
-                e.getMessage());
+            return InspectorResult.error("Failed to analyze stateful bean: " +
+                    e.getMessage());
         }
     }
-    
+
     private boolean isStatefulSessionBean(ProjectFile file) {
         return file.getTags().contains("STATEFUL_SESSION_BEAN");
     }

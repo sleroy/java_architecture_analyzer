@@ -49,7 +49,7 @@ Implement inspector I-0709 to detect and analyze Business Delegate pattern usage
 #### Inspector Class Structure
 
 ```java
-// File: src/main/java/com/analyzer/rules/ejb2spring/BusinessDelegatePatternInspector.java
+// File: src/main/java/com/analyzer/rules/ejb2spring/BusinessDelegatePatternJavaSourceInspector.java
 public class BusinessDelegatePatternInspector extends AbstractASMInspector 
         implements GraphAwareInspector {
     

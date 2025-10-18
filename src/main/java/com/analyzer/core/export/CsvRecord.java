@@ -1,4 +1,5 @@
-package com.analyzer.core;
+package com.analyzer.core.export;
+import com.analyzer.core.inspector.InspectorDependencies;
 
 /**
  * Base interface for CSV record types that can be written to inventory output.

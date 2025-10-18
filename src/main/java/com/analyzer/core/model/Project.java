@@ -1,4 +1,5 @@
-package com.analyzer.core;
+package com.analyzer.core.model;
+import com.analyzer.core.inspector.InspectorDependencies;
 
 import java.nio.file.Path;
 import java.util.*;

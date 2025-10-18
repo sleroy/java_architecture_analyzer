@@ -1,11 +1,19 @@
-package com.analyzer.core;
+package com.analyzer.core.engine;
 
 import com.analyzer.analysis.Analysis;
 import com.analyzer.analysis.AnalysisResult;
-import com.analyzer.core.graph.GraphAwareInspector;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.filter.FileIgnoreFilter;
 import com.analyzer.core.graph.GraphEdge;
 import com.analyzer.core.graph.GraphNode;
 import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.core.inspector.Inspector;
+import com.analyzer.core.inspector.InspectorProgressTracker;
+import com.analyzer.core.inspector.InspectorRegistry;
+import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.model.Project;
+import com.analyzer.core.model.ProjectDeserializer;
+import com.analyzer.core.model.ProjectFile;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -632,16 +640,10 @@ public class AnalysisEngine {
         // Record inspector trigger for progress tracking
         progressTracker.recordInspectorTrigger(inspector.getName(), projectFile);
 
-        // If this is a GraphAware inspector, inject the GraphRepository
-        if (inspector instanceof GraphAwareInspector && graphRepository != null) {
-            GraphAwareInspector graphAwareInspector = (GraphAwareInspector) inspector;
-            if (graphAwareInspector.contributesToGraph()) {
-                graphAwareInspector.setGraphRepository(graphRepository);
-                logger.debug("Injected GraphRepository into GraphAware inspector: {}", inspector.getName());
-            }
-        }
-
-        ResultDecorator decorator = new ResultDecorator(projectFile);
+        // GraphRepository is now injected via @Inject in inspector constructors
+        // No need for manual injection anymore
+        
+        ProjectFileDecorator decorator = new ProjectFileDecorator(projectFile);
         inspector.decorate(projectFile, decorator);
     }
 

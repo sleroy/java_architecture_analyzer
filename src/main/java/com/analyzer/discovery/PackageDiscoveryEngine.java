@@ -1,10 +1,12 @@
 package com.analyzer.discovery;
 
-import com.analyzer.core.ProjectFile;
-import com.analyzer.core.Package;
-import com.analyzer.resource.ResourceLocation;
+import com.analyzer.core.model.Package;
+import com.analyzer.core.model.ProjectFile;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**

@@ -37,7 +37,7 @@ Extends `AbstractClassLoaderBasedInspector` (primary approach)
 
 ```java
 @Override
-protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile, ResultDecorator resultDecorator) {
+protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile, ResultDecorator projectFileDecorator) {
     int interfaceCount = calculateTotalInterfaceCount(loadedClass);
     attachMetricToClassNode(projectFile, "interfaces.total_count", interfaceCount);
     
