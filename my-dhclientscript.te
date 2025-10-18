@@ -1,0 +1,10 @@
+
+module my-dhclientscript 1.0;
+
+require {
+	type dhcpc_t;
+	class capability dac_override;
+}
+
+#============= dhcpc_t ==============
+allow dhcpc_t self:capability dac_override;
