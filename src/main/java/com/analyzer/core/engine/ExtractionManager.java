@@ -1,5 +1,8 @@
-package com.analyzer.core;
+package com.analyzer.core.engine;
 
+import com.analyzer.core.filter.FileIgnoreFilter;
+import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.resource.JarExtractor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

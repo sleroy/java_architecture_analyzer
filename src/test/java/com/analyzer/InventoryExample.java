@@ -2,7 +2,7 @@ package com.analyzer;
 
 import com.analyzer.cli.AnalyzerCLI;
 
-public class Example {
+public class InventoryExample {
     public static void main(String[] args) {
 
         AnalyzerCLI.main(new String[]{

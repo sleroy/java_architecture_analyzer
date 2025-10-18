@@ -1,4 +1,5 @@
-package com.analyzer.core;
+package com.analyzer.core.model;
+import com.analyzer.core.inspector.InspectorDependencies;
 
 /**
  * Configuration options for project serialization and deserialization.

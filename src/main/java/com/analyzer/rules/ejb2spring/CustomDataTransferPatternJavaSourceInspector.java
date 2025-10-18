@@ -1,8 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ResultDecorator;
-import com.analyzer.core.graph.GraphAwareInspector;
-import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
@@ -18,6 +17,7 @@ import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
+import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -49,7 +49,7 @@ import java.util.Set;
         EjbMigrationTags.JDBC_DTO_USAGE,
         EjbMigrationTags.EJB_MIGRATION_MEDIUM_PRIORITY
 })
-public class CustomDataTransferPatternInspector extends AbstractJavaParserInspector implements GraphAwareInspector {
+public class CustomDataTransferPatternJavaSourceInspector extends AbstractJavaParserInspector  {
 
     private static final String INSPECTOR_ID = "I-0213";
     private static final String INSPECTOR_NAME = "Custom Data Transfer Pattern Inspector";
@@ -69,76 +69,71 @@ public class CustomDataTransferPatternInspector extends AbstractJavaParserInspec
             "mapRow", "mapResultSet", "createFrom", "fromResultSet", "populate",
             "fill", "convert", "transform", "build", "extract");
 
-    private GraphRepository graphRepository;
+    private final ClassNodeRepository classNodeRepository;
 
-    public CustomDataTransferPatternInspector(ResourceResolver resourceResolver) {
+    @Inject
+    public CustomDataTransferPatternJavaSourceInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
         super(resourceResolver);
+        this.classNodeRepository = classNodeRepository;
     }
 
-    @Override
-    public void setGraphRepository(GraphRepository graphRepository) {
-        this.graphRepository = graphRepository;
-    }
+    
 
     @Override
     public boolean supports(ProjectFile projectFile) {
-        if (projectFile == null || !super.supports(projectFile)) {
-            return false;
-        }
-
-        // Only process Java source files - require both the tag and .java extension
-        return projectFile.getBooleanTag(InspectorTags.TAG_JAVA_IS_SOURCE, false) &&
-                projectFile.getFilePath().toString().endsWith(".java");
+        return super.supports(projectFile);
     }
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-            ResultDecorator resultDecorator) {
+            ProjectFileDecorator projectFileDecorator) {
 
         DataTransferPatternDetector detector = new DataTransferPatternDetector();
         cu.accept(detector, null);
 
         DataTransferMetadata metadata = detector.getMetadata();
 
-        // Set pattern detection tags
-        boolean isDataTransferObject = metadata.isDataTransferObject();
-        boolean isValueObject = metadata.isValueObject();
-        boolean hasCustomMappingLogic = metadata.hasCustomMappingLogic();
-        boolean hasManualResultSetMapping = metadata.hasManualResultSetMapping();
-        boolean usesJdbcWithDtos = metadata.usesJdbcWithDtos();
+        classNodeRepository.getOrCreateClassNode(cu).ifPresent(classNode -> {
+            classNode.setProjectFileId(projectFile.getId());
 
-        projectFile.setTag(EjbMigrationTags.DATA_TRANSFER_OBJECT, isDataTransferObject);
-        projectFile.setTag(EjbMigrationTags.VALUE_OBJECT, isValueObject);
-        projectFile.setTag(EjbMigrationTags.MAPPING_CUSTOM_LOGIC, hasCustomMappingLogic);
-        projectFile.setTag(EjbMigrationTags.MAPPING_RESULTSET_MANUAL, hasManualResultSetMapping);
-        projectFile.setTag(EjbMigrationTags.JDBC_DTO_USAGE, usesJdbcWithDtos);
+            // Set pattern detection tags
+            boolean isDataTransferObject = metadata.isDataTransferObject();
+            boolean isValueObject = metadata.isValueObject();
+            boolean hasCustomMappingLogic = metadata.hasCustomMappingLogic();
+            boolean hasManualResultSetMapping = metadata.hasManualResultSetMapping();
+            boolean usesJdbcWithDtos = metadata.usesJdbcWithDtos();
 
-        if (isDataTransferObject || isValueObject || hasCustomMappingLogic ||
-                hasManualResultSetMapping || usesJdbcWithDtos) {
+            // Set tags on ProjectFile for dependency chain
+            projectFile.setTag(EjbMigrationTags.DATA_TRANSFER_OBJECT, isDataTransferObject);
+            projectFile.setTag(EjbMigrationTags.VALUE_OBJECT, isValueObject);
+            projectFile.setTag(EjbMigrationTags.MAPPING_CUSTOM_LOGIC, hasCustomMappingLogic);
+            projectFile.setTag(EjbMigrationTags.MAPPING_RESULTSET_MANUAL, hasManualResultSetMapping);
+            projectFile.setTag(EjbMigrationTags.JDBC_DTO_USAGE, usesJdbcWithDtos);
+            
+            if (isDataTransferObject || isValueObject || hasCustomMappingLogic ||
+                    hasManualResultSetMapping || usesJdbcWithDtos) {
 
-            projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_MEDIUM_PRIORITY, true);
+                projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_MEDIUM_PRIORITY, true);
 
-            // Set migration complexity
-            String complexity = assessMigrationComplexity(metadata);
-            if ("HIGH".equals(complexity)) {
-                projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_COMPLEX, true);
-            } else if ("MEDIUM".equals(complexity)) {
-                projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_MEDIUM, true);
-            } else {
-                projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_SIMPLE, true);
+                // Create consolidated analysis result
+                DataTransferAnalysisResult analysisResult = new DataTransferAnalysisResult(
+                    isDataTransferObject,
+                    isValueObject,
+                    hasCustomMappingLogic,
+                    hasManualResultSetMapping,
+                    usesJdbcWithDtos,
+                    assessMigrationComplexity(metadata),
+                    metadata.getPatternType(),
+                    metadata.getFieldCount(),
+                    metadata.getMappingMethodCount(),
+                    metadata.getResultSetCallCount(),
+                    generateMigrationRecommendations(metadata)
+                );
+
+                // Set single consolidated property on ClassNode for analysis data
+                classNode.setProperty("data_transfer_analysis", analysisResult.toJson());
             }
-
-            // Store detailed metadata
-            projectFile.setTag("data_transfer.pattern_type", metadata.getPatternType());
-            projectFile.setTag("data_transfer.complexity", complexity);
-            projectFile.setTag("data_transfer.field_count", String.valueOf(metadata.getFieldCount()));
-            projectFile.setTag("data_transfer.mapping_methods", String.valueOf(metadata.getMappingMethodCount()));
-            projectFile.setTag("data_transfer.resultset_calls", String.valueOf(metadata.getResultSetCallCount()));
-
-            // Generate migration recommendations
-            List<String> recommendations = generateMigrationRecommendations(metadata);
-            projectFile.setTag("data_transfer.recommendations", String.join("; ", recommendations));
-        }
+        });
     }
 
     public String assessMigrationComplexity(DataTransferMetadata metadata) {
@@ -494,6 +489,78 @@ public class CustomDataTransferPatternInspector extends AbstractJavaParserInspec
             String name = method.getNameAsString();
             return "hashCode".equals(name) || "equals".equals(name);
         }
+    }
+
+    /**
+     * Consolidated analysis result for data transfer pattern inspection
+     */
+    public static class DataTransferAnalysisResult {
+        private final boolean isDataTransferObject;
+        private final boolean isValueObject;
+        private final boolean hasCustomMappingLogic;
+        private final boolean hasManualResultSetMapping;
+        private final boolean usesJdbcWithDtos;
+        private final String migrationComplexity;
+        private final String patternType;
+        private final int fieldCount;
+        private final int mappingMethodCount;
+        private final int resultSetCallCount;
+        private final List<String> migrationRecommendations;
+
+        public DataTransferAnalysisResult(boolean isDataTransferObject, boolean isValueObject,
+                boolean hasCustomMappingLogic, boolean hasManualResultSetMapping,
+                boolean usesJdbcWithDtos, String migrationComplexity, String patternType,
+                int fieldCount, int mappingMethodCount, int resultSetCallCount,
+                List<String> migrationRecommendations) {
+            this.isDataTransferObject = isDataTransferObject;
+            this.isValueObject = isValueObject;
+            this.hasCustomMappingLogic = hasCustomMappingLogic;
+            this.hasManualResultSetMapping = hasManualResultSetMapping;
+            this.usesJdbcWithDtos = usesJdbcWithDtos;
+            this.migrationComplexity = migrationComplexity;
+            this.patternType = patternType;
+            this.fieldCount = fieldCount;
+            this.mappingMethodCount = mappingMethodCount;
+            this.resultSetCallCount = resultSetCallCount;
+            this.migrationRecommendations = migrationRecommendations != null ? 
+                new ArrayList<>(migrationRecommendations) : new ArrayList<>();
+        }
+
+        public String toJson() {
+            StringBuilder json = new StringBuilder();
+            json.append("{");
+            json.append("\"isDataTransferObject\":").append(isDataTransferObject).append(",");
+            json.append("\"isValueObject\":").append(isValueObject).append(",");
+            json.append("\"hasCustomMappingLogic\":").append(hasCustomMappingLogic).append(",");
+            json.append("\"hasManualResultSetMapping\":").append(hasManualResultSetMapping).append(",");
+            json.append("\"usesJdbcWithDtos\":").append(usesJdbcWithDtos).append(",");
+            json.append("\"migrationComplexity\":\"").append(migrationComplexity != null ? migrationComplexity : "").append("\",");
+            json.append("\"patternType\":\"").append(patternType != null ? patternType : "").append("\",");
+            json.append("\"fieldCount\":").append(fieldCount).append(",");
+            json.append("\"mappingMethodCount\":").append(mappingMethodCount).append(",");
+            json.append("\"resultSetCallCount\":").append(resultSetCallCount).append(",");
+            json.append("\"migrationRecommendations\":[");
+            for (int i = 0; i < migrationRecommendations.size(); i++) {
+                if (i > 0) json.append(",");
+                json.append("\"").append(migrationRecommendations.get(i).replace("\"", "\\\"")).append("\"");
+            }
+            json.append("]");
+            json.append("}");
+            return json.toString();
+        }
+
+        // Getters
+        public boolean isDataTransferObject() { return isDataTransferObject; }
+        public boolean isValueObject() { return isValueObject; }
+        public boolean hasCustomMappingLogic() { return hasCustomMappingLogic; }
+        public boolean hasManualResultSetMapping() { return hasManualResultSetMapping; }
+        public boolean usesJdbcWithDtos() { return usesJdbcWithDtos; }
+        public String getMigrationComplexity() { return migrationComplexity; }
+        public String getPatternType() { return patternType; }
+        public int getFieldCount() { return fieldCount; }
+        public int getMappingMethodCount() { return mappingMethodCount; }
+        public int getResultSetCallCount() { return resultSetCallCount; }
+        public List<String> getMigrationRecommendations() { return new ArrayList<>(migrationRecommendations); }
     }
 
     /**

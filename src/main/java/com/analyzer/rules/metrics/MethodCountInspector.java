@@ -1,7 +1,8 @@
 package com.analyzer.rules.metrics;
+import com.analyzer.core.export.ProjectFileDecorator;
 import com.analyzer.core.inspector.InspectorDependencies;
 
-import com.analyzer.core.export.ResultDecorator;
+import com.analyzer.core.graph.GraphRepository;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.inspectors.core.binary.AbstractASMInspector;
@@ -9,6 +10,8 @@ import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.MethodVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
 
 /**
  * Inspector that counts the number of method declarations in a Java class using
@@ -29,14 +32,18 @@ import org.slf4j.LoggerFactory;
  */
 @InspectorDependencies(
         requires = { InspectorTags.TAG_JAVA_IS_BINARY },
-        produces = {MethodCountInspectorAbstractAbstractASMInspector.TAG_METHOD_COUNT})
-public class MethodCountInspectorAbstractAbstractASMInspector extends AbstractASMInspector {
+        produces = { MethodCountInspector.TAG_METHOD_COUNT })
+public class MethodCountInspector extends AbstractASMInspector {
 
-    private static final Logger logger = LoggerFactory.getLogger(MethodCountInspectorAbstractAbstractASMInspector.class);
+    private static final Logger logger = LoggerFactory.getLogger(MethodCountInspector.class);
     public static final String TAG_METHOD_COUNT = "method_count";
 
-    public MethodCountInspectorAbstractAbstractASMInspector(ResourceResolver resourceResolver) {
+    private final GraphRepository graphRepository;
+
+    @Inject
+    public MethodCountInspector(ResourceResolver resourceResolver, GraphRepository graphRepository) {
         super(resourceResolver);
+        this.graphRepository = graphRepository;
     }
 
     @Override
@@ -49,8 +56,8 @@ public class MethodCountInspectorAbstractAbstractASMInspector extends AbstractAS
     }
 
     @Override
-    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, ResultDecorator resultDecorator) {
-        return new MethodCountVisitor(projectFile, resultDecorator);
+    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+        return new MethodCountVisitor(projectFile, projectFileDecorator);
     }
 
     /**
@@ -59,8 +66,8 @@ public class MethodCountInspectorAbstractAbstractASMInspector extends AbstractAS
     private static class MethodCountVisitor extends ASMClassVisitor {
         private int methodCount = 0;
 
-        public MethodCountVisitor(ProjectFile projectFile, ResultDecorator resultDecorator) {
-            super(projectFile, resultDecorator);
+        public MethodCountVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+            super(projectFile, projectFileDecorator);
         }
 
         @Override

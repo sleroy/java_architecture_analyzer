@@ -1,12 +1,11 @@
-package com.analyzer.core;
+package com.analyzer.core.resource;
+import com.analyzer.core.inspector.InspectorDependencies;
 
-import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;

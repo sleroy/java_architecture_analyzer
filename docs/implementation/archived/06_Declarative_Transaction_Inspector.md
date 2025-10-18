@@ -61,10 +61,10 @@ Analyze declarative transaction attributes defined in EJB deployment descriptors
 ## Implementation Details
 
 ### Core Inspector Class
+
 ```java
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.graph.GraphAwareInspector;
 import com.analyzer.core.graph.GraphRepository;
 import com.analyzer.inspectors.core.source.AbstractJavaParserInspector;
 import org.w3c.dom.Document;
@@ -72,40 +72,40 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 @RequiredTags({"EJB_DEPLOYMENT_DESCRIPTOR", "XML_FILE"})
-@InspectorTags({"DECLARATIVE_TRANSACTION", "EJB_TRANSACTION_ATTRIBUTE", 
-                "SPRING_TRANSACTIONAL_MAPPING", "TRANSACTION_CONFIGURATION"})
-public class DeclarativeTransactionInspector extends AbstractJavaParserInspector 
-    implements GraphAwareInspector {
-    
+@InspectorTags({"DECLARATIVE_TRANSACTION", "EJB_TRANSACTION_ATTRIBUTE",
+        "SPRING_TRANSACTIONAL_MAPPING", "TRANSACTION_CONFIGURATION"})
+public class DeclarativeTransactionInspector extends AbstractJavaParserInspector
+        implements GraphAwareInspector {
+
     private GraphRepository graphRepository;
-    
+
     @Override
     public void setGraphRepository(GraphRepository graphRepository) {
         this.graphRepository = graphRepository;
     }
-    
+
     @Override
     protected InspectorResult doInspection(ProjectFile file) {
         if (!isEjbJarXml(file)) {
             return InspectorResult.empty();
         }
-        
+
         try {
             Document doc = parseXmlDocument(file);
-            List<TransactionConfiguration> configs = 
-                extractTransactionConfigurations(doc);
-            
+            List<TransactionConfiguration> configs =
+                    extractTransactionConfigurations(doc);
+
             return createResultWithConfigurations(configs, file);
-            
+
         } catch (Exception e) {
-            return InspectorResult.error("Failed to parse transaction config: " + 
-                e.getMessage());
+            return InspectorResult.error("Failed to parse transaction config: " +
+                    e.getMessage());
         }
     }
-    
+
     private boolean isEjbJarXml(ProjectFile file) {
         return file.getPath().endsWith("ejb-jar.xml") ||
-               file.getPath().contains("META-INF/ejb-jar.xml");
+                file.getPath().contains("META-INF/ejb-jar.xml");
     }
 }
 ```

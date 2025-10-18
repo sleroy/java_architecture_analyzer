@@ -1,7 +1,7 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.ProjectFile;
-import com.analyzer.core.InspectorResult;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
 
@@ -16,18 +16,18 @@ import java.util.regex.Pattern;
  * Subclasses must implement getName() and getColumnName() methods and can override
  * the counting logic by providing a custom Pattern or overriding countMatches().
  */
-public abstract class CountRegexpInspector extends SourceFileInspector {
+public abstract class AbstractCountRegexpInspector extends AbstractSourceFileInspector {
 
     private final Pattern pattern;
 
     /**
-     * Creates a CountRegexpInspector with the specified regex pattern string.
+     * Creates a AbstractCountRegexpInspector with the specified regex pattern string.
      * 
      * @param resourceResolver the resolver for accessing source file resources
      * @param regexPattern the regex pattern string to compile and use for counting
      * @throws IllegalArgumentException if regexPattern is null or invalid
      */
-    protected CountRegexpInspector(ResourceResolver resourceResolver, String regexPattern) {
+    protected AbstractCountRegexpInspector(ResourceResolver resourceResolver, String regexPattern) {
         super(resourceResolver);
         if (regexPattern == null || regexPattern.trim().isEmpty()) {
             throw new IllegalArgumentException("Regex pattern cannot be null or empty");
@@ -36,13 +36,13 @@ public abstract class CountRegexpInspector extends SourceFileInspector {
     }
 
     /**
-     * Creates a CountRegexpInspector with the specified compiled Pattern.
+     * Creates a AbstractCountRegexpInspector with the specified compiled Pattern.
      * 
      * @param resourceResolver the resolver for accessing source file resources
      * @param pattern the compiled Pattern to use for counting
      * @throws IllegalArgumentException if pattern is null
      */
-    protected CountRegexpInspector(ResourceResolver resourceResolver, Pattern pattern) {
+    protected AbstractCountRegexpInspector(ResourceResolver resourceResolver, Pattern pattern) {
         super(resourceResolver);
         if (pattern == null) {
             throw new IllegalArgumentException("Pattern cannot be null");
@@ -51,18 +51,30 @@ public abstract class CountRegexpInspector extends SourceFileInspector {
     }
 
     @Override
-    protected final InspectorResult analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation)
+    protected final void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation, ProjectFileDecorator projectFileDecorator)
             throws IOException {
         try {
             String content = readFileContent(sourceLocation);
             int count = countMatches(content);
-            return InspectorResult.success(getColumnName(), count);
+            
+            // Subclasses should override this method to set appropriate tags
+            setCountResult(projectFile, count);
+            
         } catch (IOException e) {
-            return InspectorResult.error(getColumnName(), "Error reading source file: " + e.getMessage());
+            projectFileDecorator.error("Error reading source file: " + e.getMessage());
         } catch (Exception e) {
-            return InspectorResult.error(getColumnName(), "Error counting pattern matches: " + e.getMessage());
+            projectFileDecorator.error("Error counting pattern matches: " + e.getMessage());
         }
     }
+
+    /**
+     * Sets the count result on the project file.
+     * Subclasses must implement this to set appropriate tags using their TAGS constants.
+     * 
+     * @param projectFile the project file to set tags on
+     * @param count the pattern match count
+     */
+    protected abstract void setCountResult(ProjectFile projectFile, int count);
 
     /**
      * Counts the number of times the pattern matches in the given content.

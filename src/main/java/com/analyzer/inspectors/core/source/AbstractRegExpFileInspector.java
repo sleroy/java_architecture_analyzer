@@ -1,7 +1,7 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.ProjectFile;
-import com.analyzer.core.InspectorResult;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
 
@@ -15,18 +15,18 @@ import java.util.regex.Pattern;
  * Subclasses must implement getName() and getColumnName() methods and can override
  * the pattern matching logic by providing a custom Pattern or overriding matches().
  */
-public abstract class RegExpFileInspector extends SourceFileInspector {
+public abstract class AbstractRegExpFileInspector extends AbstractSourceFileInspector {
 
     private final Pattern pattern;
 
     /**
-     * Creates a RegExpFileInspector with the specified regex pattern string.
+     * Creates a AbstractRegExpFileInspector with the specified regex pattern string.
      * 
      * @param resourceResolver the resolver for accessing source file resources
      * @param regexPattern the regex pattern string to compile and use for matching
      * @throws IllegalArgumentException if regexPattern is null or invalid
      */
-    protected RegExpFileInspector(ResourceResolver resourceResolver, String regexPattern) {
+    protected AbstractRegExpFileInspector(ResourceResolver resourceResolver, String regexPattern) {
         super(resourceResolver);
         if (regexPattern == null || regexPattern.trim().isEmpty()) {
             throw new IllegalArgumentException("Regex pattern cannot be null or empty");
@@ -35,13 +35,13 @@ public abstract class RegExpFileInspector extends SourceFileInspector {
     }
 
     /**
-     * Creates a RegExpFileInspector with the specified compiled Pattern.
+     * Creates a AbstractRegExpFileInspector with the specified compiled Pattern.
      * 
      * @param resourceResolver the resolver for accessing source file resources
      * @param pattern the compiled Pattern to use for matching
      * @throws IllegalArgumentException if pattern is null
      */
-    protected RegExpFileInspector(ResourceResolver resourceResolver, Pattern pattern) {
+    protected AbstractRegExpFileInspector(ResourceResolver resourceResolver, Pattern pattern) {
         super(resourceResolver);
         if (pattern == null) {
             throw new IllegalArgumentException("Pattern cannot be null");
@@ -50,18 +50,12 @@ public abstract class RegExpFileInspector extends SourceFileInspector {
     }
 
     @Override
-    protected final InspectorResult analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation)
+    protected final void analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation, ProjectFileDecorator projectFileDecorator)
             throws IOException {
-        try {
-            String content = readFileContent(sourceLocation);
-            boolean matches = matches(content);
-            return InspectorResult.success(getColumnName(), matches);
-        } catch (IOException e) {
-            return InspectorResult.error(getColumnName(), "Error reading source file: " + e.getMessage());
-        } catch (Exception e) {
-            return InspectorResult.error(getColumnName(), "Error analyzing pattern: " + e.getMessage());
-        }
+
     }
+
+    protected abstract String getColumnName();
 
     /**
      * Determines if the pattern matches in the given content.

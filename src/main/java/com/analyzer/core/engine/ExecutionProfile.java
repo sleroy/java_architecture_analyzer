@@ -1,11 +1,11 @@
 package com.analyzer.core.engine;
+import com.analyzer.core.inspector.InspectorDependencies;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 

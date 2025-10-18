@@ -1,4 +1,8 @@
-package com.analyzer.core;
+package com.analyzer.core.export;
+import com.analyzer.core.inspector.InspectorDependencies;
+
+import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.model.ProjectFile;
 
 /**
  * CSV record representing a class entry in the inventory output.

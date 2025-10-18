@@ -1,7 +1,4 @@
-from textwrap import dedent
-path = "/mnt/data/stereotypes.md"
 
-content = dedent("""
 # Class Stereotypes — EJB2 → Spring Boot Migration
 
 This catalog defines the **architectural stereotypes** detected in an EJB 2 / J2EE codebase.
@@ -66,10 +63,3 @@ Each stereotype drives classification and triggers specific migration rules towa
 - **binary_with_asm** for bytecode-level detection of implements/extends.  
 - **java_parsing** (OpenRewrite/JavaParser) for annotations, method patterns, naming.  
 - **GenAI (Bedrock)** optional for heuristic classification and documentation (e.g., "suggest stereotype for unknown class based on methods/comments").
-
-""").strip()
-
-with open(path, "w", encoding="utf-8") as f:
-    f.write(content)
-
-path

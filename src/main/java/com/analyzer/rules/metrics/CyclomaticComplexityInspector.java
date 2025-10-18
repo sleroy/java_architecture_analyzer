@@ -1,8 +1,11 @@
-package com.analyzer.inspectors.rules.source;
+package com.analyzer.rules.metrics;
 
-import com.analyzer.core.ProjectFile;
-import com.analyzer.core.InspectorResult;
-import com.analyzer.inspectors.core.source.JavaParserInspector;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.model.ProjectFile;
+import com.analyzer.inspectors.core.source.AbstractJavaParserInspector;
 import com.analyzer.resource.ResourceResolver;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.MethodDeclaration;
@@ -11,30 +14,42 @@ import com.github.javaparser.ast.expr.ConditionalExpr;
 import com.github.javaparser.ast.stmt.*;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
+import javax.inject.Inject;
+
 /**
  * Inspector that calculates the cyclomatic complexity of Java source files.
  * This rule helps assess code complexity and maintainability using McCabe's cyclomatic complexity metric.
- * 
+ * <p>
  * Returns the total cyclomatic complexity score for all methods in the class.
- * 
+ * <p>
  * Complexity is calculated by counting:
  * - Each method starts with complexity 1
  * - +1 for each if, while, for, do-while, switch statement
- * - +1 for each case in switch statements  
+ * - +1 for each case in switch statements
  * - +1 for each catch block
  * - +1 for each ternary operator (? :)
  * - +1 for each logical AND (&&) or OR (||) operator
- * 
+ * <p>
  * Interpretation:
  * - 1-10: Simple, low risk
  * - 11-20: Moderate complexity
  * - 21-50: High complexity, more testing needed
  * - >50: Very high complexity, consider refactoring
  */
-public class CyclomaticComplexityInspector extends JavaParserInspector {
+@InspectorDependencies(
+        requires = { InspectorTags.TAG_JAVA_DETECTED },
+        produces = { CyclomaticComplexityInspector.TAG_CYCLOMATIC_COMPLEXITY }
+)
+public class CyclomaticComplexityInspector extends AbstractJavaParserInspector {
 
-    public CyclomaticComplexityInspector(ResourceResolver resourceResolver) {
+    public static final String TAG_CYCLOMATIC_COMPLEXITY = "cyclomatic-complexity";
+
+    private final GraphRepository graphRepository;
+
+    @Inject
+    public CyclomaticComplexityInspector(ResourceResolver resourceResolver, GraphRepository graphRepository) {
         super(resourceResolver);
+        this.graphRepository = graphRepository;
     }
 
     @Override
@@ -42,19 +57,19 @@ public class CyclomaticComplexityInspector extends JavaParserInspector {
         return "Cyclomatic Complexity";
     }
 
-    @Override
+
     public String getColumnName() {
-        return "cyclomatic-complexity";
+        return TAG_CYCLOMATIC_COMPLEXITY;
     }
 
 
     @Override
-    protected InspectorResult analyzeCompilationUnit(CompilationUnit cu, ProjectFile clazz) {
+    protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile clazz, ProjectFileDecorator projectFileDecorator) {
         ComplexityCalculator calculator = new ComplexityCalculator();
         cu.accept(calculator, null);
-        
+
         int totalComplexity = calculator.getTotalComplexity();
-        return InspectorResult.success(getColumnName(), totalComplexity);
+        projectFileDecorator.setTag(getColumnName(), totalComplexity);
     }
 
     /**
@@ -71,7 +86,7 @@ public class CyclomaticComplexityInspector extends JavaParserInspector {
         public void visit(MethodDeclaration method, Void arg) {
             // Each method starts with complexity 1
             totalComplexity += 1;
-            
+
             // Visit the method body to count decision points
             super.visit(method, arg);
         }
@@ -137,8 +152,8 @@ public class CyclomaticComplexityInspector extends JavaParserInspector {
         @Override
         public void visit(BinaryExpr expr, Void arg) {
             // Logical AND (&&) and OR (||) operators
-            if (expr.getOperator() == BinaryExpr.Operator.AND || 
-                expr.getOperator() == BinaryExpr.Operator.OR) {
+            if (expr.getOperator() == BinaryExpr.Operator.AND ||
+                    expr.getOperator() == BinaryExpr.Operator.OR) {
                 totalComplexity += 1;
             }
             super.visit(expr, arg);

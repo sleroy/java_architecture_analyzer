@@ -1,15 +1,17 @@
 package com.analyzer.inspectors.core;
 
-import com.analyzer.core.export.ResultDecorator;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.graph.GraphRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.JARClassLoaderService;
 import com.analyzer.resource.ResourceResolver;
-import com.analyzer.rules.std.AbstractProjectFileClassLoaderInspector;
+import com.analyzer.inspectors.core.classloader.AbstractProjectFileClassLoaderInspector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import java.lang.annotation.Annotation;
 
 /**
@@ -35,20 +37,26 @@ import java.lang.annotation.Annotation;
  * metadata and potentially annotation values.
  */
 @InspectorDependencies(need = {}, produces = {})
-public class AbstractProjectFileAnnotationCountInspector extends AbstractProjectFileClassLoaderInspector {
+public class AbstractJavaAnnotationCountInspector extends AbstractProjectFileClassLoaderInspector {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractProjectFileAnnotationCountInspector.class);
+    private static final Logger logger = LoggerFactory.getLogger(AbstractJavaAnnotationCountInspector.class);
+
+    private final GraphRepository graphRepository;
 
     /**
-     * Creates a new AbstractProjectFileAnnotationCountInspector with the required
+     * Creates a new AbstractJavaAnnotationCountInspector with the required
      * dependencies.
      * 
      * @param resourceResolver   the resolver for accessing resources
      * @param classLoaderService the service providing the shared ClassLoader
+     * @param graphRepository    the graph repository for storing analysis results
      */
-    public AbstractProjectFileAnnotationCountInspector(ResourceResolver resourceResolver,
-                    JARClassLoaderService classLoaderService) {
+    @Inject
+    public AbstractJavaAnnotationCountInspector(ResourceResolver resourceResolver,
+                                                JARClassLoaderService classLoaderService,
+                                                GraphRepository graphRepository) {
         super(resourceResolver, classLoaderService);
+        this.graphRepository = graphRepository;
     }
 
     @Override
@@ -61,19 +69,19 @@ public class AbstractProjectFileAnnotationCountInspector extends AbstractProject
     }
 
     @Override
-    protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile, ResultDecorator resultDecorator) {
+    protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
         try {
             int annotationCount = countAllAnnotations(loadedClass);
 
             logger.debug("Found {} annotations on class {} (ProjectFile: {})",
                     annotationCount, loadedClass.getName(), projectFile.getRelativePath());
 
-            resultDecorator.success(getColumnName(), annotationCount);
+            projectFileDecorator.setTag(getColumnName(), annotationCount);
 
         } catch (Exception e) {
             logger.warn("Error analyzing annotations for class {} (ProjectFile: {}): {}",
                     loadedClass.getName(), projectFile.getRelativePath(), e.getMessage());
-            resultDecorator.error(
+            projectFileDecorator.error(
                     "Error analyzing annotations: " + e.getMessage());
         }
     }

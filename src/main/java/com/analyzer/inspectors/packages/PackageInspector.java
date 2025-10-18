@@ -1,8 +1,9 @@
 package com.analyzer.inspectors.packages;
 
-import com.analyzer.core.Inspector;
-import com.analyzer.core.InspectorResult;
-import com.analyzer.core.Package;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.inspector.Inspector;
+import com.analyzer.core.inspector.InspectorResult;
+import com.analyzer.core.model.Package;
 import com.analyzer.resource.ResourceResolver;
 
 /**
@@ -35,20 +36,19 @@ public abstract class PackageInspector implements Inspector<Package> {
         return resourceResolver;
     }
 
-    @Override
-    public final InspectorResult decorate(Package packageToAnalyze) {
+    public void decorate(Package packageToAnalyze, ProjectFileDecorator projectFileDecorator) {
         if (!supports(packageToAnalyze)) {
-            return InspectorResult.notApplicable(getColumnName());
+            projectFileDecorator.notApplicable();
+            return ;
         }
 
         try {
-            return analyzePackage(packageToAnalyze);
+            analyzePackage(packageToAnalyze, projectFileDecorator);
         } catch (Exception e) {
-            return InspectorResult.error(getColumnName(), "Error analyzing package: " + e.getMessage());
+            projectFileDecorator.error("Error analyzing package: " + e.getMessage());
         }
     }
 
-    @Override
     public boolean supports(Package packageToAnalyze) {
         return packageToAnalyze != null;
     }
@@ -56,9 +56,10 @@ public abstract class PackageInspector implements Inspector<Package> {
     /**
      * Analyzes the given package.
      * Subclasses must implement this method to provide specific analysis logic.
-     * 
+     *
      * @param packageToAnalyze the package to analyze
+     * @param projectFileDecorator
      * @return the result of the analysis
      */
-    protected abstract InspectorResult analyzePackage(Package packageToAnalyze);
+    protected abstract InspectorResult analyzePackage(Package packageToAnalyze, ProjectFileDecorator projectFileDecorator);
 }

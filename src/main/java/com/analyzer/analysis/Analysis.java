@@ -1,6 +1,7 @@
 package com.analyzer.analysis;
+import com.analyzer.core.inspector.InspectorDependencies;
 
-import com.analyzer.core.Project;
+import com.analyzer.core.model.Project;
 
 /**
  * Interface for project-level analysis operations.

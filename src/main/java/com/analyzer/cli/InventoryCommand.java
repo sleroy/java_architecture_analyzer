@@ -1,25 +1,24 @@
 package com.analyzer.cli;
 
 import com.analyzer.analysis.Analysis;
-import com.analyzer.core.AnalysisEngine;
-import com.analyzer.core.CsvExporter;
-import com.analyzer.core.Inspector;
-import com.analyzer.core.InspectorRegistry;
-import com.analyzer.core.Project;
-import com.analyzer.core.ProjectFile;
-import com.analyzer.detection.FileDetector;
-import com.analyzer.detection.FileExtensionDetector;
+import com.analyzer.core.engine.AnalysisEngine;
+import com.analyzer.core.export.CsvExporter;
+import com.analyzer.core.inspector.Inspector;
+import com.analyzer.core.inspector.InspectorRegistry;
+import com.analyzer.core.model.Project;
+import com.analyzer.core.model.ProjectFile;
+import com.analyzer.inspectors.core.detection.FileExtensionDetector;
+import com.analyzer.inspectors.core.detection.FilenameInspector;
 import com.analyzer.resource.CompositeResourceResolver;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
@@ -57,6 +56,10 @@ public class InventoryCommand implements Callable<Integer> {
             "--packages" }, description = "Comma-separated list of package prefixes to include (e.g., com.example,com.company). Includes subpackages.", split = ",")
     private List<String> packageFilters;
 
+    @Option(names = {
+            "--max-passes" }, description = "Maximum number of analysis passes for convergence detection", defaultValue = "5")
+    private int maxPasses;
+
     @Override
     public Integer call() throws Exception {
         logger.info("Starting Project Architecture Analysis...");
@@ -74,6 +77,7 @@ public class InventoryCommand implements Callable<Integer> {
         logger.info("  Inspectors: {}", inspectors);
         logger.info("  Plugins directory: {}", pluginsDirectory);
         logger.info("  Package filters: {}", packageFilters);
+        logger.info("  Max passes: {}", maxPasses);
 
         try {
             // Initialize ResourceResolver system
@@ -83,20 +87,20 @@ public class InventoryCommand implements Callable<Integer> {
             InspectorRegistry inspectorRegistry = new InspectorRegistry(pluginsDirectory, resolver);
             logger.info("{}", inspectorRegistry.getStatistics());
 
-            // 2. Create default file detectors
-            List<FileDetector> fileDetectors = createDefaultFileDetectors();
-            logger.info("Created {} file detectors", fileDetectors.size());
+            // 2. Create default file detection inspectors
+            List<Inspector<ProjectFile>> fileDetectionInspectors = createDefaultFileInspectors();
+            logger.info("Created {} file detection inspectors", fileDetectionInspectors.size());
 
             // 3. Create empty analysis list (will be enhanced later)
             List<Analysis> analyses = new ArrayList<>();
 
             // 4. Initialize Analysis Engine with new architecture
-            AnalysisEngine analysisEngine = new AnalysisEngine(inspectorRegistry, fileDetectors, analyses);
+            AnalysisEngine analysisEngine = new AnalysisEngine(inspectorRegistry, fileDetectionInspectors, analyses);
             logger.info("{}", analysisEngine.getStatistics());
 
-            // 5. Analyze the project using new architecture
+            // 5. Analyze the project using new architecture with multi-pass algorithm
             java.nio.file.Path projectDir = java.nio.file.Paths.get(projectPath);
-            Project project = analysisEngine.analyzeProject(projectDir, inspectors);
+            Project project = analysisEngine.analyzeProject(projectDir, inspectors, maxPasses);
 
             logger.info("Project analysis completed. Found {} files", project.getProjectFiles().size());
 
@@ -106,8 +110,7 @@ public class InventoryCommand implements Callable<Integer> {
             List<Inspector> inspectorList = analysisEngine.getInspectors(inspectors);
 
             logger.info("Exporting results to CSV...");
-            // TODO: Update CsvExporter to work with ProjectFile instead of ProjectFile
-            // csvExporter.exportToCsv(project.getProjectFiles(), inspectorList);
+            csvExporter.exportToCsv(project, inspectorList);
 
             logger.info("Analysis completed successfully!");
             logger.info("Results written to: {}", outputFile.getAbsolutePath());
@@ -120,19 +123,23 @@ public class InventoryCommand implements Callable<Integer> {
     }
 
     /**
-     * Creates default file detectors for common file types.
+     * Creates default file detection inspectors for common file types.
      */
-    private List<FileDetector> createDefaultFileDetectors() {
-        List<FileDetector> detectors = new ArrayList<>();
+    private List<Inspector<ProjectFile>> createDefaultFileInspectors() {
+        List<Inspector<ProjectFile>> inspectors = new ArrayList<>();
 
-        // Add Java file detector
-        detectors.add(FileExtensionDetector.createJavaDetector());
+        // Add core file detection inspectors
+        inspectors.add(FileExtensionDetector.createJavaInspector());
+        inspectors.add(FileExtensionDetector.createXmlInspector());
+        inspectors.add(FileExtensionDetector.createConfigInspector());
+        inspectors.add(FileExtensionDetector.createBinaryInspector());
 
-        // Add other common file detectors
-        detectors.add(FileExtensionDetector.createConfigDetector());
-        detectors.add(FileExtensionDetector.createBinaryDetector());
+        // Add filename-based inspectors
+        inspectors.add(FilenameInspector.createBuildFileInspector());
+        inspectors.add(FilenameInspector.createReadmeInspector());
+        inspectors.add(FilenameInspector.createDockerInspector());
 
-        return detectors;
+        return inspectors;
     }
 
     /**
@@ -225,5 +232,9 @@ public class InventoryCommand implements Callable<Integer> {
 
     public List<String> getPackageFilters() {
         return packageFilters;
+    }
+
+    public int getMaxPasses() {
+        return maxPasses;
     }
 }

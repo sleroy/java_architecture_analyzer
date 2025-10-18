@@ -37,7 +37,7 @@ Extends `AbstractClassLoaderBasedInspector` (with ASM and JavaParser integration
 
 ```java
 @Override
-protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile, ResultDecorator resultDecorator) {
+protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile, ResultDecorator projectFileDecorator) {
     TypeUsageMetrics metrics = analyzeTypeUsage(loadedClass, projectFile);
     attachTypeMetricsToClassNode(projectFile, metrics);
 }

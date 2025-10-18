@@ -2,11 +2,11 @@ package com.analyzer;
 
 import com.analyzer.cli.AnalyzerCLI;
 
-public class InventoryExample {
+public class GraphAuditExample {
     public static void main(String[] args) {
 
         AnalyzerCLI.main(new String[]{
-              "inventory",  "--project" , "/home/sleroy/git/sample.ejb2", "--java_version", "17", "--output", "ejb.csv"
+              "inspector-graph",  "dependencies.graphml"
         });
     }
 }

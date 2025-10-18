@@ -1,8 +1,11 @@
-package com.analyzer.core;
+package com.analyzer.core.inspector;
 
+import com.analyzer.core.resource.ClasspathInspectorScanner;
+import com.analyzer.core.resource.JARClassLoaderService;
 import com.analyzer.inspectors.core.binary.AbstractBinaryClassInspector;
 import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
 import com.analyzer.resource.ResourceResolver;
+import org.picocontainer.PicoContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,38 +13,60 @@ import java.io.File;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import java.util.Enumeration;
 
 /**
- * Registry for managing and loading inspectors from default built-ins and
- * plugin JAR files.
- * Handles the loading of inspectors from the --plugins directory and provides
- * access to inspectors by name or type.
+ * Registry for managing and loading inspectors using PicoContainer dependency injection.
+ * Handles the loading of inspectors from the classpath and plugin JAR files with 
+ * automatic dependency injection support.
+ * 
+ * <p>Features:</p>
+ * <ul>
+ *   <li>PicoContainer-based dependency injection</li>
+ *   <li>Automatic inspector discovery and registration</li>
+ *   <li>Plugin support from JAR files</li>
+ *   <li>@Inject annotation support for constructor injection</li>
+ * </ul>
  */
 public class InspectorRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(InspectorRegistry.class);
+    
     private final Map<String, Inspector> inspectors = new HashMap<>();
     private final File pluginsDirectory;
     private final ResourceResolver resourceResolver;
     private final JARClassLoaderService jarClassLoaderService;
     private final ClasspathInspectorScanner classpathScanner;
+    private final PicoContainer container;
+    private final InspectorContainerConfig containerConfig;
 
-    public InspectorRegistry(File pluginsDirectory, ResourceResolver resourceResolver) {
+    /**
+     * Creates a new InspectorRegistry with PicoContainer-based dependency injection.
+     * 
+     * @param pluginsDirectory optional directory containing plugin JAR files
+     * @param resourceResolver the ResourceResolver instance for resource access
+     */
+    public InspectorRegistry(File pluginsDirectory, ResourceResolver resourceResolver, List<String> scanPackages, List<String> excludePackages) {
         this.pluginsDirectory = pluginsDirectory;
         this.resourceResolver = resourceResolver;
         this.jarClassLoaderService = new JARClassLoaderService();
         this.classpathScanner = new ClasspathInspectorScanner(resourceResolver, jarClassLoaderService);
+        
+        // Initialize PicoContainer configuration
+        this.containerConfig = new InspectorContainerConfig(resourceResolver, pluginsDirectory, scanPackages, excludePackages);
+        this.container = containerConfig.createContainer();
+        
+        logger.info("InspectorRegistry initialized with PicoContainer: {}", containerConfig.getConfigurationStats());
 
         loadDefaultInspectors();
-        loadClasspathInspectors();
+        loadContainerInspectors();
         loadPluginInspectors();
+    }
+
+    public InspectorRegistry(File pluginsDirectory, ResourceResolver resourceResolver) {
+        this(pluginsDirectory, resourceResolver, Arrays.asList("com.analyzer.inspectors", "com.analyzer.rules", "com.rules"), Arrays.asList("com.analyzer.inspectors.test", "com.analyzer.rules.test"));
     }
 
     /**
@@ -54,42 +79,43 @@ public class InspectorRegistry {
      */
     private void loadDefaultInspectors() {
         logger.info("Loading default inspectors...");
-
+        // Default inspectors can be manually registered here if needed
         logger.info("Default inspectors loaded: {}", inspectors.size());
     }
 
     /**
-     * Loads inspectors automatically discovered from the classpath.
-     * This method scans for inspector classes in the com.analyzer.inspectors and
-     * com.rules packages.
-     * Manual registration takes precedence over auto-discovered inspectors.
+     * Loads inspectors from the PicoContainer.
+     * This replaces the manual classpath scanning with container-managed instantiation.
      */
-    private void loadClasspathInspectors() {
-        List<Inspector> discoveredInspectors = classpathScanner.scanForInspectors();
-
-        int autoRegistered = 0;
-        for (Inspector inspector : discoveredInspectors) {
+    private void loadContainerInspectors() {
+        logger.info("Loading inspectors from PicoContainer...");
+        
+        int registeredCount = 0;
+        
+        // Get all inspector instances from the container
+        Collection<Inspector> containerInspectors = container.getComponents(Inspector.class);
+        
+        for (Inspector inspector : containerInspectors) {
             String name = inspector.getName();
-
+            
             // Only register if not already manually registered (manual takes precedence)
             if (!inspectors.containsKey(name)) {
                 inspectors.put(name, inspector);
-                autoRegistered++;
-                logger.debug("Auto-registered inspector: {}", name);
+                registeredCount++;
+                logger.debug("Registered container inspector: {} ({})", name, inspector.getClass().getSimpleName());
             } else {
-                logger.debug("Skipping auto-discovered inspector '{}' - already manually registered", name);
+                logger.debug("Skipping container inspector '{}' - already manually registered", name);
             }
         }
-
-        logger.info(
-                "Auto-discovery completed: {} inspectors discovered, {} registered ({} skipped due to manual registration)",
-                discoveredInspectors.size(), autoRegistered, discoveredInspectors.size() - autoRegistered);
-        logger.info("Total inspectors after auto-discovery: {}", inspectors.size());
+        
+        logger.info("Container-based inspector loading completed: {} inspectors registered", registeredCount);
+        logger.info("Total inspectors after container loading: {}", inspectors.size());
     }
 
     /**
      * Loads inspector plugins from JAR files in the plugins directory.
-     * Scans for classes that extend AbstractSourceFileInspector or AbstractBinaryClassInspector.
+     * For now, this keeps the legacy manual instantiation for plugin JARs
+     * until we extend PicoContainer to handle plugin classloaders.
      */
     private void loadPluginInspectors() {
         if (pluginsDirectory == null || !pluginsDirectory.exists() || !pluginsDirectory.isDirectory()) {
@@ -119,6 +145,8 @@ public class InspectorRegistry {
 
     /**
      * Loads inspector classes from a single JAR file.
+     * This uses manual instantiation for now, but could be enhanced
+     * to use PicoContainer with custom classloaders in the future.
      */
     private int loadInspectorsFromJar(File jarFile) throws Exception {
         int loaded = 0;
@@ -139,10 +167,13 @@ public class InspectorRegistry {
 
                         // Check if it's an inspector class
                         if (Inspector.class.isAssignableFrom(clazz) && !Modifier.isAbstract(clazz.getModifiers())) {
-                            Inspector inspector = (Inspector) clazz.getDeclaredConstructor().newInstance();
-                            registerInspector(inspector);
-                            loaded++;
-                            logger.info("Loaded plugin inspector: {}", inspector.getName());
+                            // Try PicoContainer instantiation first, fall back to manual
+                            Inspector inspector = createInspectorInstance(clazz);
+                            if (inspector != null) {
+                                registerInspector(inspector);
+                                loaded++;
+                                logger.info("Loaded plugin inspector: {}", inspector.getName());
+                            }
                         }
                     } catch (Exception e) {
                         // Skip classes that can't be loaded or instantiated
@@ -153,6 +184,26 @@ public class InspectorRegistry {
         }
 
         return loaded;
+    }
+
+    /**
+     * Creates an inspector instance, preferring PicoContainer but falling back to manual instantiation.
+     */
+    private Inspector createInspectorInstance(Class<?> clazz) {
+        try {
+            // Try to get instance from container first
+            return (Inspector) container.getComponent(clazz);
+        } catch (Exception e) {
+            logger.debug("Container instantiation failed for {}, trying manual: {}", clazz.getName(), e.getMessage());
+            
+            // Fall back to manual instantiation
+            try {
+                return (Inspector) clazz.getDeclaredConstructor().newInstance();
+            } catch (Exception manualException) {
+                logger.debug("Manual instantiation also failed for {}: {}", clazz.getName(), manualException.getMessage());
+                return null;
+            }
+        }
     }
 
     /**
@@ -242,10 +293,21 @@ public class InspectorRegistry {
     }
 
     /**
+     * Gets the underlying PicoContainer instance.
+     * This can be used for advanced container operations if needed.
+     * 
+     * @return the PicoContainer instance
+     */
+    public PicoContainer getContainer() {
+        return container;
+    }
+
+    /**
      * Gets registry statistics for debugging/logging.
      */
     public String getStatistics() {
-        return String.format("InspectorRegistry: %d total inspectors (%d source, %d binary)",
-                getInspectorCount(), getSourceInspectorCount(), getBinaryInspectorCount());
+        return String.format("InspectorRegistry: %d total inspectors (%d source, %d binary) [PicoContainer: %d components]",
+                getInspectorCount(), getSourceInspectorCount(), getBinaryInspectorCount(), 
+                container.getComponents().size());
     }
 }

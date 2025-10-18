@@ -1,4 +1,5 @@
 package com.analyzer.cli;
+import com.analyzer.core.inspector.InspectorDependencies;
 
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -10,6 +11,8 @@ import picocli.CommandLine.HelpCommand;
  */
 @Command(name = "java-architecture-analyzer", description = "Static analysis tool for Java applications", version = "1.0.0-SNAPSHOT", mixinStandardHelpOptions = true, subcommands = {
         InventoryCommand.class,
+        LoadCommand.class,
+                InspectorDependencyGraphCommand.class,
         HelpCommand.class
 })
 public class AnalyzerCLI implements Runnable {

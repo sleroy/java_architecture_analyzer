@@ -1,16 +1,17 @@
-package com.analyzer.inspectors.rules.bedrock;
+package com.analyzer.rules.metrics;
+import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.inspector.InspectorDependencies;
 
-import com.analyzer.core.ProjectFile;
-import com.analyzer.core.InspectorResult;
-import com.analyzer.inspectors.core.bedrock.BedrockInspector;
+import com.analyzer.core.model.ProjectFile;
+import com.analyzer.inspectors.core.bedrock.AbstractBedrockInspectorAbstract;
 import com.analyzer.resource.ResourceResolver;
 
 /**
- * Concrete implementation of BedrockInspector that uses AI to assess code
+ * Concrete implementation of AbstractBedrockInspectorAbstract that uses AI to assess code
  * quality.
  * This inspector demonstrates how to use AWS Bedrock models for code analysis
  * by asking the AI to evaluate code quality on a scale from 1-10.
- * 
+ * <p>
  * The inspector analyzes various aspects of code quality including:
  * - Code readability and clarity
  * - Following Java best practices
@@ -18,17 +19,20 @@ import com.analyzer.resource.ResourceResolver;
  * - Code organization and structure
  * - Appropriate use of design patterns
  */
-public class CodeQualityInspector extends BedrockInspector {
+@InspectorDependencies(
+        produces = {CodeQualityInspectorAbstractAbstract.TAG_CODE_QUALITY_AI}
+)
+public class CodeQualityInspectorAbstractAbstract extends AbstractBedrockInspectorAbstract {
 
     public static final String NAME = "Code Quality (AI)";
-    public static final String COLUMN_NAME = "code_quality_ai";
+    public static final String TAG_CODE_QUALITY_AI = "code_quality_ai";
 
     /**
-     * Creates a CodeQualityInspector with the specified ResourceResolver.
-     * 
+     * Creates a CodeQualityInspectorAbstractAbstract with the specified ResourceResolver.
+     *
      * @param resourceResolver the resolver for accessing source file resources
      */
-    public CodeQualityInspector(ResourceResolver resourceResolver) {
+    public CodeQualityInspectorAbstractAbstract(ResourceResolver resourceResolver) {
         super(resourceResolver);
     }
 
@@ -37,9 +41,9 @@ public class CodeQualityInspector extends BedrockInspector {
         return NAME;
     }
 
-    @Override
+
     public String getColumnName() {
-        return COLUMN_NAME;
+        return TAG_CODE_QUALITY_AI;
     }
 
 
@@ -64,9 +68,10 @@ public class CodeQualityInspector extends BedrockInspector {
     }
 
     @Override
-    protected InspectorResult parseResponse(String response, ProjectFile clazz) {
+    protected void parseResponse(String response, ProjectFile clazz, ProjectFileDecorator projectFileDecorator) {
         if (response == null || response.trim().isEmpty()) {
-            return InspectorResult.error(getColumnName(), "Empty response from AI model");
+            projectFileDecorator.error("Empty response from AI model");
+            return;
         }
 
         // Parse numeric response, defaulting to 5 (average) if parsing fails
@@ -85,7 +90,7 @@ public class CodeQualityInspector extends BedrockInspector {
         logger.debug("Code quality assessment for {}: {}/10",
                 clazz.getFullyQualifiedName(), roundedScore);
 
-        return InspectorResult.success(getColumnName(), roundedScore);
+        projectFileDecorator.setTag(getColumnName(), roundedScore);
     }
 
     @Override

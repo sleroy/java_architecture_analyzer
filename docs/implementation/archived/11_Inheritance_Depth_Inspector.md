@@ -30,7 +30,7 @@ Extends `AbstractClassLoaderBasedInspector`
 
 ```java
 @Override
-protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile, ResultDecorator resultDecorator) {
+protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile, ResultDecorator projectFileDecorator) {
     int inheritanceDepth = calculateInheritanceDepth(loadedClass);
     attachMetricToClassNode(projectFile, "inheritance.depth", inheritanceDepth);
 }
