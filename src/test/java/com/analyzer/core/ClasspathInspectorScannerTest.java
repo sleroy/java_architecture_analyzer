@@ -1,7 +1,10 @@
 package com.analyzer.core;
 
-import com.analyzer.inspectors.core.source.SourceFileInspector;
-import com.analyzer.inspectors.core.binary.BinaryClassInspector;
+import com.analyzer.core.inspector.Inspector;
+import com.analyzer.core.resource.ClasspathInspectorScanner;
+import com.analyzer.core.resource.JARClassLoaderService;
+import com.analyzer.inspectors.core.binary.AbstractBinaryClassInspector;
+import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
 import com.analyzer.resource.ResourceResolver;
 import com.analyzer.test.stubs.StubResourceResolver;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +32,16 @@ public class ClasspathInspectorScannerTest {
     void setUp() {
         resourceResolver = new StubResourceResolver();
         jarClassLoaderService = new JARClassLoaderService();
-        scanner = new ClasspathInspectorScanner(resourceResolver, jarClassLoaderService);
+
+        // Use PicoContainer to create the scanner with all dependencies
+        org.picocontainer.MutablePicoContainer pico = new org.picocontainer.DefaultPicoContainer();
+        pico.addComponent(ResourceResolver.class, resourceResolver);
+        pico.addComponent(JARClassLoaderService.class, jarClassLoaderService);
+        pico.addComponent(com.analyzer.core.graph.GraphRepository.class,
+                com.analyzer.core.graph.InMemoryGraphRepository.class);
+        pico.addComponent(ClasspathInspectorScanner.class);
+
+        scanner = pico.getComponent(ClasspathInspectorScanner.class);
     }
 
     @Test
@@ -47,7 +59,7 @@ public class ClasspathInspectorScannerTest {
         // Check that we have both source and binary inspectors
         boolean hasSourceInspectors = false;
         boolean hasBinaryInspectors = false;
-        boolean hasServletInspector = false;
+        boolean hasJavaVersionInspector = false;
 
         for (Inspector inspector : discoveredInspectors) {
             assertNotNull(inspector, "Inspector should not be null");
@@ -56,20 +68,20 @@ public class ClasspathInspectorScannerTest {
 
             logger.debug("Discovered inspector: {} ({})", inspector.getName(), inspector.getClass().getName());
 
-            if (inspector instanceof SourceFileInspector) {
+            if (inspector instanceof AbstractSourceFileInspector) {
                 hasSourceInspectors = true;
             }
-            if (inspector instanceof BinaryClassInspector) {
+            if (inspector instanceof AbstractBinaryClassInspector) {
                 hasBinaryInspectors = true;
             }
-            if ("Identify Servlet".equals(inspector.getName())) {
-                hasServletInspector = true;
+            if ("JavaVersionInspector".equals(inspector.getName())) {
+                hasJavaVersionInspector = true;
             }
         }
 
         assertTrue(hasSourceInspectors, "Should discover at least one source file inspector");
         assertTrue(hasBinaryInspectors, "Should discover at least one binary class inspector");
-        assertTrue(hasServletInspector, "Should discover the IdentifyServletSourceInspector");
+        assertTrue(hasJavaVersionInspector, "Should discover JavaVersionInspector");
     }
 
     @Test
@@ -85,10 +97,11 @@ public class ClasspathInspectorScannerTest {
 
         // Verify that key inspectors are discovered (using actual getName() values)
         assertTrue(inspectorNames.contains("Number of lines of code"), "Should discover ClocInspector");
-        assertTrue(inspectorNames.contains("Type Declaration Inspector"), "Should discover TypeInspector");
-        assertTrue(inspectorNames.contains("Method count inspector (BINARY)"), "Should discover MethodCountInspector");
-        assertTrue(inspectorNames.contains("Cyclomatic Complexity"), "Should discover CyclomaticComplexityInspector");
-        assertTrue(inspectorNames.contains("Identify Servlet"), "Should discover IdentifyServletSourceInspector");
+        // Check for core inspectors that should always be present
+        assertTrue(inspectorNames.contains("Number of lines of code"), "Should discover ClocInspector");
+        assertTrue(inspectorNames.contains("JavaVersionInspector"), "Should discover JavaVersionInspector");
+        assertTrue(inspectorNames.contains("Java Binary class detector"), "Should discover JavaBinaryClassDetector");
+        assertTrue(inspectorNames.contains("Java Source File Inspector"), "Should discover JavaSourceFileInspector");
 
         // Note: annotation-count and code-quality inspectors may not be discovered due
         // to

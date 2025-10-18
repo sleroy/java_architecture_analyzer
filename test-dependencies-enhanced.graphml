@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?><graphml xmlns="http://graphml.graphdrawing.org/xmlns" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <key id="vertex_label_key" for="node" attr.name="VertexLabel" attr.type="string"/>
+    <key id="edge_label_key" for="edge" attr.name="EdgeLabel" attr.type="string"/>
+    <key id="key0" for="node" attr.name="node_name" attr.type="string"/>
+    <key id="key1" for="node" attr.name="className" attr.type="string"/>
+    <key id="key4" for="node" attr.name="requiredTagsList" attr.type="string">
+        <default/>
+    </key>
+    <key id="key3" for="node" attr.name="requiredTagsCount" attr.type="int">
+        <default>0</default>
+    </key>
+    <key id="key5" for="node" attr.name="producedTagsList" attr.type="string">
+        <default/>
+    </key>
+    <key id="key6" for="edge" attr.name="tag" attr.type="string"/>
+    <key id="key7" for="edge" attr.name="producer" attr.type="string"/>
+    <key id="key8" for="edge" attr.name="consumer" attr.type="string"/>
+    <graph edgedefault="directed"/>
+</graphml>
