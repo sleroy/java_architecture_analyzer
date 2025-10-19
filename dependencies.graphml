@@ -1,530 +1,660 @@
 <?xml version="1.0" encoding="UTF-8"?><graphml xmlns="http://graphml.graphdrawing.org/xmlns" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <key id="vertex_label_key" for="node" attr.name="VertexLabel" attr.type="string"/>
+    <key id="edge_label_key" for="edge" attr.name="EdgeLabel" attr.type="string"/>
+    <key id="key0" for="node" attr.name="node_name" attr.type="string"/>
+    <key id="key1" for="node" attr.name="className" attr.type="string"/>
+    <key id="key4" for="node" attr.name="requiredTagsList" attr.type="string">
+        <default/>
+    </key>
+    <key id="key3" for="node" attr.name="requiredTagsCount" attr.type="int">
+        <default>0</default>
+    </key>
+    <key id="key5" for="node" attr.name="producedTagsList" attr.type="string">
+        <default/>
+    </key>
+    <key id="key6" for="edge" attr.name="tag" attr.type="string"/>
+    <key id="key7" for="edge" attr.name="producer" attr.type="string"/>
+    <key id="key8" for="edge" attr.name="consumer" attr.type="string"/>
     <graph edgedefault="directed">
-        <node id="1"/>
-        <node id="2"/>
-        <node id="3"/>
-        <node id="4"/>
-        <node id="5"/>
-        <node id="6"/>
-        <node id="7"/>
-        <node id="8"/>
-        <node id="9"/>
-        <node id="10"/>
-        <node id="11"/>
-        <node id="12"/>
-        <node id="13"/>
-        <node id="14"/>
-        <node id="15"/>
-        <node id="16"/>
-        <node id="17"/>
-        <node id="18"/>
-        <node id="19"/>
-        <node id="20"/>
-        <node id="21"/>
-        <node id="22"/>
-        <node id="23"/>
-        <node id="24"/>
-        <node id="25"/>
-        <node id="26"/>
-        <node id="27"/>
-        <node id="28"/>
-        <node id="29"/>
-        <node id="30"/>
-        <node id="31"/>
-        <node id="32"/>
-        <node id="33"/>
-        <node id="34"/>
-        <node id="35"/>
-        <node id="36"/>
-        <node id="37"/>
-        <node id="38"/>
-        <node id="39"/>
-        <node id="40"/>
-        <node id="41"/>
-        <node id="42"/>
-        <node id="43"/>
-        <edge source="9" target="1"/>
-        <edge source="9" target="2"/>
-        <edge source="9" target="4"/>
-        <edge source="9" target="8"/>
-        <edge source="9" target="10"/>
-        <edge source="9" target="11"/>
-        <edge source="9" target="12"/>
-        <edge source="9" target="13"/>
-        <edge source="9" target="14"/>
-        <edge source="9" target="15"/>
-        <edge source="9" target="16"/>
-        <edge source="9" target="20"/>
-        <edge source="9" target="21"/>
-        <edge source="9" target="22"/>
-        <edge source="9" target="23"/>
-        <edge source="9" target="24"/>
-        <edge source="9" target="25"/>
-        <edge source="9" target="26"/>
-        <edge source="9" target="27"/>
-        <edge source="9" target="31"/>
-        <edge source="9" target="33"/>
-        <edge source="9" target="34"/>
-        <edge source="9" target="35"/>
-        <edge source="9" target="37"/>
-        <edge source="9" target="39"/>
-        <edge source="9" target="42"/>
-        <edge source="28" target="1"/>
-        <edge source="28" target="2"/>
-        <edge source="28" target="4"/>
-        <edge source="28" target="8"/>
-        <edge source="28" target="10"/>
-        <edge source="28" target="11"/>
-        <edge source="28" target="12"/>
-        <edge source="28" target="13"/>
-        <edge source="28" target="14"/>
-        <edge source="28" target="15"/>
-        <edge source="28" target="16"/>
-        <edge source="28" target="20"/>
-        <edge source="28" target="21"/>
-        <edge source="28" target="22"/>
-        <edge source="28" target="23"/>
-        <edge source="28" target="24"/>
-        <edge source="28" target="25"/>
-        <edge source="28" target="26"/>
-        <edge source="28" target="27"/>
-        <edge source="28" target="31"/>
-        <edge source="28" target="33"/>
-        <edge source="28" target="34"/>
-        <edge source="28" target="35"/>
-        <edge source="28" target="37"/>
-        <edge source="28" target="39"/>
-        <edge source="28" target="42"/>
-        <edge source="7" target="1"/>
-        <edge source="7" target="2"/>
-        <edge source="7" target="3"/>
-        <edge source="7" target="18"/>
-        <edge source="7" target="19"/>
-        <edge source="7" target="20"/>
-        <edge source="7" target="22"/>
-        <edge source="7" target="25"/>
-        <edge source="7" target="5"/>
-        <edge source="7" target="27"/>
-        <edge source="7" target="29"/>
-        <edge source="7" target="31"/>
-        <edge source="7" target="9"/>
-        <edge source="7" target="10"/>
-        <edge source="7" target="12"/>
-        <edge source="7" target="13"/>
-        <edge source="7" target="37"/>
-        <edge source="7" target="38"/>
-        <edge source="7" target="40"/>
-        <edge source="7" target="14"/>
-        <edge source="7" target="41"/>
-        <edge source="2" target="8"/>
-        <edge source="2" target="12"/>
-        <edge source="6" target="3"/>
-        <edge source="6" target="18"/>
-        <edge source="6" target="3"/>
-        <edge source="6" target="18"/>
-        <edge source="6" target="29"/>
-        <edge source="1" target="8"/>
-        <edge source="1" target="11"/>
-        <edge source="1" target="12"/>
-        <edge source="2" target="8"/>
-        <edge source="2" target="11"/>
-        <edge source="2" target="12"/>
-        <edge source="3" target="8"/>
-        <edge source="3" target="11"/>
-        <edge source="3" target="12"/>
-        <edge source="18" target="8"/>
-        <edge source="18" target="11"/>
-        <edge source="18" target="12"/>
-        <edge source="20" target="8"/>
-        <edge source="20" target="11"/>
-        <edge source="20" target="12"/>
-        <edge source="22" target="8"/>
-        <edge source="22" target="11"/>
-        <edge source="22" target="12"/>
-        <edge source="25" target="8"/>
-        <edge source="25" target="11"/>
-        <edge source="25" target="12"/>
-        <edge source="27" target="8"/>
-        <edge source="27" target="11"/>
-        <edge source="27" target="12"/>
-        <edge source="29" target="8"/>
-        <edge source="29" target="11"/>
-        <edge source="29" target="12"/>
-        <edge source="31" target="8"/>
-        <edge source="31" target="11"/>
-        <edge source="31" target="12"/>
-        <edge source="10" target="8"/>
-        <edge source="10" target="11"/>
-        <edge source="10" target="12"/>
-        <edge source="12" target="8"/>
-        <edge source="12" target="11"/>
-        <edge source="13" target="8"/>
-        <edge source="13" target="11"/>
-        <edge source="13" target="12"/>
-        <edge source="37" target="8"/>
-        <edge source="37" target="11"/>
-        <edge source="37" target="12"/>
-        <edge source="38" target="8"/>
-        <edge source="38" target="11"/>
-        <edge source="38" target="12"/>
-        <edge source="40" target="8"/>
-        <edge source="40" target="11"/>
-        <edge source="40" target="12"/>
-        <edge source="14" target="8"/>
-        <edge source="14" target="11"/>
-        <edge source="14" target="12"/>
-        <edge source="25" target="11"/>
-        <edge source="28" target="16"/>
-        <edge source="28" target="4"/>
-        <edge source="28" target="21"/>
-        <edge source="28" target="23"/>
-        <edge source="28" target="24"/>
-        <edge source="28" target="26"/>
-        <edge source="28" target="8"/>
-        <edge source="28" target="11"/>
-        <edge source="28" target="33"/>
-        <edge source="28" target="34"/>
-        <edge source="28" target="35"/>
-        <edge source="28" target="39"/>
-        <edge source="28" target="15"/>
-        <edge source="6" target="3"/>
-        <edge source="6" target="18"/>
-        <edge source="9" target="1"/>
-        <edge source="9" target="2"/>
-        <edge source="9" target="17"/>
-        <edge source="9" target="20"/>
-        <edge source="9" target="22"/>
-        <edge source="9" target="25"/>
-        <edge source="9" target="27"/>
-        <edge source="9" target="31"/>
-        <edge source="9" target="10"/>
-        <edge source="9" target="12"/>
-        <edge source="9" target="13"/>
-        <edge source="9" target="34"/>
-        <edge source="9" target="37"/>
-        <edge source="9" target="14"/>
-        <edge source="9" target="15"/>
-        <edge source="9" target="42"/>
-        <edge source="9" target="43"/>
-        <edge source="35" target="1"/>
-        <edge source="35" target="2"/>
-        <edge source="35" target="17"/>
-        <edge source="35" target="20"/>
-        <edge source="35" target="22"/>
-        <edge source="35" target="25"/>
-        <edge source="35" target="27"/>
-        <edge source="35" target="31"/>
-        <edge source="35" target="10"/>
-        <edge source="35" target="12"/>
-        <edge source="35" target="13"/>
-        <edge source="35" target="34"/>
-        <edge source="35" target="37"/>
-        <edge source="35" target="14"/>
-        <edge source="35" target="15"/>
-        <edge source="35" target="42"/>
-        <edge source="35" target="43"/>
-        <edge source="9" target="1"/>
-        <edge source="9" target="2"/>
-        <edge source="9" target="4"/>
-        <edge source="9" target="8"/>
-        <edge source="9" target="10"/>
-        <edge source="9" target="11"/>
-        <edge source="9" target="12"/>
-        <edge source="9" target="13"/>
-        <edge source="9" target="14"/>
-        <edge source="9" target="15"/>
-        <edge source="9" target="16"/>
-        <edge source="9" target="17"/>
-        <edge source="9" target="20"/>
-        <edge source="9" target="21"/>
-        <edge source="9" target="22"/>
-        <edge source="9" target="23"/>
-        <edge source="9" target="24"/>
-        <edge source="9" target="25"/>
-        <edge source="9" target="26"/>
-        <edge source="9" target="27"/>
-        <edge source="9" target="30"/>
-        <edge source="9" target="31"/>
-        <edge source="9" target="33"/>
-        <edge source="9" target="34"/>
-        <edge source="9" target="35"/>
-        <edge source="9" target="37"/>
-        <edge source="9" target="39"/>
-        <edge source="9" target="42"/>
-        <edge source="9" target="43"/>
-        <edge source="28" target="1"/>
-        <edge source="28" target="2"/>
-        <edge source="28" target="4"/>
-        <edge source="28" target="8"/>
-        <edge source="28" target="10"/>
-        <edge source="28" target="11"/>
-        <edge source="28" target="12"/>
-        <edge source="28" target="13"/>
-        <edge source="28" target="14"/>
-        <edge source="28" target="15"/>
-        <edge source="28" target="16"/>
-        <edge source="28" target="17"/>
-        <edge source="28" target="20"/>
-        <edge source="28" target="21"/>
-        <edge source="28" target="22"/>
-        <edge source="28" target="23"/>
-        <edge source="28" target="24"/>
-        <edge source="28" target="25"/>
-        <edge source="28" target="26"/>
-        <edge source="28" target="27"/>
-        <edge source="28" target="30"/>
-        <edge source="28" target="31"/>
-        <edge source="28" target="33"/>
-        <edge source="28" target="34"/>
-        <edge source="28" target="35"/>
-        <edge source="28" target="37"/>
-        <edge source="28" target="39"/>
-        <edge source="28" target="42"/>
-        <edge source="28" target="43"/>
-        <edge source="9" target="1"/>
-        <edge source="9" target="2"/>
-        <edge source="9" target="4"/>
-        <edge source="9" target="8"/>
-        <edge source="9" target="10"/>
-        <edge source="9" target="11"/>
-        <edge source="9" target="12"/>
-        <edge source="9" target="13"/>
-        <edge source="9" target="14"/>
-        <edge source="9" target="15"/>
-        <edge source="9" target="16"/>
-        <edge source="9" target="20"/>
-        <edge source="9" target="21"/>
-        <edge source="9" target="22"/>
-        <edge source="9" target="23"/>
-        <edge source="9" target="24"/>
-        <edge source="9" target="25"/>
-        <edge source="9" target="26"/>
-        <edge source="9" target="27"/>
-        <edge source="9" target="31"/>
-        <edge source="9" target="33"/>
-        <edge source="9" target="34"/>
-        <edge source="9" target="35"/>
-        <edge source="9" target="37"/>
-        <edge source="9" target="39"/>
-        <edge source="9" target="42"/>
-        <edge source="28" target="1"/>
-        <edge source="28" target="2"/>
-        <edge source="28" target="4"/>
-        <edge source="28" target="8"/>
-        <edge source="28" target="10"/>
-        <edge source="28" target="11"/>
-        <edge source="28" target="12"/>
-        <edge source="28" target="13"/>
-        <edge source="28" target="14"/>
-        <edge source="28" target="15"/>
-        <edge source="28" target="16"/>
-        <edge source="28" target="20"/>
-        <edge source="28" target="21"/>
-        <edge source="28" target="22"/>
-        <edge source="28" target="23"/>
-        <edge source="28" target="24"/>
-        <edge source="28" target="25"/>
-        <edge source="28" target="26"/>
-        <edge source="28" target="27"/>
-        <edge source="28" target="31"/>
-        <edge source="28" target="33"/>
-        <edge source="28" target="34"/>
-        <edge source="28" target="35"/>
-        <edge source="28" target="37"/>
-        <edge source="28" target="39"/>
-        <edge source="28" target="42"/>
-        <edge source="9" target="1"/>
-        <edge source="9" target="2"/>
-        <edge source="9" target="20"/>
-        <edge source="9" target="22"/>
-        <edge source="9" target="25"/>
-        <edge source="9" target="27"/>
-        <edge source="9" target="31"/>
-        <edge source="9" target="10"/>
-        <edge source="9" target="12"/>
-        <edge source="9" target="13"/>
-        <edge source="9" target="37"/>
-        <edge source="9" target="14"/>
-        <edge source="9" target="42"/>
-        <edge source="8" target="3"/>
-        <edge source="8" target="18"/>
-        <edge source="24" target="3"/>
-        <edge source="24" target="18"/>
-        <edge source="6" target="3"/>
-        <edge source="6" target="18"/>
-        <edge source="6" target="3"/>
-        <edge source="6" target="18"/>
-        <edge source="9" target="1"/>
-        <edge source="9" target="2"/>
-        <edge source="9" target="4"/>
-        <edge source="9" target="5"/>
-        <edge source="9" target="6"/>
-        <edge source="9" target="8"/>
-        <edge source="9" target="10"/>
-        <edge source="9" target="11"/>
-        <edge source="9" target="12"/>
-        <edge source="9" target="13"/>
-        <edge source="9" target="14"/>
-        <edge source="9" target="15"/>
-        <edge source="9" target="16"/>
-        <edge source="9" target="20"/>
-        <edge source="9" target="21"/>
-        <edge source="9" target="22"/>
-        <edge source="9" target="23"/>
-        <edge source="9" target="24"/>
-        <edge source="9" target="25"/>
-        <edge source="9" target="26"/>
-        <edge source="9" target="27"/>
-        <edge source="9" target="31"/>
-        <edge source="9" target="33"/>
-        <edge source="9" target="34"/>
-        <edge source="9" target="35"/>
-        <edge source="9" target="37"/>
-        <edge source="9" target="38"/>
-        <edge source="9" target="39"/>
-        <edge source="9" target="41"/>
-        <edge source="9" target="42"/>
-        <edge source="28" target="1"/>
-        <edge source="28" target="2"/>
-        <edge source="28" target="4"/>
-        <edge source="28" target="5"/>
-        <edge source="28" target="6"/>
-        <edge source="28" target="8"/>
-        <edge source="28" target="10"/>
-        <edge source="28" target="11"/>
-        <edge source="28" target="12"/>
-        <edge source="28" target="13"/>
-        <edge source="28" target="14"/>
-        <edge source="28" target="15"/>
-        <edge source="28" target="16"/>
-        <edge source="28" target="20"/>
-        <edge source="28" target="21"/>
-        <edge source="28" target="22"/>
-        <edge source="28" target="23"/>
-        <edge source="28" target="24"/>
-        <edge source="28" target="25"/>
-        <edge source="28" target="26"/>
-        <edge source="28" target="27"/>
-        <edge source="28" target="31"/>
-        <edge source="28" target="33"/>
-        <edge source="28" target="34"/>
-        <edge source="28" target="35"/>
-        <edge source="28" target="37"/>
-        <edge source="28" target="38"/>
-        <edge source="28" target="39"/>
-        <edge source="28" target="41"/>
-        <edge source="28" target="42"/>
-        <edge source="9" target="1"/>
-        <edge source="9" target="2"/>
-        <edge source="9" target="20"/>
-        <edge source="9" target="22"/>
-        <edge source="9" target="25"/>
-        <edge source="9" target="27"/>
-        <edge source="9" target="31"/>
-        <edge source="9" target="10"/>
-        <edge source="9" target="12"/>
-        <edge source="9" target="13"/>
-        <edge source="9" target="37"/>
-        <edge source="9" target="14"/>
-        <edge source="9" target="42"/>
-        <edge source="9" target="1"/>
-        <edge source="9" target="2"/>
-        <edge source="9" target="17"/>
-        <edge source="9" target="20"/>
-        <edge source="9" target="22"/>
-        <edge source="9" target="25"/>
-        <edge source="9" target="27"/>
-        <edge source="9" target="31"/>
-        <edge source="9" target="10"/>
-        <edge source="9" target="12"/>
-        <edge source="9" target="13"/>
-        <edge source="9" target="34"/>
-        <edge source="9" target="37"/>
-        <edge source="9" target="14"/>
-        <edge source="9" target="15"/>
-        <edge source="9" target="42"/>
-        <edge source="9" target="43"/>
-        <edge source="35" target="1"/>
-        <edge source="35" target="2"/>
-        <edge source="35" target="17"/>
-        <edge source="35" target="20"/>
-        <edge source="35" target="22"/>
-        <edge source="35" target="25"/>
-        <edge source="35" target="27"/>
-        <edge source="35" target="31"/>
-        <edge source="35" target="10"/>
-        <edge source="35" target="12"/>
-        <edge source="35" target="13"/>
-        <edge source="35" target="34"/>
-        <edge source="35" target="37"/>
-        <edge source="35" target="14"/>
-        <edge source="35" target="15"/>
-        <edge source="35" target="42"/>
-        <edge source="35" target="43"/>
-        <edge source="8" target="3"/>
-        <edge source="8" target="18"/>
-        <edge source="24" target="3"/>
-        <edge source="24" target="18"/>
-        <edge source="6" target="3"/>
-        <edge source="6" target="18"/>
-        <edge source="2" target="8"/>
-        <edge source="2" target="12"/>
-        <edge source="8" target="3"/>
-        <edge source="8" target="18"/>
-        <edge source="6" target="3"/>
-        <edge source="6" target="18"/>
-        <edge source="8" target="3"/>
-        <edge source="8" target="18"/>
-        <edge source="24" target="3"/>
-        <edge source="24" target="18"/>
-        <edge source="6" target="3"/>
-        <edge source="6" target="18"/>
-        <edge source="9" target="1"/>
-        <edge source="9" target="2"/>
-        <edge source="9" target="17"/>
-        <edge source="9" target="20"/>
-        <edge source="9" target="22"/>
-        <edge source="9" target="25"/>
-        <edge source="9" target="27"/>
-        <edge source="9" target="31"/>
-        <edge source="9" target="10"/>
-        <edge source="9" target="12"/>
-        <edge source="9" target="13"/>
-        <edge source="9" target="34"/>
-        <edge source="9" target="37"/>
-        <edge source="9" target="14"/>
-        <edge source="9" target="15"/>
-        <edge source="9" target="42"/>
-        <edge source="9" target="43"/>
-        <edge source="35" target="1"/>
-        <edge source="35" target="2"/>
-        <edge source="35" target="17"/>
-        <edge source="35" target="20"/>
-        <edge source="35" target="22"/>
-        <edge source="35" target="25"/>
-        <edge source="35" target="27"/>
-        <edge source="35" target="31"/>
-        <edge source="35" target="10"/>
-        <edge source="35" target="12"/>
-        <edge source="35" target="13"/>
-        <edge source="35" target="34"/>
-        <edge source="35" target="37"/>
-        <edge source="35" target="14"/>
-        <edge source="35" target="15"/>
-        <edge source="35" target="42"/>
-        <edge source="35" target="43"/>
-        <edge source="28" target="16"/>
-        <edge source="28" target="4"/>
-        <edge source="28" target="21"/>
-        <edge source="28" target="23"/>
-        <edge source="28" target="24"/>
-        <edge source="28" target="26"/>
-        <edge source="28" target="8"/>
-        <edge source="28" target="11"/>
-        <edge source="28" target="33"/>
-        <edge source="28" target="34"/>
-        <edge source="28" target="35"/>
-        <edge source="28" target="39"/>
-        <edge source="28" target="15"/>
+        <node id="Business_Delegate_Pattern_Inspector__I-0709_">
+            <data key="vertex_label_key">Business Delegate Pattern Inspector (I-0709)</data>
+            <data key="key0">10</data>
+            <data key="key4">java.format, java.is_source, java.classType, layer.basic, layer.java_source, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key5">ejb.client.serviceLocator, ejb.client.code, ejb.client.businessDelegate, ejb.client.jndiLookup, ejb.migration.highPriority</data>
+        </node>
+        <node id="Entity_Bean_Detector">
+            <data key="vertex_label_key">Entity Bean Detector</data>
+            <data key="key0">4</data>
+            <data key="key4">JAVA, layer.basic, layer.java_source, resource.has_java_source</data>
+            <data key="key5">entity_bean_inspector.bean_persistence_type, entity_bean_inspector.is_entity_bean</data>
+        </node>
+        <node id="Database_Resource_Management_Inspector__I-0703_">
+            <data key="vertex_label_key">Database Resource Management Inspector (I-0703)</data>
+            <data key="key0">9</data>
+            <data key="key4">ejb.deployment.vendor, ejb.deployment.descriptor, ejb_deployment_descriptor_detector.descriptor_type, migration.complexity.medium, layer.basic, ejb_deployment_descriptor_detector.file_type, migration.complexity.high, jpa.conversion.candidate, migration.complexity.low</data>
+            <data key="key5">resource.management.analysis</data>
+        </node>
+        <node id="EJB_Create_Method_Usage_Inspector__I-0706_">
+            <data key="vertex_label_key">EJB Create Method Usage Inspector (I-0706)</data>
+            <data key="key0">6</data>
+            <data key="key4">java.format, layer.java_binary, resource.has_java_binary, language, java.detected, java.is_binary</data>
+            <data key="key5">ejb.migration.complex, ejb.migration.simple, ejb.createMethod.parameterized, ejb.client.createMethod, ejb.migration.medium, ejb.client.code, ejb.client.dependencyInjectionCandidate, ejb.client.jndiLookup, ejb.homeInterface, ejb.createMethod, ejb.createMethod.complexInitialization</data>
+        </node>
+        <node id="EJB_Deployment_Descriptor_Detector">
+            <data key="vertex_label_key">EJB Deployment Descriptor Detector</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.basic</data>
+            <data key="key5">ejb.deployment.vendor, ejb.deployment.descriptor, ejb_deployment_descriptor_detector.descriptor_type, migration.complexity.medium, ejb_deployment_descriptor_detector.file_type, migration.complexity.high, jpa.conversion.candidate, migration.complexity.low</data>
+        </node>
+        <node id="SourceFileTagInspector">
+            <data key="vertex_label_key">SourceFileTagInspector</data>
+            <data key="key0">0</data>
+            <data key="key5">source_file</data>
+        </node>
+        <node id="EJB_Deployment_Descriptor_Analyzer_Inspector">
+            <data key="vertex_label_key">EJB Deployment Descriptor Analyzer Inspector</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.basic</data>
+            <data key="key5">ejb_jar_analysis</data>
+        </node>
+        <node id="CMP_Field_Mapping_Inspector__I-0206_">
+            <data key="vertex_label_key">CMP Field Mapping Inspector (I-0206)</data>
+            <data key="key0">8</data>
+            <data key="key4">java.format, layer.java_binary, resource.has_java_binary, language, java.detected, entity_bean_inspector.bean_persistence_type, java.is_binary, entity_bean_inspector.is_entity_bean</data>
+            <data key="key5">ejb.primaryKey, ejb.cmr.relationship, migration.complexity.medium, ejb.cmp.fieldMapping, migration.complexity.high, ejb.cmp.field, jpa.conversion.candidate, migration.complexity.low</data>
+        </node>
+        <node id="Java_Source_File_Inspector">
+            <data key="vertex_label_key">Java Source File Inspector</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.basic</data>
+            <data key="key5">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+        </node>
+        <node id="EJB_Remote_Local_Interface_Detector">
+            <data key="vertex_label_key">EJB Remote/Local Interface Detector</data>
+            <data key="key0">10</data>
+            <data key="key4">java.format, java.is_source, java.classType, layer.basic, layer.java_source, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key5">ejb_remote_interface_inspector.is_remote_interface</data>
+        </node>
+        <node id="I-0905_Stateful_Session_State_Inspector">
+            <data key="vertex_label_key">I-0905 Stateful Session State Inspector</data>
+            <data key="key0">2</data>
+            <data key="key4">layer.java_binary, session_bean_inspector.is_session_bean</data>
+            <data key="key5">ejb.crossMethodDependency, ejb.conversationalState, ejb.stateful.sessionState, spring.conversion.scope</data>
+        </node>
+        <node id="Complex_CMP_Relationship_Inspector__I-0207_">
+            <data key="vertex_label_key">Complex CMP Relationship Inspector (I-0207)</data>
+            <data key="key0">12</data>
+            <data key="key4">java.format, java.is_source, java.classType, layer.basic, layer.java_source, java.className, language, java.packageName, java.detected, entity_bean_inspector.bean_persistence_type, java.fullyQualifiedName, entity_bean_inspector.is_entity_bean</data>
+            <data key="key5">complex_cmp_relationship.cascade_operations, complex_cmp_relationship.bidirectional, complex_cmp_relationship.collection_relationships, complex_cmp_relationship.has_complex_cmr, complex_cmp_relationship.jpa_conversion_complexity</data>
+        </node>
+        <node id="Identify_Servlet">
+            <data key="vertex_label_key">Identify Servlet</data>
+            <data key="key0">10</data>
+            <data key="key4">java.format, java.is_source, java.classType, layer.basic, layer.java_source, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key5">identify_servlet_source_inspector.is_servlet</data>
+        </node>
+        <node id="Source_Java_Class_Node_Inspector">
+            <data key="vertex_label_key">Source Java Class Node Inspector</data>
+            <data key="key0">11</data>
+            <data key="key4">java.format, java.is_source, java.classType, layer.basic, layer.java_source, java.className, language, java.packageName, java.detected, java.fullyQualifiedName, source_file</data>
+            <data key="key5">java.class_node.source</data>
+        </node>
+        <node id="InheritanceDepthInspector">
+            <data key="vertex_label_key">InheritanceDepthInspector</data>
+            <data key="key0">5</data>
+            <data key="key4">java.format, resource.has_java_binary, language, java.detected, java.is_binary</data>
+            <data key="key5">layer.java_classloader, inheritance_depth_analysis</data>
+        </node>
+        <node id="ClassFileInspector">
+            <data key="vertex_label_key">ClassFileInspector</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.java_binary</data>
+            <data key="key5">class_file_inspector.java_fully_qualified_name, class_file_inspector.java_package_name, class_file_inspector.java_class_type, class_file_inspector.java_class_name</data>
+        </node>
+        <node id="Annotation_Count">
+            <data key="vertex_label_key">Annotation Count</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.java_classloader</data>
+            <data key="key5">layer.java_classloader, annotation-count</data>
+        </node>
+        <node id="I-0504_JBoss_EJB_Configuration_Inspector">
+            <data key="vertex_label_key">I-0504 JBoss EJB Configuration Inspector</data>
+            <data key="key0">9</data>
+            <data key="key4">ejb.deployment.vendor, ejb.deployment.descriptor, ejb_deployment_descriptor_detector.descriptor_type, migration.complexity.medium, layer.basic, ejb_deployment_descriptor_detector.file_type, migration.complexity.high, jpa.conversion.candidate, migration.complexity.low</data>
+            <data key="key5">spring.boot.migration.candidate, vendor.specific.configuration, jboss.configuration</data>
+        </node>
+        <node id="Legacy_Framework_Detector">
+            <data key="vertex_label_key">Legacy Framework Detector</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.basic</data>
+            <data key="key5">legacy_framework_detector.connection_pool, legacy_framework_detector.logging_config, legacy_framework_detector.hibernate, legacy_framework_detector.web_config, legacy_framework_detector.soap_webservice, legacy_framework_detector.legacy, legacy_framework_detector.security_framework, legacy_framework_detector.build_config, legacy_framework_detector.ejb, legacy_framework_detector.migration_priority, legacy_framework_detector.build_legacy, legacy_framework_detector.hibernate_config, legacy_framework_detector.web_framework, legacy_framework_detector.jpa_config, legacy_framework_detector.struts_config, legacy_framework_detector.xml, legacy_framework_detector.ejb_vendor_descriptor, legacy_framework_detector.datasource_config, legacy_framework_detector.spring_legacy_config, legacy_framework_detector.log4j, legacy_framework_detector.persistence_unit, legacy_framework_detector.hibernate_mapping, legacy_framework_detector.security_config, legacy_framework_detector.properties, legacy_framework_detector.struts, legacy_framework_detector.spring_legacy, legacy_framework_detector.legacy_framework, legacy_framework_detector.ejb_config, legacy_framework_detector.jsf, legacy_framework_detector.jsf_config, legacy_framework_detector.axis, legacy_framework_detector.ejb_deployment_descriptor, legacy_framework_detector.wsdd</data>
+        </node>
+        <node id="JNDI_Lookup_Pattern_Detector">
+            <data key="vertex_label_key">JNDI Lookup Pattern Detector</data>
+            <data key="key0">9</data>
+            <data key="key4">java.format, java.is_source, java.classType, layer.basic, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key5">jndi_lookup_inspector.lookup_detected, jndi_lookup_inspector.uses_initial_context, jndi_lookup_inspector.environment_references, jndi_lookup_inspector.other_references, jndi_lookup_inspector.migration_complexity, jndi_lookup_inspector.jms_references, jndi_lookup_inspector.ejb_uses_jndi, jndi_lookup_inspector.jndi_names, jndi_lookup_inspector.datasource_references, jndi_lookup_inspector.ejb_references</data>
+        </node>
+        <node id="Programmatic_Transaction_Usage_Inspector__I-0804_">
+            <data key="vertex_label_key">Programmatic Transaction Usage Inspector (I-0804)</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.java_binary</data>
+        </node>
+        <node id="Cyclomatic_Complexity">
+            <data key="vertex_label_key">Cyclomatic Complexity</data>
+            <data key="key0">3</data>
+            <data key="key4">layer.basic, layer.java_source, resource.has_java_source</data>
+            <data key="key5">cyclomatic-complexity</data>
+        </node>
+        <node id="JavaVersionInspector">
+            <data key="vertex_label_key">JavaVersionInspector</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.java_binary</data>
+            <data key="key5">java.version, java.major_version, java.version_source</data>
+        </node>
+        <node id="JDBC_Data_Access_Pattern_Inspector__P2-01_">
+            <data key="vertex_label_key">JDBC Data Access Pattern Inspector (P2-01)</data>
+            <data key="key0">6</data>
+            <data key="key4">java.format, layer.java_binary, resource.has_java_binary, language, java.detected, java.is_binary</data>
+            <data key="key5">migration.complexity.medium, spring.jdbc.template.migration, dataAccess.dao.pattern, jdbc.sql.query, jdbc.statement.usage, jdbc.connection.usage, spring.repository.pattern, dataAccess.layer, jdbc.preparedStatement.usage, dataAccess.manual.mapping, migration.complexity.high, jdbc.resultSet.processing, migration.complexity.low</data>
+        </node>
+        <node id="Session_Bean_Detector">
+            <data key="vertex_label_key">Session Bean Detector</data>
+            <data key="key0">10</data>
+            <data key="key4">java.format, java.is_source, java.classType, layer.basic, layer.java_source, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key5">session_bean_inspector.is_session_bean</data>
+        </node>
+        <node id="Binary_Java_Class_Node_Inspector">
+            <data key="vertex_label_key">Binary Java Class Node Inspector</data>
+            <data key="key0">6</data>
+            <data key="key4">java.format, layer.java_binary, resource.has_java_binary, language, java.detected, java.is_binary</data>
+            <data key="key5">java.class_node.binary</data>
+        </node>
+        <node id="Message_Driven_Bean_Detector">
+            <data key="vertex_label_key">Message Driven Bean Detector</data>
+            <data key="key0">10</data>
+            <data key="key4">java.format, java.is_source, java.classType, layer.basic, layer.java_source, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key5">message_driven_bean_inspector.annotation_message_driven, message_driven_bean_inspector.ejb_mdb_detected, message_driven_bean_inspector.jms_consumer, message_driven_bean_inspector.ejb_message_driven_bean</data>
+        </node>
+        <node id="IsBinaryJavaClassInspector">
+            <data key="vertex_label_key">IsBinaryJavaClassInspector</data>
+            <data key="key0">0</data>
+            <data key="key5">java.format, resource.has_java_binary, language, java.detected, java.is_binary</data>
+        </node>
+        <node id="ProjectFile_Annotation_Count">
+            <data key="vertex_label_key">ProjectFile Annotation Count</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.java_classloader</data>
+        </node>
+        <node id="I-0805_Declarative_Transaction_Inspector">
+            <data key="vertex_label_key">I-0805 Declarative Transaction Inspector</data>
+            <data key="key0">2</data>
+            <data key="key4">ejb.deployment.descriptor, layer.basic</data>
+            <data key="key5">spring.conversion.transaction, ejb.transaction.declarative, ejb.transaction.containerManaged</data>
+        </node>
+        <node id="Custom_Data_Transfer_Pattern_Inspector__I-0213_">
+            <data key="vertex_label_key">Custom Data Transfer Pattern Inspector (I-0213)</data>
+            <data key="key0">10</data>
+            <data key="key4">java.format, java.is_source, java.classType, layer.basic, layer.java_source, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key5">dataAccess.vo.pattern, dataAccess.mapping.resultset, ejb.migration.mediumPriority, dataAccess.mapping.custom, jdbc.dto.usage, dataAccess.dto.pattern</data>
+        </node>
+        <node id="JavaImportGraphInspector">
+            <data key="vertex_label_key">JavaImportGraphInspector</data>
+            <data key="key0">0</data>
+        </node>
+        <node id="Type_Declaration_Inspector">
+            <data key="vertex_label_key">Type Declaration Inspector</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.java_binary</data>
+            <data key="key5">type_inspector_asm.class_type</data>
+        </node>
+        <node id="JavaClassGraphInspector">
+            <data key="vertex_label_key">JavaClassGraphInspector</data>
+            <data key="key0">0</data>
+        </node>
+        <node id="TypeUsageInspector">
+            <data key="vertex_label_key">TypeUsageInspector</data>
+            <data key="key0">5</data>
+            <data key="key4">java.format, resource.has_java_binary, language, java.detected, java.is_binary</data>
+            <data key="key5">type_usage_analysis, layer.java_classloader</data>
+        </node>
+        <node id="Binary_Class_FQN_Inspector">
+            <data key="vertex_label_key">Binary Class FQN Inspector</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.java_binary</data>
+            <data key="key5">java.className, java.packageName, java.fullyQualifiedName</data>
+        </node>
+        <node id="EJB_Home_Interface_Detector">
+            <data key="vertex_label_key">EJB Home Interface Detector</data>
+            <data key="key0">10</data>
+            <data key="key4">java.format, java.is_source, java.classType, layer.basic, layer.java_source, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key5">ejb_home_interface_inspector.is_home_interface</data>
+        </node>
+        <node id="Method_count_inspector__BINARY_">
+            <data key="vertex_label_key">Method count inspector (BINARY)</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.java_binary</data>
+            <data key="key5">method_count</data>
+        </node>
+        <node id="Number_of_lines_of_code">
+            <data key="vertex_label_key">Number of lines of code</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.basic</data>
+            <data key="key5">cloc</data>
+        </node>
+        <node id="Application_Server_Configuration_Detector">
+            <data key="vertex_label_key">Application Server Configuration Detector</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.basic</data>
+            <data key="key5">application_server_config_detector.server.tomcat, application_server_config_detector.server_config, application_server_config_detector.config.web, application_server_config_detector.server.weblogic, application_server_config_detector.config.security, application_server_config_detector.app_server_config, application_server_config_detector.config.messaging, application_server_config_detector.config.oracle_as, application_server_config_detector.migration_priority, application_server_config_detector.config.weblogic, application_server_config_detector.server.oracle_as, application_server_config_detector.config.datasource, application_server_config_detector.config.tomcat, application_server_config_detector.app_server, application_server_config_detector.config.glassfish, application_server_config_detector.server.glassfish, application_server_config_detector.server.websphere, application_server_config_detector.config.websphere</data>
+        </node>
+        <node id="EJB_Java_File_Detector">
+            <data key="vertex_label_key">EJB Java File Detector</data>
+            <data key="key0">8</data>
+            <data key="key4">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key5">ejb_java_file_detector.package.interface, ejb_java_file_detector.ejb_candidate_type, ejb_java_file_detector.package.ejb, ejb_java_file_detector.package.business, ejb_java_file_detector.migration_priority, ejb_java_file_detector.package.bean, ejb_java_file_detector.package.messaging, ejb_java_file_detector.package.session, ejb_java_file_detector.package.entity</data>
+        </node>
+        <node id="InterfaceNumberInspector">
+            <data key="vertex_label_key">InterfaceNumberInspector</data>
+            <data key="key0">1</data>
+            <data key="key4">layer.java_classloader</data>
+            <data key="key5">interface_analysis, layer.java_classloader</data>
+        </node>
+        <edge id="InheritanceDepthInspector_layer_java_classloader_ProjectFile_Annotation_Count" source="InheritanceDepthInspector" target="ProjectFile_Annotation_Count">
+            <data key="edge_label_key">InheritanceDepthInspector -[layer.java_classloader]-&gt; ProjectFile Annotation Count</data>
+            <data key="key6">layer.java_classloader</data>
+            <data key="key7">InheritanceDepthInspector</data>
+            <data key="key8">ProjectFile Annotation Count</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_java_is_source_java_classType_java_className_language_java_packageName_java_detected_java_fullyQualifiedName_Business_Delegate_Pattern_Inspector__I-0709_" source="Java_Source_File_Inspector" target="Business_Delegate_Pattern_Inspector__I-0709_">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName]-&gt; Business Delegate Pattern Inspector (I-0709)</data>
+            <data key="key6">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">Business Delegate Pattern Inspector (I-0709)</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_language_java_detected_Business_Delegate_Pattern_Inspector__I-0709_" source="IsBinaryJavaClassInspector" target="Business_Delegate_Pattern_Inspector__I-0709_">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, language, java.detected]-&gt; Business Delegate Pattern Inspector (I-0709)</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">Business Delegate Pattern Inspector (I-0709)</data>
+        </edge>
+        <edge id="InheritanceDepthInspector_layer_java_classloader_InterfaceNumberInspector" source="InheritanceDepthInspector" target="InterfaceNumberInspector">
+            <data key="edge_label_key">InheritanceDepthInspector -[layer.java_classloader]-&gt; InterfaceNumberInspector</data>
+            <data key="key6">layer.java_classloader</data>
+            <data key="key7">InheritanceDepthInspector</data>
+            <data key="key8">InterfaceNumberInspector</data>
+        </edge>
+        <edge id="Binary_Class_FQN_Inspector_java_className_java_packageName_java_fullyQualifiedName_EJB_Remote_Local_Interface_Detector" source="Binary_Class_FQN_Inspector" target="EJB_Remote_Local_Interface_Detector">
+            <data key="edge_label_key">Binary Class FQN Inspector -[java.className, java.packageName, java.fullyQualifiedName]-&gt; EJB Remote/Local Interface Detector</data>
+            <data key="key6">java.className, java.packageName, java.fullyQualifiedName</data>
+            <data key="key7">Binary Class FQN Inspector</data>
+            <data key="key8">EJB Remote/Local Interface Detector</data>
+        </edge>
+        <edge id="Binary_Class_FQN_Inspector_java_className_java_packageName_java_fullyQualifiedName_Business_Delegate_Pattern_Inspector__I-0709_" source="Binary_Class_FQN_Inspector" target="Business_Delegate_Pattern_Inspector__I-0709_">
+            <data key="edge_label_key">Binary Class FQN Inspector -[java.className, java.packageName, java.fullyQualifiedName]-&gt; Business Delegate Pattern Inspector (I-0709)</data>
+            <data key="key6">java.className, java.packageName, java.fullyQualifiedName</data>
+            <data key="key7">Binary Class FQN Inspector</data>
+            <data key="key8">Business Delegate Pattern Inspector (I-0709)</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_java_is_source_java_classType_java_className_language_java_packageName_java_detected_java_fullyQualifiedName_Message_Driven_Bean_Detector" source="Java_Source_File_Inspector" target="Message_Driven_Bean_Detector">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName]-&gt; Message Driven Bean Detector</data>
+            <data key="key6">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">Message Driven Bean Detector</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_language_java_detected_Session_Bean_Detector" source="IsBinaryJavaClassInspector" target="Session_Bean_Detector">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, language, java.detected]-&gt; Session Bean Detector</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">Session Bean Detector</data>
+        </edge>
+        <edge id="Binary_Class_FQN_Inspector_java_className_java_packageName_java_fullyQualifiedName_EJB_Home_Interface_Detector" source="Binary_Class_FQN_Inspector" target="EJB_Home_Interface_Detector">
+            <data key="edge_label_key">Binary Class FQN Inspector -[java.className, java.packageName, java.fullyQualifiedName]-&gt; EJB Home Interface Detector</data>
+            <data key="key6">java.className, java.packageName, java.fullyQualifiedName</data>
+            <data key="key7">Binary Class FQN Inspector</data>
+            <data key="key8">EJB Home Interface Detector</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_language_java_detected_Message_Driven_Bean_Detector" source="IsBinaryJavaClassInspector" target="Message_Driven_Bean_Detector">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, language, java.detected]-&gt; Message Driven Bean Detector</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">Message Driven Bean Detector</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_language_java_detected_TypeUsageInspector" source="Java_Source_File_Inspector" target="TypeUsageInspector">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, language, java.detected]-&gt; TypeUsageInspector</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">TypeUsageInspector</data>
+        </edge>
+        <edge id="Binary_Class_FQN_Inspector_java_className_java_packageName_java_fullyQualifiedName_Complex_CMP_Relationship_Inspector__I-0207_" source="Binary_Class_FQN_Inspector" target="Complex_CMP_Relationship_Inspector__I-0207_">
+            <data key="edge_label_key">Binary Class FQN Inspector -[java.className, java.packageName, java.fullyQualifiedName]-&gt; Complex CMP Relationship Inspector (I-0207)</data>
+            <data key="key6">java.className, java.packageName, java.fullyQualifiedName</data>
+            <data key="key7">Binary Class FQN Inspector</data>
+            <data key="key8">Complex CMP Relationship Inspector (I-0207)</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_java_is_source_java_classType_java_className_language_java_packageName_java_detected_java_fullyQualifiedName_EJB_Remote_Local_Interface_Detector" source="Java_Source_File_Inspector" target="EJB_Remote_Local_Interface_Detector">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName]-&gt; EJB Remote/Local Interface Detector</data>
+            <data key="key6">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">EJB Remote/Local Interface Detector</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_java_is_source_java_classType_java_className_language_java_packageName_java_detected_java_fullyQualifiedName_EJB_Java_File_Detector" source="Java_Source_File_Inspector" target="EJB_Java_File_Detector">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName]-&gt; EJB Java File Detector</data>
+            <data key="key6">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">EJB Java File Detector</data>
+        </edge>
+        <edge id="Binary_Class_FQN_Inspector_java_className_java_packageName_java_fullyQualifiedName_EJB_Java_File_Detector" source="Binary_Class_FQN_Inspector" target="EJB_Java_File_Detector">
+            <data key="edge_label_key">Binary Class FQN Inspector -[java.className, java.packageName, java.fullyQualifiedName]-&gt; EJB Java File Detector</data>
+            <data key="key6">java.className, java.packageName, java.fullyQualifiedName</data>
+            <data key="key7">Binary Class FQN Inspector</data>
+            <data key="key8">EJB Java File Detector</data>
+        </edge>
+        <edge id="EJB_Deployment_Descriptor_Detector_ejb_deployment_descriptor_I-0805_Declarative_Transaction_Inspector" source="EJB_Deployment_Descriptor_Detector" target="I-0805_Declarative_Transaction_Inspector">
+            <data key="edge_label_key">EJB Deployment Descriptor Detector -[ejb.deployment.descriptor]-&gt; I-0805 Declarative Transaction Inspector</data>
+            <data key="key6">ejb.deployment.descriptor</data>
+            <data key="key7">EJB Deployment Descriptor Detector</data>
+            <data key="key8">I-0805 Declarative Transaction Inspector</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_language_java_detected_Complex_CMP_Relationship_Inspector__I-0207_" source="IsBinaryJavaClassInspector" target="Complex_CMP_Relationship_Inspector__I-0207_">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, language, java.detected]-&gt; Complex CMP Relationship Inspector (I-0207)</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">Complex CMP Relationship Inspector (I-0207)</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_resource_has_java_binary_language_java_detected_java_is_binary_JDBC_Data_Access_Pattern_Inspector__P2-01_" source="IsBinaryJavaClassInspector" target="JDBC_Data_Access_Pattern_Inspector__P2-01_">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, resource.has_java_binary, language, java.detected, java.is_binary]-&gt; JDBC Data Access Pattern Inspector (P2-01)</data>
+            <data key="key6">java.format, resource.has_java_binary, language, java.detected, java.is_binary</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">JDBC Data Access Pattern Inspector (P2-01)</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_resource_has_java_binary_language_java_detected_java_is_binary_Binary_Java_Class_Node_Inspector" source="IsBinaryJavaClassInspector" target="Binary_Java_Class_Node_Inspector">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, resource.has_java_binary, language, java.detected, java.is_binary]-&gt; Binary Java Class Node Inspector</data>
+            <data key="key6">java.format, resource.has_java_binary, language, java.detected, java.is_binary</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">Binary Java Class Node Inspector</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_language_java_detected_Binary_Java_Class_Node_Inspector" source="Java_Source_File_Inspector" target="Binary_Java_Class_Node_Inspector">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, language, java.detected]-&gt; Binary Java Class Node Inspector</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">Binary Java Class Node Inspector</data>
+        </edge>
+        <edge id="Entity_Bean_Detector_entity_bean_inspector_bean_persistence_type_entity_bean_inspector_is_entity_bean_Complex_CMP_Relationship_Inspector__I-0207_" source="Entity_Bean_Detector" target="Complex_CMP_Relationship_Inspector__I-0207_">
+            <data key="edge_label_key">Entity Bean Detector -[entity_bean_inspector.bean_persistence_type, entity_bean_inspector.is_entity_bean]-&gt; Complex CMP Relationship Inspector (I-0207)</data>
+            <data key="key6">entity_bean_inspector.bean_persistence_type, entity_bean_inspector.is_entity_bean</data>
+            <data key="key7">Entity Bean Detector</data>
+            <data key="key8">Complex CMP Relationship Inspector (I-0207)</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_resource_has_java_binary_language_java_detected_java_is_binary_CMP_Field_Mapping_Inspector__I-0206_" source="IsBinaryJavaClassInspector" target="CMP_Field_Mapping_Inspector__I-0206_">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, resource.has_java_binary, language, java.detected, java.is_binary]-&gt; CMP Field Mapping Inspector (I-0206)</data>
+            <data key="key6">java.format, resource.has_java_binary, language, java.detected, java.is_binary</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">CMP Field Mapping Inspector (I-0206)</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_language_java_detected_EJB_Remote_Local_Interface_Detector" source="IsBinaryJavaClassInspector" target="EJB_Remote_Local_Interface_Detector">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, language, java.detected]-&gt; EJB Remote/Local Interface Detector</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">EJB Remote/Local Interface Detector</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_java_is_source_java_classType_java_className_language_java_packageName_java_detected_java_fullyQualifiedName_Complex_CMP_Relationship_Inspector__I-0207_" source="Java_Source_File_Inspector" target="Complex_CMP_Relationship_Inspector__I-0207_">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName]-&gt; Complex CMP Relationship Inspector (I-0207)</data>
+            <data key="key6">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">Complex CMP Relationship Inspector (I-0207)</data>
+        </edge>
+        <edge id="JDBC_Data_Access_Pattern_Inspector__P2-01__migration_complexity_medium_migration_complexity_high_migration_complexity_low_I-0504_JBoss_EJB_Configuration_Inspector" source="JDBC_Data_Access_Pattern_Inspector__P2-01_" target="I-0504_JBoss_EJB_Configuration_Inspector">
+            <data key="edge_label_key">JDBC Data Access Pattern Inspector (P2-01) -[migration.complexity.medium, migration.complexity.high, migration.complexity.low]-&gt; I-0504 JBoss EJB Configuration Inspector</data>
+            <data key="key6">migration.complexity.medium, migration.complexity.high, migration.complexity.low</data>
+            <data key="key7">JDBC Data Access Pattern Inspector (P2-01)</data>
+            <data key="key8">I-0504 JBoss EJB Configuration Inspector</data>
+        </edge>
+        <edge id="EJB_Deployment_Descriptor_Detector_ejb_deployment_vendor_ejb_deployment_descriptor_migration_complexity_medium_ejb_deployment_descriptor_detector_descriptor_type_ejb_deployment_descriptor_detector_file_type_migration_complexity_high_jpa_conversion_candidate_migration_complexity_low_I-0504_JBoss_EJB_Configuration_Inspector" source="EJB_Deployment_Descriptor_Detector" target="I-0504_JBoss_EJB_Configuration_Inspector">
+            <data key="edge_label_key">EJB Deployment Descriptor Detector -[ejb.deployment.vendor, ejb.deployment.descriptor, migration.complexity.medium, ejb_deployment_descriptor_detector.descriptor_type, ejb_deployment_descriptor_detector.file_type, migration.complexity.high, jpa.conversion.candidate, migration.complexity.low]-&gt; I-0504 JBoss EJB Configuration Inspector</data>
+            <data key="key6">ejb.deployment.vendor, ejb.deployment.descriptor, migration.complexity.medium, ejb_deployment_descriptor_detector.descriptor_type, ejb_deployment_descriptor_detector.file_type, migration.complexity.high, jpa.conversion.candidate, migration.complexity.low</data>
+            <data key="key7">EJB Deployment Descriptor Detector</data>
+            <data key="key8">I-0504 JBoss EJB Configuration Inspector</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_language_java_detected_JDBC_Data_Access_Pattern_Inspector__P2-01_" source="Java_Source_File_Inspector" target="JDBC_Data_Access_Pattern_Inspector__P2-01_">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, language, java.detected]-&gt; JDBC Data Access Pattern Inspector (P2-01)</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">JDBC Data Access Pattern Inspector (P2-01)</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_language_java_detected_EJB_Create_Method_Usage_Inspector__I-0706_" source="Java_Source_File_Inspector" target="EJB_Create_Method_Usage_Inspector__I-0706_">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, language, java.detected]-&gt; EJB Create Method Usage Inspector (I-0706)</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">EJB Create Method Usage Inspector (I-0706)</data>
+        </edge>
+        <edge id="EJB_Deployment_Descriptor_Detector_ejb_deployment_vendor_ejb_deployment_descriptor_migration_complexity_medium_ejb_deployment_descriptor_detector_descriptor_type_ejb_deployment_descriptor_detector_file_type_migration_complexity_high_jpa_conversion_candidate_migration_complexity_low_Database_Resource_Management_Inspector__I-0703_" source="EJB_Deployment_Descriptor_Detector" target="Database_Resource_Management_Inspector__I-0703_">
+            <data key="edge_label_key">EJB Deployment Descriptor Detector -[ejb.deployment.vendor, ejb.deployment.descriptor, migration.complexity.medium, ejb_deployment_descriptor_detector.descriptor_type, ejb_deployment_descriptor_detector.file_type, migration.complexity.high, jpa.conversion.candidate, migration.complexity.low]-&gt; Database Resource Management Inspector (I-0703)</data>
+            <data key="key6">ejb.deployment.vendor, ejb.deployment.descriptor, migration.complexity.medium, ejb_deployment_descriptor_detector.descriptor_type, ejb_deployment_descriptor_detector.file_type, migration.complexity.high, jpa.conversion.candidate, migration.complexity.low</data>
+            <data key="key7">EJB Deployment Descriptor Detector</data>
+            <data key="key8">Database Resource Management Inspector (I-0703)</data>
+        </edge>
+        <edge id="InheritanceDepthInspector_layer_java_classloader_Annotation_Count" source="InheritanceDepthInspector" target="Annotation_Count">
+            <data key="edge_label_key">InheritanceDepthInspector -[layer.java_classloader]-&gt; Annotation Count</data>
+            <data key="key6">layer.java_classloader</data>
+            <data key="key7">InheritanceDepthInspector</data>
+            <data key="key8">Annotation Count</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_java_is_source_java_classType_java_className_language_java_packageName_java_detected_java_fullyQualifiedName_Identify_Servlet" source="Java_Source_File_Inspector" target="Identify_Servlet">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName]-&gt; Identify Servlet</data>
+            <data key="key6">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">Identify Servlet</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_resource_has_java_binary_language_java_detected_java_is_binary_EJB_Create_Method_Usage_Inspector__I-0706_" source="IsBinaryJavaClassInspector" target="EJB_Create_Method_Usage_Inspector__I-0706_">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, resource.has_java_binary, language, java.detected, java.is_binary]-&gt; EJB Create Method Usage Inspector (I-0706)</data>
+            <data key="key6">java.format, resource.has_java_binary, language, java.detected, java.is_binary</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">EJB Create Method Usage Inspector (I-0706)</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_resource_has_java_binary_language_java_detected_java_is_binary_TypeUsageInspector" source="IsBinaryJavaClassInspector" target="TypeUsageInspector">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, resource.has_java_binary, language, java.detected, java.is_binary]-&gt; TypeUsageInspector</data>
+            <data key="key6">java.format, resource.has_java_binary, language, java.detected, java.is_binary</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">TypeUsageInspector</data>
+        </edge>
+        <edge id="TypeUsageInspector_layer_java_classloader_InterfaceNumberInspector" source="TypeUsageInspector" target="InterfaceNumberInspector">
+            <data key="edge_label_key">TypeUsageInspector -[layer.java_classloader]-&gt; InterfaceNumberInspector</data>
+            <data key="key6">layer.java_classloader</data>
+            <data key="key7">TypeUsageInspector</data>
+            <data key="key8">InterfaceNumberInspector</data>
+        </edge>
+        <edge id="InterfaceNumberInspector_layer_java_classloader_ProjectFile_Annotation_Count" source="InterfaceNumberInspector" target="ProjectFile_Annotation_Count">
+            <data key="edge_label_key">InterfaceNumberInspector -[layer.java_classloader]-&gt; ProjectFile Annotation Count</data>
+            <data key="key6">layer.java_classloader</data>
+            <data key="key7">InterfaceNumberInspector</data>
+            <data key="key8">ProjectFile Annotation Count</data>
+        </edge>
+        <edge id="JDBC_Data_Access_Pattern_Inspector__P2-01__migration_complexity_medium_migration_complexity_high_migration_complexity_low_Database_Resource_Management_Inspector__I-0703_" source="JDBC_Data_Access_Pattern_Inspector__P2-01_" target="Database_Resource_Management_Inspector__I-0703_">
+            <data key="edge_label_key">JDBC Data Access Pattern Inspector (P2-01) -[migration.complexity.medium, migration.complexity.high, migration.complexity.low]-&gt; Database Resource Management Inspector (I-0703)</data>
+            <data key="key6">migration.complexity.medium, migration.complexity.high, migration.complexity.low</data>
+            <data key="key7">JDBC Data Access Pattern Inspector (P2-01)</data>
+            <data key="key8">Database Resource Management Inspector (I-0703)</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_language_java_detected_CMP_Field_Mapping_Inspector__I-0206_" source="Java_Source_File_Inspector" target="CMP_Field_Mapping_Inspector__I-0206_">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, language, java.detected]-&gt; CMP Field Mapping Inspector (I-0206)</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">CMP Field Mapping Inspector (I-0206)</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_java_is_source_java_classType_java_className_language_java_packageName_java_detected_java_fullyQualifiedName_EJB_Home_Interface_Detector" source="Java_Source_File_Inspector" target="EJB_Home_Interface_Detector">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName]-&gt; EJB Home Interface Detector</data>
+            <data key="key6">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">EJB Home Interface Detector</data>
+        </edge>
+        <edge id="Binary_Class_FQN_Inspector_java_className_java_packageName_java_fullyQualifiedName_Identify_Servlet" source="Binary_Class_FQN_Inspector" target="Identify_Servlet">
+            <data key="edge_label_key">Binary Class FQN Inspector -[java.className, java.packageName, java.fullyQualifiedName]-&gt; Identify Servlet</data>
+            <data key="key6">java.className, java.packageName, java.fullyQualifiedName</data>
+            <data key="key7">Binary Class FQN Inspector</data>
+            <data key="key8">Identify Servlet</data>
+        </edge>
+        <edge id="CMP_Field_Mapping_Inspector__I-0206__migration_complexity_medium_migration_complexity_high_jpa_conversion_candidate_migration_complexity_low_I-0504_JBoss_EJB_Configuration_Inspector" source="CMP_Field_Mapping_Inspector__I-0206_" target="I-0504_JBoss_EJB_Configuration_Inspector">
+            <data key="edge_label_key">CMP Field Mapping Inspector (I-0206) -[migration.complexity.medium, migration.complexity.high, jpa.conversion.candidate, migration.complexity.low]-&gt; I-0504 JBoss EJB Configuration Inspector</data>
+            <data key="key6">migration.complexity.medium, migration.complexity.high, jpa.conversion.candidate, migration.complexity.low</data>
+            <data key="key7">CMP Field Mapping Inspector (I-0206)</data>
+            <data key="key8">I-0504 JBoss EJB Configuration Inspector</data>
+        </edge>
+        <edge id="Binary_Class_FQN_Inspector_java_className_java_packageName_java_fullyQualifiedName_Message_Driven_Bean_Detector" source="Binary_Class_FQN_Inspector" target="Message_Driven_Bean_Detector">
+            <data key="edge_label_key">Binary Class FQN Inspector -[java.className, java.packageName, java.fullyQualifiedName]-&gt; Message Driven Bean Detector</data>
+            <data key="key6">java.className, java.packageName, java.fullyQualifiedName</data>
+            <data key="key7">Binary Class FQN Inspector</data>
+            <data key="key8">Message Driven Bean Detector</data>
+        </edge>
+        <edge id="Entity_Bean_Detector_entity_bean_inspector_bean_persistence_type_entity_bean_inspector_is_entity_bean_CMP_Field_Mapping_Inspector__I-0206_" source="Entity_Bean_Detector" target="CMP_Field_Mapping_Inspector__I-0206_">
+            <data key="edge_label_key">Entity Bean Detector -[entity_bean_inspector.bean_persistence_type, entity_bean_inspector.is_entity_bean]-&gt; CMP Field Mapping Inspector (I-0206)</data>
+            <data key="key6">entity_bean_inspector.bean_persistence_type, entity_bean_inspector.is_entity_bean</data>
+            <data key="key7">Entity Bean Detector</data>
+            <data key="key8">CMP Field Mapping Inspector (I-0206)</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_resource_has_java_binary_language_java_detected_java_is_binary_InheritanceDepthInspector" source="IsBinaryJavaClassInspector" target="InheritanceDepthInspector">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, resource.has_java_binary, language, java.detected, java.is_binary]-&gt; InheritanceDepthInspector</data>
+            <data key="key6">java.format, resource.has_java_binary, language, java.detected, java.is_binary</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">InheritanceDepthInspector</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_java_is_source_java_classType_java_className_language_java_packageName_java_detected_java_fullyQualifiedName_Session_Bean_Detector" source="Java_Source_File_Inspector" target="Session_Bean_Detector">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName]-&gt; Session Bean Detector</data>
+            <data key="key6">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">Session Bean Detector</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_java_is_source_java_classType_java_className_language_java_packageName_java_detected_java_fullyQualifiedName_JNDI_Lookup_Pattern_Detector" source="Java_Source_File_Inspector" target="JNDI_Lookup_Pattern_Detector">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName]-&gt; JNDI Lookup Pattern Detector</data>
+            <data key="key6">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">JNDI Lookup Pattern Detector</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_language_java_detected_EJB_Java_File_Detector" source="IsBinaryJavaClassInspector" target="EJB_Java_File_Detector">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, language, java.detected]-&gt; EJB Java File Detector</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">EJB Java File Detector</data>
+        </edge>
+        <edge id="TypeUsageInspector_layer_java_classloader_Annotation_Count" source="TypeUsageInspector" target="Annotation_Count">
+            <data key="edge_label_key">TypeUsageInspector -[layer.java_classloader]-&gt; Annotation Count</data>
+            <data key="key6">layer.java_classloader</data>
+            <data key="key7">TypeUsageInspector</data>
+            <data key="key8">Annotation Count</data>
+        </edge>
+        <edge id="TypeUsageInspector_layer_java_classloader_ProjectFile_Annotation_Count" source="TypeUsageInspector" target="ProjectFile_Annotation_Count">
+            <data key="edge_label_key">TypeUsageInspector -[layer.java_classloader]-&gt; ProjectFile Annotation Count</data>
+            <data key="key6">layer.java_classloader</data>
+            <data key="key7">TypeUsageInspector</data>
+            <data key="key8">ProjectFile Annotation Count</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_language_java_detected_Custom_Data_Transfer_Pattern_Inspector__I-0213_" source="IsBinaryJavaClassInspector" target="Custom_Data_Transfer_Pattern_Inspector__I-0213_">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, language, java.detected]-&gt; Custom Data Transfer Pattern Inspector (I-0213)</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">Custom Data Transfer Pattern Inspector (I-0213)</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_language_java_detected_JNDI_Lookup_Pattern_Detector" source="IsBinaryJavaClassInspector" target="JNDI_Lookup_Pattern_Detector">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, language, java.detected]-&gt; JNDI Lookup Pattern Detector</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">JNDI Lookup Pattern Detector</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_language_java_detected_InheritanceDepthInspector" source="Java_Source_File_Inspector" target="InheritanceDepthInspector">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, language, java.detected]-&gt; InheritanceDepthInspector</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">InheritanceDepthInspector</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_language_java_detected_EJB_Home_Interface_Detector" source="IsBinaryJavaClassInspector" target="EJB_Home_Interface_Detector">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, language, java.detected]-&gt; EJB Home Interface Detector</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">EJB Home Interface Detector</data>
+        </edge>
+        <edge id="Binary_Class_FQN_Inspector_java_className_java_packageName_java_fullyQualifiedName_Source_Java_Class_Node_Inspector" source="Binary_Class_FQN_Inspector" target="Source_Java_Class_Node_Inspector">
+            <data key="edge_label_key">Binary Class FQN Inspector -[java.className, java.packageName, java.fullyQualifiedName]-&gt; Source Java Class Node Inspector</data>
+            <data key="key6">java.className, java.packageName, java.fullyQualifiedName</data>
+            <data key="key7">Binary Class FQN Inspector</data>
+            <data key="key8">Source Java Class Node Inspector</data>
+        </edge>
+        <edge id="SourceFileTagInspector_source_file_Source_Java_Class_Node_Inspector" source="SourceFileTagInspector" target="Source_Java_Class_Node_Inspector">
+            <data key="edge_label_key">SourceFileTagInspector -[source_file]-&gt; Source Java Class Node Inspector</data>
+            <data key="key6">source_file</data>
+            <data key="key7">SourceFileTagInspector</data>
+            <data key="key8">Source Java Class Node Inspector</data>
+        </edge>
+        <edge id="Annotation_Count_layer_java_classloader_InterfaceNumberInspector" source="Annotation_Count" target="InterfaceNumberInspector">
+            <data key="edge_label_key">Annotation Count -[layer.java_classloader]-&gt; InterfaceNumberInspector</data>
+            <data key="key6">layer.java_classloader</data>
+            <data key="key7">Annotation Count</data>
+            <data key="key8">InterfaceNumberInspector</data>
+        </edge>
+        <edge id="InterfaceNumberInspector_layer_java_classloader_Annotation_Count" source="InterfaceNumberInspector" target="Annotation_Count">
+            <data key="edge_label_key">InterfaceNumberInspector -[layer.java_classloader]-&gt; Annotation Count</data>
+            <data key="key6">layer.java_classloader</data>
+            <data key="key7">InterfaceNumberInspector</data>
+            <data key="key8">Annotation Count</data>
+        </edge>
+        <edge id="Binary_Class_FQN_Inspector_java_className_java_packageName_java_fullyQualifiedName_JNDI_Lookup_Pattern_Detector" source="Binary_Class_FQN_Inspector" target="JNDI_Lookup_Pattern_Detector">
+            <data key="edge_label_key">Binary Class FQN Inspector -[java.className, java.packageName, java.fullyQualifiedName]-&gt; JNDI Lookup Pattern Detector</data>
+            <data key="key6">java.className, java.packageName, java.fullyQualifiedName</data>
+            <data key="key7">Binary Class FQN Inspector</data>
+            <data key="key8">JNDI Lookup Pattern Detector</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_java_is_source_java_classType_java_className_language_java_packageName_java_detected_java_fullyQualifiedName_Source_Java_Class_Node_Inspector" source="Java_Source_File_Inspector" target="Source_Java_Class_Node_Inspector">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName]-&gt; Source Java Class Node Inspector</data>
+            <data key="key6">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">Source Java Class Node Inspector</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_language_java_detected_Identify_Servlet" source="IsBinaryJavaClassInspector" target="Identify_Servlet">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, language, java.detected]-&gt; Identify Servlet</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">Identify Servlet</data>
+        </edge>
+        <edge id="CMP_Field_Mapping_Inspector__I-0206__migration_complexity_medium_migration_complexity_high_jpa_conversion_candidate_migration_complexity_low_Database_Resource_Management_Inspector__I-0703_" source="CMP_Field_Mapping_Inspector__I-0206_" target="Database_Resource_Management_Inspector__I-0703_">
+            <data key="edge_label_key">CMP Field Mapping Inspector (I-0206) -[migration.complexity.medium, migration.complexity.high, jpa.conversion.candidate, migration.complexity.low]-&gt; Database Resource Management Inspector (I-0703)</data>
+            <data key="key6">migration.complexity.medium, migration.complexity.high, jpa.conversion.candidate, migration.complexity.low</data>
+            <data key="key7">CMP Field Mapping Inspector (I-0206)</data>
+            <data key="key8">Database Resource Management Inspector (I-0703)</data>
+        </edge>
+        <edge id="IsBinaryJavaClassInspector_java_format_language_java_detected_Source_Java_Class_Node_Inspector" source="IsBinaryJavaClassInspector" target="Source_Java_Class_Node_Inspector">
+            <data key="edge_label_key">IsBinaryJavaClassInspector -[java.format, language, java.detected]-&gt; Source Java Class Node Inspector</data>
+            <data key="key6">java.format, language, java.detected</data>
+            <data key="key7">IsBinaryJavaClassInspector</data>
+            <data key="key8">Source Java Class Node Inspector</data>
+        </edge>
+        <edge id="Java_Source_File_Inspector_java_format_java_is_source_java_classType_java_className_language_java_packageName_java_detected_java_fullyQualifiedName_Custom_Data_Transfer_Pattern_Inspector__I-0213_" source="Java_Source_File_Inspector" target="Custom_Data_Transfer_Pattern_Inspector__I-0213_">
+            <data key="edge_label_key">Java Source File Inspector -[java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName]-&gt; Custom Data Transfer Pattern Inspector (I-0213)</data>
+            <data key="key6">java.format, java.is_source, java.classType, java.className, language, java.packageName, java.detected, java.fullyQualifiedName</data>
+            <data key="key7">Java Source File Inspector</data>
+            <data key="key8">Custom Data Transfer Pattern Inspector (I-0213)</data>
+        </edge>
+        <edge id="Binary_Class_FQN_Inspector_java_className_java_packageName_java_fullyQualifiedName_Session_Bean_Detector" source="Binary_Class_FQN_Inspector" target="Session_Bean_Detector">
+            <data key="edge_label_key">Binary Class FQN Inspector -[java.className, java.packageName, java.fullyQualifiedName]-&gt; Session Bean Detector</data>
+            <data key="key6">java.className, java.packageName, java.fullyQualifiedName</data>
+            <data key="key7">Binary Class FQN Inspector</data>
+            <data key="key8">Session Bean Detector</data>
+        </edge>
+        <edge id="Session_Bean_Detector_session_bean_inspector_is_session_bean_I-0905_Stateful_Session_State_Inspector" source="Session_Bean_Detector" target="I-0905_Stateful_Session_State_Inspector">
+            <data key="edge_label_key">Session Bean Detector -[session_bean_inspector.is_session_bean]-&gt; I-0905 Stateful Session State Inspector</data>
+            <data key="key6">session_bean_inspector.is_session_bean</data>
+            <data key="key7">Session Bean Detector</data>
+            <data key="key8">I-0905 Stateful Session State Inspector</data>
+        </edge>
+        <edge id="Binary_Class_FQN_Inspector_java_className_java_packageName_java_fullyQualifiedName_Custom_Data_Transfer_Pattern_Inspector__I-0213_" source="Binary_Class_FQN_Inspector" target="Custom_Data_Transfer_Pattern_Inspector__I-0213_">
+            <data key="edge_label_key">Binary Class FQN Inspector -[java.className, java.packageName, java.fullyQualifiedName]-&gt; Custom Data Transfer Pattern Inspector (I-0213)</data>
+            <data key="key6">java.className, java.packageName, java.fullyQualifiedName</data>
+            <data key="key7">Binary Class FQN Inspector</data>
+            <data key="key8">Custom Data Transfer Pattern Inspector (I-0213)</data>
+        </edge>
+        <edge id="Annotation_Count_layer_java_classloader_ProjectFile_Annotation_Count" source="Annotation_Count" target="ProjectFile_Annotation_Count">
+            <data key="edge_label_key">Annotation Count -[layer.java_classloader]-&gt; ProjectFile Annotation Count</data>
+            <data key="key6">layer.java_classloader</data>
+            <data key="key7">Annotation Count</data>
+            <data key="key8">ProjectFile Annotation Count</data>
+        </edge>
     </graph>
 </graphml>

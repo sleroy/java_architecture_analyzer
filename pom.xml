@@ -45,6 +45,10 @@
         <jqassistant.version>2.3.0</jqassistant.version>
         <jakarta-xml-bind.version>4.0.2</jakarta-xml-bind.version>
         <jaxb-runtime.version>4.0.5</jaxb-runtime.version>
+
+        <!-- Graph Storage System -->
+        <jgrapht.version>1.5.2</jgrapht.version>
+        <picocontainer.version>2.15</picocontainer.version>
     </properties>
 
     <!-- OpenRewrite + Spring recipes -->
@@ -163,6 +167,11 @@
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-configuration2</artifactId>
             <version>${commons-configuration.version}</version>
@@ -189,6 +198,37 @@
             <groupId>org.glassfish.jaxb</groupId>
             <artifactId>jaxb-runtime</artifactId>
             <version>${jaxb-runtime.version}</version>
+        </dependency>
+
+        <!-- Graph Storage System -->
+        <dependency>
+            <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-core</artifactId>
+            <version>${jgrapht.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jgrapht</groupId>
+            <artifactId>jgrapht-io</artifactId>
+            <version>${jgrapht.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.picocontainer</groupId>
+            <artifactId>picocontainer</artifactId>
+            <version>${picocontainer.version}</version>
+        </dependency>
+
+        <!-- Dependency Injection annotations -->
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>1</version>
+        </dependency>
+
+        <!-- Spring Context for Dependency Injection -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>6.1.10</version>
         </dependency>
 
         <!-- Test Dependencies -->
