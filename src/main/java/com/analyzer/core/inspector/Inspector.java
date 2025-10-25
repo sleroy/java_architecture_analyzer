@@ -1,25 +1,25 @@
 package com.analyzer.core.inspector;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.graph.GraphNode;
 import com.analyzer.core.model.ProjectFile;
 
 /**
  * Generic interface for all inspectors.
- * Inspectors analyze objects and return results that are stored in columns.
+ * Inspectors analyze graph nodes and decorate them with properties and tags.
  *
- * @param <T> the type of object this inspector can analyze (ProjectFile,
- *            Package, or legacy ProjectFile)
+ * @param <T> the type of GraphNode this inspector can analyze
  */
-public interface Inspector<T> {
+public interface Inspector<T extends GraphNode> {
 
     /**
-     * Analyzes the given object and returns a result.
+     * Inspects and analyzes the given node, decorating it with properties and tags.
      *
-     * @param objectToAnalyze the object to analyze
-     * @param projectFileDecorator the decorator to store the result
-     * @return the result of the analysis
+     * @param node      the node to inspect
+     * @param decorator the decorator for setting properties (with aggregation) and
+     *                  tags
      */
-    void decorate(T objectToAnalyze, ProjectFileDecorator projectFileDecorator);
+    void inspect(T node, NodeDecorator<T> decorator);
 
     /**
      * Gets the unique name of this inspector.
@@ -42,9 +42,9 @@ public interface Inspector<T> {
      *
      * @return RequiredTags containing all dependencies (own + inherited)
      * @InspectorDependencies annotations. The resolver handles inheritance,
-     * overrides,
-     * and caching automatically.
-     * </p>
+     *                        overrides,
+     *                        and caching automatically.
+     *                        </p>
      */
     default RequiredTags getDependencies() {
         return InspectorDependencyResolver.getDependencies(this);
@@ -63,7 +63,7 @@ public interface Inspector<T> {
      *
      * @param objectToAnalyze the object to check
      * @return true if all dependencies are satisfied AND the inspector supports the
-     * object type
+     *         object type
      */
     default boolean canProcess(T objectToAnalyze) {
         if (objectToAnalyze == null) {
@@ -83,5 +83,23 @@ public interface Inspector<T> {
 
     default boolean supports(T objectToAnalyze) {
         return true; // Default implementation assumes support for all types
+    }
+
+    /**
+     * Gets the target type that this inspector processes.
+     * This enables type-safe filtering of inspectors without instanceof checks.
+     * 
+     * <p>
+     * Default implementation determines type from the inspector's class hierarchy.
+     * Base classes should override this to return the specific target type.
+     * </p>
+     * 
+     * @return the target type this inspector processes
+     * @since Phase 7 - Type-Safe Inspector Filtering
+     */
+    default InspectorTargetType getTargetType() {
+        // Default implementation: try to determine from class hierarchy
+        // Base classes should override for better performance
+        return InspectorTargetType.ANY;
     }
 }

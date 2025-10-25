@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -17,6 +17,7 @@ import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Inspector that detects Entity Bean implementations for EJB-to-Spring JPA
@@ -28,7 +29,7 @@ import java.util.List;
  * - Requires JAVA tag and JAVA_SOURCE for Java file parsing
  * - Produces Entity Bean detection tags for downstream EJB analysis
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_IS_SOURCE}, produces = {
         EntityBeanJavaSourceInspector.TAGS.TAG_IS_ENTITY_BEAN,
         EntityBeanJavaSourceInspector.TAGS.TAG_BEAN_PERSISTENCE_TYPE
 })
@@ -39,11 +40,9 @@ public class EntityBeanJavaSourceInspector extends AbstractJavaClassInspector {
         super(resourceResolver, classNodeRepository);
     }
 
-
-
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-            ProjectFileDecorator projectFileDecorator) {
+                                NodeDecorator projectFileDecorator) {
         if (type instanceof ClassOrInterfaceDeclaration) {
             ClassOrInterfaceDeclaration classDecl = (ClassOrInterfaceDeclaration) type;
             EntityBeanDetector detector = new EntityBeanDetector();
@@ -52,13 +51,14 @@ public class EntityBeanJavaSourceInspector extends AbstractJavaClassInspector {
             if (detector.isEntityBean()) {
                 EntityBeanInfo info = detector.getEntityBeanInfo();
 
-                // Honor produces contract: set tags on ProjectFile using ProjectFileDecorator for dependency chains
-                projectFileDecorator.setTag(TAGS.TAG_IS_ENTITY_BEAN, true);
-                projectFileDecorator.setTag(TAGS.TAG_BEAN_PERSISTENCE_TYPE,
-                        info.persistenceType != null ? info.persistenceType : "UNKNOWN");
+                // Honor produces contract: set tags on ProjectFile using ProjectFileDecorator
+                // for dependency chains
+                projectFileDecorator.setProperty(TAGS.TAG_IS_ENTITY_BEAN, true);
+                projectFileDecorator.setProperty(TAGS.TAG_BEAN_PERSISTENCE_TYPE,
+                        Objects.requireNonNullElse(info.persistenceType, "UNKNOWN"));
 
                 // Set single consolidated analysis property on ClassNode
-                classNode.setProperty(PROPERTIES.ENTITY_BEAN_ANALYSIS, info.toJson());
+                classNode.setProperty(PROPERTIES.ENTITY_BEAN_ANALYSIS, info);
             }
         }
     }
@@ -178,19 +178,5 @@ public class EntityBeanJavaSourceInspector extends AbstractJavaClassInspector {
         public List<String> selectorMethods = new ArrayList<>();
         public List<String> createMethods = new ArrayList<>();
 
-        public String toJson() {
-            String json = "{" +
-                    "\"className\":\"" + (className != null ? className : "") + "\"," +
-                    "\"persistenceType\":\"" + (persistenceType != null ? persistenceType : "") + "\"," +
-                    "\"ejbVersion\":\"" + (ejbVersion != null ? ejbVersion : "") + "\"," +
-                    "\"migrationComplexity\":\"" + (migrationComplexity != null ? migrationComplexity : "") +
-                    "\"," +
-                    "\"hasCustomPersistenceLogic\":" + hasCustomPersistenceLogic + "," +
-                    "\"finderMethodCount\":" + finderMethods.size() + "," +
-                    "\"selectorMethodCount\":" + selectorMethods.size() + "," +
-                    "\"createMethodCount\":" + createMethods.size() +
-                    "}";
-            return json;
-        }
     }
 }

@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.binary;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
@@ -22,15 +22,14 @@ import java.io.InputStream;
  * identified as Java binary class files.
  * </p>
  */
-@InspectorDependencies(
-        requires = {},
-        produces = {InspectorTags.TAG_JAVA_IS_BINARY})
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_DETECTED}, produces = { InspectorTags.TAG_JAVA_IS_BINARY })
 public abstract class AbstractBinaryClassInspector implements Inspector<ProjectFile> {
 
     private final ResourceResolver resourceResolver;
 
     /**
-     * Creates a new AbstractBinaryClassInspector with the specified ResourceResolver.
+     * Creates a new AbstractBinaryClassInspector with the specified
+     * ResourceResolver.
      *
      * @param resourceResolver the resolver for accessing class file resources
      */
@@ -38,19 +37,19 @@ public abstract class AbstractBinaryClassInspector implements Inspector<ProjectF
         this.resourceResolver = resourceResolver;
     }
 
-    public final void decorate(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+    @Override
+    public final void inspect(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator) {
 
         try {
             // For ProjectFile, create ResourceLocation from the file path
             ResourceLocation binaryLocation = new ResourceLocation(projectFile.getFilePath().toUri());
 
-            analyzeBinaryClass(projectFile, binaryLocation, projectFileDecorator);
+            analyzeBinaryClass(projectFile, binaryLocation, decorator);
 
         } catch (Exception e) {
-            projectFileDecorator.error("Error analyzing binary class: " + e.getMessage());
+            decorator.error("Error analyzing binary class: " + e.getMessage());
         }
     }
-
 
     public boolean supports(ProjectFile projectFile) {
         // Focus on file format validation only - dependencies are handled by
@@ -63,18 +62,19 @@ public abstract class AbstractBinaryClassInspector implements Inspector<ProjectF
     /**
      * Analyzes a binary class using the ResourceResolver.
      */
-    private void analyzeBinaryClass(ProjectFile projectFile, ResourceLocation binaryLocation, ProjectFileDecorator projectFileDecorator) {
+    private void analyzeBinaryClass(ProjectFile projectFile, ResourceLocation binaryLocation,
+            NodeDecorator<ProjectFile> decorator) {
 
         // Validate binary location before attempting to open stream
         if (binaryLocation == null) {
-            projectFileDecorator.error(
+            decorator.error(
                     "Binary location is null for project file: " + projectFile.getFilePath());
             return;
         }
 
         try (InputStream classStream = resourceResolver.openStream(binaryLocation)) {
             if (classStream == null) {
-                projectFileDecorator.error(
+                decorator.error(
                         "Could not open binary class stream: " + binaryLocation);
                 return;
             }
@@ -83,7 +83,7 @@ public abstract class AbstractBinaryClassInspector implements Inspector<ProjectF
             if (!classStream.markSupported()) {
                 // If mark not supported, we can't pre-check, so proceed to analyzeClassFile
                 // which will handle empty streams
-                analyzeClassFile(projectFile, binaryLocation, classStream, projectFileDecorator);
+                analyzeClassFile(projectFile, binaryLocation, classStream, decorator);
                 return;
             }
 
@@ -93,18 +93,18 @@ public abstract class AbstractBinaryClassInspector implements Inspector<ProjectF
             classStream.reset();
 
             if (firstByte == -1) {
-                projectFileDecorator.error(
+                decorator.error(
                         "Empty class file stream: " + binaryLocation);
                 return;
             }
-            projectFileDecorator.setTag(InspectorTags.TAG_JAVA_IS_BINARY, true);
-            analyzeClassFile(projectFile, binaryLocation, classStream, projectFileDecorator);
+            decorator.enableTag(InspectorTags.TAG_JAVA_IS_BINARY);
+            analyzeClassFile(projectFile, binaryLocation, classStream, decorator);
 
         } catch (IOException e) {
-            projectFileDecorator.error(
+            decorator.error(
                     "Error accessing binary class file: " + binaryLocation + " - " + e.getMessage());
         } catch (Exception e) {
-            projectFileDecorator.error(
+            decorator.error(
                     "Unexpected error analyzing binary class: " + binaryLocation + " - " + e.getMessage());
         }
     }
@@ -116,8 +116,9 @@ public abstract class AbstractBinaryClassInspector implements Inspector<ProjectF
      * @param projectFile      the project file to analyze
      * @param binaryLocation   the location of the binary class file
      * @param classInputStream the input stream to the class file
+     * @param decorator        the decorator for setting properties and tags
      * @throws IOException if there's an error reading the class file
      */
     protected abstract void analyzeClassFile(ProjectFile projectFile, ResourceLocation binaryLocation,
-                                             InputStream classInputStream, ProjectFileDecorator projectFileDecorator) throws IOException;
+            InputStream classInputStream, NodeDecorator<ProjectFile> decorator) throws IOException;
 }

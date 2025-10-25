@@ -1,10 +1,9 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.detection.JavaSourceFileDetector;
 import com.analyzer.inspectors.core.source.AbstractJavaParserInspector;
 import com.analyzer.resource.ResourceResolver;
 import com.github.javaparser.ast.CompilationUnit;
@@ -14,11 +13,7 @@ import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Inspector I-0207: Complex CMP Relationship Inspector
@@ -31,7 +26,7 @@ import java.util.Set;
  * Phase 2 - Advanced Persistence & Vendor Support
  */
 @InspectorDependencies(need = {
-        JavaSourceFileDetector.class,
+
         EntityBeanJavaSourceInspector.class
 }, produces = {
         ComplexCmpRelationshipJavaSourceInspector.TAGS.TAG_HAS_COMPLEX_CMR,
@@ -58,7 +53,7 @@ public class ComplexCmpRelationshipJavaSourceInspector extends AbstractJavaParse
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-            ProjectFileDecorator projectFileDecorator) {
+                                          NodeDecorator projectFileDecorator) {
 
         ComplexCmrDetector detector = new ComplexCmrDetector();
         cu.accept(detector, null);
@@ -72,11 +67,11 @@ public class ComplexCmpRelationshipJavaSourceInspector extends AbstractJavaParse
             boolean hasComplexRelationships = metadata.hasComplexRelationships();
 
             // Set tags on ProjectFile for dependency chain
-            projectFile.setTag(TAGS.TAG_HAS_COMPLEX_CMR, hasComplexRelationships);
-            projectFile.setTag(TAGS.TAG_BIDIRECTIONAL_RELATIONSHIP, metadata.hasBidirectionalRelationships());
-            projectFile.setTag(TAGS.TAG_CASCADE_OPERATIONS, metadata.hasCascadeOperations());
-            projectFile.setTag(TAGS.TAG_COLLECTION_RELATIONSHIPS, metadata.hasCollectionRelationships());
-            projectFile.setTag(TAGS.TAG_JPA_CONVERSION_COMPLEXITY, metadata.getJpaConversionComplexity());
+            projectFile.setProperty(TAGS.TAG_HAS_COMPLEX_CMR, hasComplexRelationships);
+            projectFile.setProperty(TAGS.TAG_BIDIRECTIONAL_RELATIONSHIP, metadata.hasBidirectionalRelationships());
+            projectFile.setProperty(TAGS.TAG_CASCADE_OPERATIONS, metadata.hasCascadeOperations());
+            projectFile.setProperty(TAGS.TAG_COLLECTION_RELATIONSHIPS, metadata.hasCollectionRelationships());
+            projectFile.setProperty(TAGS.TAG_JPA_CONVERSION_COMPLEXITY, metadata.getJpaConversionComplexity());
 
             // Set single consolidated property on ClassNode for analysis data (follows
             // guidelines)
@@ -86,11 +81,11 @@ public class ComplexCmpRelationshipJavaSourceInspector extends AbstractJavaParse
                     metadata.hasCascadeOperations(),
                     metadata.hasCollectionRelationships(),
                     metadata.getJpaConversionComplexity(),
-                    metadata.toJson(),
+                    metadata,
                     hasComplexRelationships ? generateJpaRecommendations(metadata)
                             : List.of("No complex CMP relationships detected"));
 
-            classNode.setProperty(PROPERTIES.COMPLEX_CMR_ANALYSIS, analysisResult.toJson());
+            classNode.setProperty(PROPERTIES.COMPLEX_CMR_ANALYSIS, analysisResult);
         });
     }
 
@@ -399,16 +394,6 @@ public class ComplexCmpRelationshipJavaSourceInspector extends AbstractJavaParse
             return "LOW";
         }
 
-        public String toJson() {
-            return "{" +
-                    "\"entityClass\":\"" + (entityClass != null ? entityClass : "") + "\"," +
-                    "\"relationshipCount\":" + relationships.size() + "," +
-                    "\"hasBidirectional\":" + hasBidirectionalRelationships() + "," +
-                    "\"hasCascadeOps\":" + hasCascadeOperations() + "," +
-                    "\"hasCollections\":" + hasCollectionRelationships() + "," +
-                    "\"complexity\":\"" + getJpaConversionComplexity() + "\"" +
-                    "}";
-        }
     }
 
     /**
@@ -420,36 +405,19 @@ public class ComplexCmpRelationshipJavaSourceInspector extends AbstractJavaParse
         private final boolean hasCascadeOperations;
         private final boolean hasCollectionRelationships;
         private final String jpaConversionComplexity;
-        private final String detailedMetadata;
+        private final ComplexCmrMetadata detailedMetadata;
         private final List<String> jpaRecommendations;
 
         public ComplexCmrAnalysisResult(boolean hasComplexCmr, boolean hasBidirectionalRelationships,
                 boolean hasCascadeOperations, boolean hasCollectionRelationships,
-                String jpaConversionComplexity, String detailedMetadata, List<String> jpaRecommendations) {
+                String jpaConversionComplexity, ComplexCmrMetadata detailedMetadata, List<String> jpaRecommendations) {
             this.hasComplexCmr = hasComplexCmr;
             this.hasBidirectionalRelationships = hasBidirectionalRelationships;
             this.hasCascadeOperations = hasCascadeOperations;
             this.hasCollectionRelationships = hasCollectionRelationships;
             this.jpaConversionComplexity = jpaConversionComplexity != null ? jpaConversionComplexity : "NONE";
-            this.detailedMetadata = detailedMetadata != null ? detailedMetadata : "{}";
+            this.detailedMetadata = detailedMetadata;
             this.jpaRecommendations = jpaRecommendations != null ? jpaRecommendations : new ArrayList<>();
-        }
-
-        public String toJson() {
-            String recommendationsJson = jpaRecommendations.stream()
-                    .map(rec -> "\"" + rec.replace("\"", "\\\"") + "\"")
-                    .reduce((a, b) -> a + "," + b)
-                    .orElse("");
-
-            return "{" +
-                    "\"hasComplexCmr\":" + hasComplexCmr + "," +
-                    "\"hasBidirectionalRelationships\":" + hasBidirectionalRelationships + "," +
-                    "\"hasCascadeOperations\":" + hasCascadeOperations + "," +
-                    "\"hasCollectionRelationships\":" + hasCollectionRelationships + "," +
-                    "\"jpaConversionComplexity\":\"" + jpaConversionComplexity + "\"," +
-                    "\"detailedMetadata\":" + detailedMetadata + "," +
-                    "\"jpaRecommendations\":[" + recommendationsJson + "]" +
-                    "}";
         }
     }
 

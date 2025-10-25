@@ -253,7 +253,7 @@ public class ClasspathInspectorScanner {
     /**
      * Checks if a class directly implements Inspector interface without extending
      * the standard base classes. This allows for core inspectors like
-     * SourceFileTagDetector that don't need the full framework of the base
+     * SourceFileDetector that don't need the full framework of the base
      * classes.
      */
     private boolean isDirectInspectorImplementation(Class<?> clazz) {

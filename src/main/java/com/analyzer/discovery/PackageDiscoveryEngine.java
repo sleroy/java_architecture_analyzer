@@ -35,7 +35,7 @@ public class PackageDiscoveryEngine {
 
         // First pass: create all packages and collect their classes
         for (ProjectFile clazz : discoveredClasses.values()) {
-            String packageName = clazz.getPackageName();
+            String packageName = clazz.getStringProperty("packageName", "");
 
             // Handle default package (empty package name)
             if (packageName.isEmpty()) {

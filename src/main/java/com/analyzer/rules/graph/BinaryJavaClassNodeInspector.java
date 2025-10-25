@@ -1,6 +1,6 @@
 package com.analyzer.rules.graph;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.GraphRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -53,7 +53,7 @@ public class BinaryJavaClassNodeInspector extends AbstractASMInspector {
     // supports() method removed as filtering is handled by @InspectorDependencies
 
     @Override
-    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, NodeDecorator<ProjectFile> projectFileDecorator) {
 
         return new BinaryClassNodeVisitor(projectFile, projectFileDecorator);
     }
@@ -104,7 +104,7 @@ public class BinaryJavaClassNodeInspector extends AbstractASMInspector {
      */
     private static class NoOpClassVisitor extends ASMClassVisitor {
 
-        public NoOpClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+        public NoOpClassVisitor(ProjectFile projectFile, NodeDecorator<ProjectFile> projectFileDecorator) {
             super(projectFile, projectFileDecorator);
         }
 
@@ -121,7 +121,7 @@ public class BinaryJavaClassNodeInspector extends AbstractASMInspector {
      */
     private class BinaryClassNodeVisitor extends ASMClassVisitor {
 
-        public BinaryClassNodeVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+        public BinaryClassNodeVisitor(ProjectFile projectFile, NodeDecorator<ProjectFile> projectFileDecorator) {
             super(projectFile, projectFileDecorator);
         }
 
@@ -145,11 +145,11 @@ public class BinaryJavaClassNodeInspector extends AbstractASMInspector {
                 logger.debug("Created/found class node from binary: {} (type: {})", fullyQualifiedName, classType);
 
                 // Set tag to indicate this class node was created from binary analysis
-                projectFileDecorator.setTag(TAGS.TAG_JAVA_CLASS_NODE_BINARY, fullyQualifiedName);
+                decorator.setProperty(TAGS.TAG_JAVA_CLASS_NODE_BINARY, fullyQualifiedName);
 
             } catch (Exception e) {
                 logger.warn("Error processing binary class {}: {}", name, e.getMessage());
-                projectFileDecorator.error(e.getMessage());
+                decorator.error(e.getMessage());
             }
         }
     }

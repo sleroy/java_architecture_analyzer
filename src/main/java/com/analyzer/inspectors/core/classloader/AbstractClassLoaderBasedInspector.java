@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.classloader;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
@@ -27,7 +27,7 @@ import java.net.URLClassLoader;
  * Class<?> object to perform runtime analysis that would not be possible
  * with static bytecode analysis alone.
  */
-@InspectorDependencies(requires = {}, produces = { InspectorTags.TAG_JAVA_CLASSLOADER })
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_DETECTED}, produces = {InspectorTags.TAG_JAVA_CLASSLOADER})
 public abstract class AbstractClassLoaderBasedInspector implements Inspector<ProjectFile> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractClassLoaderBasedInspector.class);
@@ -43,62 +43,63 @@ public abstract class AbstractClassLoaderBasedInspector implements Inspector<Pro
      * @param classLoaderService the service providing the shared ClassLoader
      */
     protected AbstractClassLoaderBasedInspector(ResourceResolver resourceResolver,
-            JARClassLoaderService classLoaderService) {
+                                                JARClassLoaderService classLoaderService) {
         this.resourceResolver = resourceResolver;
         this.classLoaderService = classLoaderService;
 
-        // Initialize the shared ClassLoader on first use
-        if (!classLoaderService.isInitialized()) {
-            classLoaderService.initializeFromResourceResolver(resourceResolver);
-        }
     }
 
-    public final void decorate(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+    public final void inspect(ProjectFile projectFile, NodeDecorator<ProjectFile> nodeDecorator) {
 
         try {
             // Get the shared ClassLoader
             URLClassLoader sharedClassLoader = classLoaderService.getSharedClassLoader();
 
             // Attempt to load the class by its fully qualified name
-            String fullyQualifiedName = projectFile.getFullyQualifiedName();
-            logger.debug("Attempting to load class: {}", fullyQualifiedName);
+            String fullyQualifiedName = projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
+            if (fullyQualifiedName == null || fullyQualifiedName.isEmpty()) {
+                logger.error("No fully qualified class name found for project file: {}", projectFile.getFilePath());
+                nodeDecorator.error("No fully qualified class name available");
+                return;
+            }
+            logger.warn("Attempting to load class: {}", fullyQualifiedName);
 
             Class<?> loadedClass = sharedClassLoader.loadClass(fullyQualifiedName);
 
             // SUCCESS: Class loaded successfully, delegate to concrete implementation
-            logger.debug("Successfully loaded class: {}", fullyQualifiedName);
-            projectFileDecorator.setTag(InspectorTags.TAG_JAVA_CLASSLOADER, true);
-            analyzeLoadedClass(loadedClass, projectFile, projectFileDecorator);
+            logger.warn("Successfully loaded class: {}", fullyQualifiedName);
+            nodeDecorator.setProperty(InspectorTags.TAG_JAVA_CLASSLOADER, true);
+            analyzeLoadedClass(loadedClass, projectFile, nodeDecorator);
 
         } catch (ClassNotFoundException e) {
             // Class not found - this is expected for many classes
-            logger.debug("Class not found in ClassLoader: {} ({})",
-                    projectFile.getFullyQualifiedName(), e.getMessage());
-            projectFileDecorator.error(e);
+            logger.warn("Class not found in ClassLoader: {} ({})",
+                    projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
+            nodeDecorator.error(e);
 
         } catch (NoClassDefFoundError e) {
             // Missing dependencies - also expected
-            logger.debug("Missing dependencies for class: {} ({})",
-                    projectFile.getFullyQualifiedName(), e.getMessage());
-            projectFileDecorator.error(e);
+            logger.warn("Missing dependencies for class: {} ({})",
+                    projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
+            nodeDecorator.error(e);
 
         } catch (LinkageError e) {
             // Linkage issues - treat as not applicable
-            logger.debug("Linkage error loading class: {} ({})",
-                    projectFile.getFullyQualifiedName(), e.getMessage());
-            projectFileDecorator.error(e);
+            logger.warn("Linkage error loading class: {} ({})",
+                    projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
+            nodeDecorator.error(e);
 
         } catch (SecurityException e) {
             // Security restrictions - treat as not applicable
-            logger.debug("Security restriction loading class: {} ({})",
-                    projectFile.getFullyQualifiedName(), e.getMessage());
-            projectFileDecorator.error(e);
+            logger.warn("Security restriction loading class: {} ({})",
+                    projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
+            nodeDecorator.error(e);
 
         } catch (Exception e) {
             // Unexpected errors - return as error
             logger.warn("Unexpected error loading class: {} ({})",
-                    projectFile.getFullyQualifiedName(), e.getMessage());
-            projectFileDecorator.error(
+                    projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
+            nodeDecorator.error(
                     "Unexpected error loading class: " + e.getMessage());
         }
     }
@@ -121,13 +122,13 @@ public abstract class AbstractClassLoaderBasedInspector implements Inspector<Pro
      * - Checking interface implementations
      * - Accessing field types and modifiers
      *
-     * @param loadedClass     the successfully loaded Class<?> object
-     * @param projectFile     the ProjectFile metadata object containing file
-     *                        locations
+     * @param loadedClass          the successfully loaded Class<?> object
+     * @param projectFile          the ProjectFile metadata object containing file
+     *                             locations
      * @param projectFileDecorator
      */
     protected abstract void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile,
-            ProjectFileDecorator projectFileDecorator);
+                                               NodeDecorator<ProjectFile> projectFileDecorator);
 
     /**
      * Gets the shared ClassLoader service used by this inspector.

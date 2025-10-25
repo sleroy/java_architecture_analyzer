@@ -1,6 +1,7 @@
 package com.analyzer.inspectors.core.binary;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
@@ -36,7 +37,7 @@ public abstract class AbstractASMInspector extends AbstractBinaryClassInspector 
 
     @Override
     protected final void analyzeClassFile(ProjectFile projectFile, ResourceLocation binaryLocation,
-                                          InputStream classInputStream, ProjectFileDecorator projectFileDecorator) throws IOException {
+            InputStream classInputStream, NodeDecorator<ProjectFile> projectFileDecorator) throws IOException {
         try {
             // Validate input stream before ASM processing
             if (classInputStream == null) {
@@ -86,51 +87,63 @@ public abstract class AbstractASMInspector extends AbstractBinaryClassInspector 
      * Subclasses must implement this method to provide their specific analysis
      * logic.
      *
-     * @param projectFile     the project file being analyzed
-     * @param projectFileDecorator
+     * @param projectFile the project file being analyzed
+     * @param decorator   the decorator for setting properties and tags
      * @return an ASMClassVisitor that will perform the analysis
      */
-    protected abstract ASMClassVisitor createClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator);
+    protected abstract ASMClassVisitor createClassVisitor(ProjectFile projectFile,
+            NodeDecorator<ProjectFile> decorator);
 
     /**
-     * Base class for ASM class visitors that store analysis results using ProjectFileDecorator.
+     * Base class for ASM class visitors that store analysis results using
+     * NodeDecorator.
      * Subclasses should extend this class and implement their analysis logic
-     * in the various visit methods, then use setTag() to store results or reportError() for errors.
+     * in the various visit methods, then use setProperty() or enableTag() to store
+     * results.
      */
     public static abstract class ASMClassVisitor extends ClassVisitor {
 
         protected final ProjectFile projectFile;
-        protected final ProjectFileDecorator projectFileDecorator;
+        protected final NodeDecorator<ProjectFile> decorator;
 
         /**
-         * Creates an ASMClassVisitor with the specified project file and result decorator.
+         * Creates an ASMClassVisitor with the specified project file and decorator.
          *
          * @param projectFile the project file being analyzed
-         * @param projectFileDecorator the result decorator for storing results
+         * @param decorator   the decorator for storing results
          */
-        protected ASMClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+        protected ASMClassVisitor(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator) {
             super(org.objectweb.asm.Opcodes.ASM9);
             this.projectFile = projectFile;
-            this.projectFileDecorator = projectFileDecorator;
+            this.decorator = decorator;
         }
 
         /**
-         * Sets a tag value on the project file.
+         * Sets a property value on the project file.
+         *
+         * @param propertyName the property name
+         * @param value        the property value
+         */
+        protected void setProperty(String propertyName, Object value) {
+            decorator.setProperty(propertyName, value);
+        }
+
+        /**
+         * Enables a tag on the project file.
          *
          * @param tagName the tag name
-         * @param value the tag value
          */
-        protected void setTag(String tagName, Object value) {
-            projectFileDecorator.setTag(tagName, value);
+        protected void enableTag(String tagName) {
+            decorator.enableTag(tagName);
         }
 
         /**
-         * Reports an error using the result decorator.
+         * Reports an error using the decorator.
          *
          * @param errorMessage the error message
          */
         protected void reportError(String errorMessage) {
-            projectFileDecorator.error(errorMessage);
+            decorator.error(errorMessage);
         }
     }
 }

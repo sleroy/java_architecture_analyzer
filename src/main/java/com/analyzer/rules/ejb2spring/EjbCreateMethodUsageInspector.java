@@ -1,34 +1,49 @@
 package com.analyzer.rules.ejb2spring;
-import com.analyzer.core.inspector.InspectorDependencies;
 
-import com.analyzer.core.export.ProjectFileDecorator;
-import com.analyzer.core.graph.ClassNodeRepository;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.JavaClassNode;
+import com.analyzer.core.graph.ProjectFileRepository;
+import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
-import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.binary.AbstractASMInspector;
+import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Inspector I-0706: EJB Create Method Usage Inspector
+ * Class-centric EJB Create Method Usage Inspector - Phase 3 migration.
+ * 
  * <p>
  * Analyzes EJB create method patterns including:
- * - ejbCreate/ejbPostCreate methods in Entity and Session beans
- * - create methods in Home interfaces
- * - Client code using create methods with JNDI lookups
- * - Cross-method dependencies and migration complexity assessment
+ * </p>
+ * <ul>
+ * <li>ejbCreate/ejbPostCreate methods in Entity and Session beans</li>
+ * <li>create methods in Home interfaces</li>
+ * <li>Client code using create methods with JNDI lookups</li>
+ * <li>Cross-method dependencies and migration complexity assessment</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>Key Differences from EjbCreateMethodUsageInspector:</strong>
+ * </p>
+ * <ul>
+ * <li>Extends AbstractASMClassInspector (class-centric) instead of AbstractASMInspector (file-centric)</li>
+ * <li>Receives JavaClassNode directly instead of creating it</li>
+ * <li>Writes all analysis results to JavaClassNode properties</li>
+ * <li>Uses NodeDecorator for type-safe property access</li>
+ * <li>Simplified constructor with standard injection pattern</li>
+ * </ul>
+ * 
+ * @since Phase 3 - Systematic Inspector Migration
+ * @see EjbCreateMethodUsageInspector Original file-centric version
  */
-@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_IS_BINARY}, produces = {
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = {
         EjbMigrationTags.EJB_CREATE_METHOD,
         EjbMigrationTags.EJB_CREATE_METHOD_USAGE,
         EjbMigrationTags.EJB_HOME_INTERFACE,
@@ -41,7 +56,9 @@ import java.util.stream.Collectors;
         EjbMigrationTags.EJB_MIGRATION_MEDIUM,
         EjbMigrationTags.EJB_MIGRATION_COMPLEX
 })
-public class EjbCreateMethodUsageInspector extends AbstractASMInspector  {
+public class EjbCreateMethodUsageInspector extends AbstractASMClassInspector {
+
+    private static final Logger logger = LoggerFactory.getLogger(EjbCreateMethodUsageInspector.class);
 
     private static final String EJB_CREATE_METHOD_PREFIX = "ejbCreate";
     private static final String EJB_POST_CREATE_METHOD_PREFIX = "ejbPostCreate";
@@ -57,42 +74,38 @@ public class EjbCreateMethodUsageInspector extends AbstractASMInspector  {
             "javax/ejb/EJBHome",
             "javax/ejb/EJBLocalHome");
 
-    private final ClassNodeRepository classNodeRepository;
-    private final Map<String, CreateMethodMetadata> createMethodCache = new ConcurrentHashMap<>();
-    private final Map<String, HomeInterfaceMetadata> homeInterfaceCache = new ConcurrentHashMap<>();
-
     @Inject
-    public EjbCreateMethodUsageInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
-        this.classNodeRepository = classNodeRepository;
-    }
-
-    @Override
-    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-        JavaClassNode classNode = classNodeRepository.getOrCreateClassNodeByFqn(projectFile.getFullyQualifiedName()).orElseThrow();
-        classNode.setProjectFileId(projectFile.getId());
-        return new EjbCreateMethodVisitor(projectFile, projectFileDecorator, classNode);
+    public EjbCreateMethodUsageInspector(ProjectFileRepository projectFileRepository,
+            ResourceResolver resourceResolver) {
+        super(projectFileRepository, resourceResolver);
     }
 
     @Override
     public String getName() {
-        return "EJB Create Method Usage Inspector (I-0706)";
+        return "EJB Create Method Usage Inspector V2 (Class-Centric ASM)";
+    }
+
+    @Override
+    protected ASMClassNodeVisitor createClassVisitor(JavaClassNode classNode,
+            NodeDecorator<JavaClassNode> decorator) {
+        return new EjbCreateMethodVisitor(classNode, decorator);
     }
 
     /**
-     * ASM visitor that analyzes EJB create method patterns
+     * ASM visitor that analyzes EJB create method patterns using class-centric
+     * architecture.
+     * Analyzes beans, home interfaces, and client code for create method usage.
      */
-    private class EjbCreateMethodVisitor extends ASMClassVisitor {
+    private static class EjbCreateMethodVisitor extends ASMClassNodeVisitor {
+
         private final ClassNode classNode;
-        private final JavaClassNode graphNode;
         private CreateMethodMetadata beanMetadata;
         private HomeInterfaceMetadata homeMetadata;
         private CreateMethodUsageMetadata usageMetadata;
 
-        public EjbCreateMethodVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator, JavaClassNode graphNode) {
-            super(projectFile, projectFileDecorator);
+        protected EjbCreateMethodVisitor(JavaClassNode graphNode, NodeDecorator<JavaClassNode> decorator) {
+            super(graphNode, decorator);
             this.classNode = new ClassNode();
-            this.graphNode = graphNode;
         }
 
         @Override
@@ -106,24 +119,22 @@ public class EjbCreateMethodUsageInspector extends AbstractASMInspector  {
         public void visitEnd() {
             // Analyze EJB bean classes for ejbCreate methods
             if (isEjbBeanClass(classNode)) {
-                beanMetadata = analyzeEjbBeanCreateMethods(projectFile, classNode);
+                beanMetadata = analyzeEjbBeanCreateMethods(classNode);
                 if (beanMetadata.hasCreateMethods()) {
                     addBeanCreateMethodResults();
-                    createMethodCache.put(classNode.name, beanMetadata);
                 }
             }
 
             // Analyze Home interfaces for create methods
             if (isEjbHomeInterface(classNode)) {
-                homeMetadata = analyzeHomeInterfaceCreateMethods(projectFile, classNode);
+                homeMetadata = analyzeHomeInterfaceCreateMethods(classNode);
                 if (homeMetadata.hasCreateMethods()) {
                     addHomeCreateMethodResults();
-                    homeInterfaceCache.put(classNode.name, homeMetadata);
                 }
             }
 
             // Analyze client classes for create method usage
-            usageMetadata = analyzeCreateMethodUsage(projectFile, classNode);
+            usageMetadata = analyzeCreateMethodUsage(classNode);
             if (usageMetadata.hasCreateMethodCalls()) {
                 addCreateMethodUsageResults();
             }
@@ -148,7 +159,7 @@ public class EjbCreateMethodUsageInspector extends AbstractASMInspector  {
                     .anyMatch(iface -> EJB_HOME_INTERFACES.contains(iface));
         }
 
-        private CreateMethodMetadata analyzeEjbBeanCreateMethods(ProjectFile file, ClassNode classNode) {
+        private CreateMethodMetadata analyzeEjbBeanCreateMethods(ClassNode classNode) {
             CreateMethodMetadata metadata = new CreateMethodMetadata(classNode.name, determineEjbBeanType(classNode));
 
             // Analyze all methods for create patterns
@@ -323,7 +334,7 @@ public class EjbCreateMethodUsageInspector extends AbstractASMInspector  {
             return new EjbPostCreateMethodInfo(method.name, method.desc, postCreateMethodSuffix, parameters);
         }
 
-        private HomeInterfaceMetadata analyzeHomeInterfaceCreateMethods(ProjectFile file, ClassNode classNode) {
+        private HomeInterfaceMetadata analyzeHomeInterfaceCreateMethods(ClassNode classNode) {
             HomeInterfaceMetadata metadata = new HomeInterfaceMetadata(classNode.name,
                     isRemoteHomeInterface(classNode),
                     isLocalHomeInterface(classNode));
@@ -380,7 +391,7 @@ public class EjbCreateMethodUsageInspector extends AbstractASMInspector  {
                     returnType, parameters, isRemoteMethod, isLocalMethod, exceptions);
         }
 
-        private CreateMethodUsageMetadata analyzeCreateMethodUsage(ProjectFile file, ClassNode classNode) {
+        private CreateMethodUsageMetadata analyzeCreateMethodUsage(ClassNode classNode) {
             CreateMethodUsageMetadata metadata = new CreateMethodUsageMetadata(classNode.name);
 
             // Analyze all methods for create method calls
@@ -477,75 +488,76 @@ public class EjbCreateMethodUsageInspector extends AbstractASMInspector  {
         }
 
         private void addBeanCreateMethodResults() {
-            // Honor produces contract: set tags on ProjectFile
-            projectFile.setTag(EjbMigrationTags.EJB_CREATE_METHOD, true);
+            // Write all results to JavaClassNode properties (class-centric)
+            enableTag(EjbMigrationTags.EJB_CREATE_METHOD);
 
             if (beanMetadata.getBeanType() == EjbBeanType.ENTITY_BEAN) {
-                projectFile.setTag(EjbMigrationTags.EJB_ENTITY_BEAN, true);
+                enableTag(EjbMigrationTags.EJB_ENTITY_BEAN);
             } else if (beanMetadata.getBeanType() == EjbBeanType.SESSION_BEAN) {
-                projectFile.setTag(EjbMigrationTags.EJB_SESSION_BEAN, true);
+                enableTag(EjbMigrationTags.EJB_SESSION_BEAN);
             }
 
             // Add complexity tags
             int totalCreateMethods = beanMetadata.getEjbCreateMethods().size();
             if (totalCreateMethods > 3) {
-                projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_COMPLEX, true);
+                enableTag(EjbMigrationTags.EJB_MIGRATION_COMPLEX);
             } else if (totalCreateMethods > 1) {
-                projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_MEDIUM, true);
+                enableTag(EjbMigrationTags.EJB_MIGRATION_MEDIUM);
             } else {
-                projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_SIMPLE, true);
+                enableTag(EjbMigrationTags.EJB_MIGRATION_SIMPLE);
             }
 
             // Add create method specific tags
             for (EjbCreateMethodInfo createMethod : beanMetadata.getEjbCreateMethods()) {
                 if (createMethod.getCreateMethodType() == CreateMethodType.PARAMETERIZED) {
-                    projectFile.setTag(EjbMigrationTags.EJB_PARAMETERIZED_CREATE, true);
+                    enableTag(EjbMigrationTags.EJB_PARAMETERIZED_CREATE);
                 }
                 if (!createMethod.getAnalysis().getInitializationPatterns().isEmpty()) {
-                    projectFile.setTag(EjbMigrationTags.EJB_COMPLEX_INITIALIZATION, true);
+                    enableTag(EjbMigrationTags.EJB_COMPLEX_INITIALIZATION);
                 }
                 if (!createMethod.getAnalysis().getDependencyLookups().isEmpty()) {
-                    projectFile.setTag(EjbMigrationTags.EJB_DEPENDENCY_INJECTION_CANDIDATE, true);
+                    enableTag(EjbMigrationTags.EJB_DEPENDENCY_INJECTION_CANDIDATE);
                 }
             }
 
-            // Consolidate analysis data as single property (guideline #5)
-            CreateMethodAnalysisResult analysisResult = new CreateMethodAnalysisResult(
-                totalCreateMethods,
-                beanMetadata.getEjbPostCreateMethods().size(),
-                beanMetadata.getBeanType().toString(),
-                assessCreateMethodMigrationComplexity(beanMetadata),
-                beanMetadata
-            );
-            graphNode.setProperty("ejb.create.method.analysis", analysisResult.toJson());
+            // Consolidate analysis data as single property
+            setProperty("ejb.create.method.analysis", new CreateMethodAnalysisResult(
+                    totalCreateMethods,
+                    beanMetadata.getEjbPostCreateMethods().size(),
+                    beanMetadata.getBeanType().toString(),
+                    assessCreateMethodMigrationComplexity(beanMetadata),
+                    beanMetadata));
+
+            logger.debug("Detected {} ejbCreate methods in {}", totalCreateMethods, classNode.name);
         }
 
         private void addHomeCreateMethodResults() {
-            // Honor produces contract: set tags on ProjectFile
-            projectFile.setTag(EjbMigrationTags.EJB_HOME_INTERFACE, true);
-            projectFile.setTag(EjbMigrationTags.EJB_CREATE_METHOD, true);
+            // Write all results to JavaClassNode properties (class-centric)
+            enableTag(EjbMigrationTags.EJB_HOME_INTERFACE);
+            enableTag(EjbMigrationTags.EJB_CREATE_METHOD);
 
             if (homeMetadata.isRemoteHome()) {
-                projectFile.setTag(EjbMigrationTags.EJB_REMOTE_INTERFACE, true);
+                enableTag(EjbMigrationTags.EJB_REMOTE_INTERFACE);
             }
             if (homeMetadata.isLocalHome()) {
-                projectFile.setTag(EjbMigrationTags.EJB_LOCAL_INTERFACE, true);
+                enableTag(EjbMigrationTags.EJB_LOCAL_INTERFACE);
             }
 
-            // Consolidate analysis data as single property (guideline #5)
-            HomeInterfaceAnalysisResult analysisResult = new HomeInterfaceAnalysisResult(
-                homeMetadata.getCreateMethods().size(),
-                homeMetadata.isRemoteHome(),
-                homeMetadata.isLocalHome(),
-                homeMetadata
-            );
-            graphNode.setProperty("ejb.home.interface.analysis", analysisResult.toJson());
+            // Consolidate analysis data as single property
+            setProperty("ejb.home.interface.analysis", new HomeInterfaceAnalysisResult(
+                    homeMetadata.getCreateMethods().size(),
+                    homeMetadata.isRemoteHome(),
+                    homeMetadata.isLocalHome(),
+                    homeMetadata));
+
+            logger.debug("Detected Home interface with {} create methods: {}",
+                    homeMetadata.getCreateMethods().size(), classNode.name);
         }
 
         private void addCreateMethodUsageResults() {
-            // Honor produces contract: set tags on ProjectFile
-            projectFile.setTag(EjbMigrationTags.EJB_CLIENT_CODE, true);
-            projectFile.setTag(EjbMigrationTags.EJB_CREATE_METHOD_USAGE, true);
+            // Write all results to JavaClassNode properties (class-centric)
+            enableTag(EjbMigrationTags.EJB_CLIENT_CODE);
+            enableTag(EjbMigrationTags.EJB_CREATE_METHOD_USAGE);
 
             int totalCreateCalls = usageMetadata.getCallContexts().stream()
                     .mapToInt(context -> context.getCreateMethodCalls().size())
@@ -556,18 +568,18 @@ public class EjbCreateMethodUsageInspector extends AbstractASMInspector  {
                     .anyMatch(call -> call.getCallContext().hasJndiLookup());
 
             if (hasJndiLookups) {
-                projectFile.setTag(EjbMigrationTags.EJB_JNDI_LOOKUP, true);
-                projectFile.setTag(EjbMigrationTags.EJB_DEPENDENCY_INJECTION_CANDIDATE, true);
+                enableTag(EjbMigrationTags.EJB_JNDI_LOOKUP);
+                enableTag(EjbMigrationTags.EJB_DEPENDENCY_INJECTION_CANDIDATE);
             }
 
-            // Consolidate analysis data as single property (guideline #5)
-            CreateMethodUsageAnalysisResult analysisResult = new CreateMethodUsageAnalysisResult(
-                totalCreateCalls,
-                countReferencedHomeInterfaces(usageMetadata),
-                hasJndiLookups,
-                usageMetadata
-            );
-            graphNode.setProperty("ejb.create.method.usage.analysis", analysisResult.toJson());
+            // Consolidate analysis data as single property
+            setProperty("ejb.create.method.usage.analysis", new CreateMethodUsageAnalysisResult(
+                    totalCreateCalls,
+                    countReferencedHomeInterfaces(usageMetadata),
+                    hasJndiLookups,
+                    usageMetadata));
+
+            logger.debug("Detected {} create method calls in client class: {}", totalCreateCalls, classNode.name);
         }
 
         private int countReferencedHomeInterfaces(CreateMethodUsageMetadata usageMetadata) {
@@ -607,100 +619,12 @@ public class EjbCreateMethodUsageInspector extends AbstractASMInspector  {
             } else if (complexityScore <= 12) {
                 return "MEDIUM";
             } else {
-            return "HIGH";
+                return "HIGH";
+            }
         }
     }
 
-    /**
-     * Consolidated analysis result for EJB create method data (guideline #5)
-     */
-    public static class CreateMethodAnalysisResult {
-        private final int createMethodCount;
-        private final int postCreateMethodCount;
-        private final String beanType;
-        private final String migrationComplexity;
-        private final CreateMethodMetadata metadata;
-
-        public CreateMethodAnalysisResult(int createMethodCount, int postCreateMethodCount, 
-                                        String beanType, String migrationComplexity,
-                                        CreateMethodMetadata metadata) {
-            this.createMethodCount = createMethodCount;
-            this.postCreateMethodCount = postCreateMethodCount;
-            this.beanType = beanType;
-            this.migrationComplexity = migrationComplexity;
-            this.metadata = metadata;
-        }
-
-        public String toJson() {
-            StringBuilder json = new StringBuilder();
-            json.append("{");
-            json.append("\"createMethodCount\":").append(createMethodCount).append(",");
-            json.append("\"postCreateMethodCount\":").append(postCreateMethodCount).append(",");
-            json.append("\"beanType\":\"").append(beanType).append("\",");
-            json.append("\"migrationComplexity\":\"").append(migrationComplexity).append("\"");
-            json.append("}");
-            return json.toString();
-        }
-    }
-
-    /**
-     * Consolidated analysis result for EJB home interface data (guideline #5)
-     */
-    public static class HomeInterfaceAnalysisResult {
-        private final int createMethodCount;
-        private final boolean isRemoteHome;
-        private final boolean isLocalHome;
-        private final HomeInterfaceMetadata metadata;
-
-        public HomeInterfaceAnalysisResult(int createMethodCount, boolean isRemoteHome, 
-                                         boolean isLocalHome, HomeInterfaceMetadata metadata) {
-            this.createMethodCount = createMethodCount;
-            this.isRemoteHome = isRemoteHome;
-            this.isLocalHome = isLocalHome;
-            this.metadata = metadata;
-        }
-
-        public String toJson() {
-            StringBuilder json = new StringBuilder();
-            json.append("{");
-            json.append("\"createMethodCount\":").append(createMethodCount).append(",");
-            json.append("\"isRemoteHome\":").append(isRemoteHome).append(",");
-            json.append("\"isLocalHome\":").append(isLocalHome);
-            json.append("}");
-            return json.toString();
-        }
-    }
-
-    /**
-     * Consolidated analysis result for EJB create method usage data (guideline #5)
-     */
-    public static class CreateMethodUsageAnalysisResult {
-        private final int createMethodCallCount;
-        private final int referencedHomeInterfaceCount;
-        private final boolean hasJndiLookups;
-        private final CreateMethodUsageMetadata metadata;
-
-        public CreateMethodUsageAnalysisResult(int createMethodCallCount, int referencedHomeInterfaceCount,
-                                             boolean hasJndiLookups, CreateMethodUsageMetadata metadata) {
-            this.createMethodCallCount = createMethodCallCount;
-            this.referencedHomeInterfaceCount = referencedHomeInterfaceCount;
-            this.hasJndiLookups = hasJndiLookups;
-            this.metadata = metadata;
-        }
-
-        public String toJson() {
-            StringBuilder json = new StringBuilder();
-            json.append("{");
-            json.append("\"createMethodCallCount\":").append(createMethodCallCount).append(",");
-            json.append("\"referencedHomeInterfaceCount\":").append(referencedHomeInterfaceCount).append(",");
-            json.append("\"hasJndiLookups\":").append(hasJndiLookups);
-            json.append("}");
-            return json.toString();
-        }
-    }
-}
-
-    // Supporting enums and data classes
+    // Supporting enums and data classes (unchanged from original)
     public enum EjbBeanType {
         ENTITY_BEAN, SESSION_BEAN, UNKNOWN
     }
@@ -709,6 +633,63 @@ public class EjbCreateMethodUsageInspector extends AbstractASMInspector  {
         DEFAULT_CREATE, // ejbCreate() with no parameters
         PARAMETERIZED, // ejbCreate(...) with parameters
         NAMED_CREATE // ejbCreateBySomething(...)
+    }
+
+    /**
+     * Consolidated analysis result for EJB create method data
+     */
+    public static class CreateMethodAnalysisResult {
+        private final int createMethodCount;
+        private final int postCreateMethodCount;
+        private final String beanType;
+        private final String migrationComplexity;
+        private final CreateMethodMetadata metadata;
+
+        public CreateMethodAnalysisResult(int createMethodCount, int postCreateMethodCount,
+                String beanType, String migrationComplexity,
+                CreateMethodMetadata metadata) {
+            this.createMethodCount = createMethodCount;
+            this.postCreateMethodCount = postCreateMethodCount;
+            this.beanType = beanType;
+            this.migrationComplexity = migrationComplexity;
+            this.metadata = metadata;
+        }
+    }
+
+    /**
+     * Consolidated analysis result for EJB home interface data
+     */
+    public static class HomeInterfaceAnalysisResult {
+        private final int createMethodCount;
+        private final boolean isRemoteHome;
+        private final boolean isLocalHome;
+        private final HomeInterfaceMetadata metadata;
+
+        public HomeInterfaceAnalysisResult(int createMethodCount, boolean isRemoteHome,
+                boolean isLocalHome, HomeInterfaceMetadata metadata) {
+            this.createMethodCount = createMethodCount;
+            this.isRemoteHome = isRemoteHome;
+            this.isLocalHome = isLocalHome;
+            this.metadata = metadata;
+        }
+}
+
+    /**
+     * Consolidated analysis result for EJB create method usage data
+     */
+    public static class CreateMethodUsageAnalysisResult {
+        private final int createMethodCallCount;
+        private final int referencedHomeInterfaceCount;
+        private final boolean hasJndiLookups;
+        private final CreateMethodUsageMetadata metadata;
+
+        public CreateMethodUsageAnalysisResult(int createMethodCallCount, int referencedHomeInterfaceCount,
+                boolean hasJndiLookups, CreateMethodUsageMetadata metadata) {
+            this.createMethodCallCount = createMethodCallCount;
+            this.referencedHomeInterfaceCount = referencedHomeInterfaceCount;
+            this.hasJndiLookups = hasJndiLookups;
+            this.metadata = metadata;
+        }
     }
 
     // Data classes

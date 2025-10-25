@@ -1,10 +1,7 @@
 package com.analyzer.inspectors.core.detection;
 
-import com.analyzer.core.export.ProjectFileDecorator;
-import com.analyzer.core.inspector.InspectorDependencies;
-
-import com.analyzer.core.inspector.Inspector;
-import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.detector.FileDetector;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.model.ClassType;
 import com.analyzer.core.model.ProjectFile;
 import org.slf4j.Logger;
@@ -15,7 +12,7 @@ import java.nio.file.Files;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.analyzer.core.inspector.InspectorTags.TAG_JAVA_IS_SOURCE;
+import static com.analyzer.core.inspector.InspectorTags.*;
 
 /**
  * Comprehensive inspector for Java source files (.java).
@@ -34,19 +31,7 @@ import static com.analyzer.core.inspector.InspectorTags.TAG_JAVA_IS_SOURCE;
  * Uses the new annotation-based dependency system - no dependencies as
  * foundational inspector.
  */
-@InspectorDependencies(need = {
-        SourceFileTagDetector.class
-}, produces = {
-        TAG_JAVA_IS_SOURCE,
-        InspectorTags.JAVA_FORMAT,
-        InspectorTags.TAG_LANGUAGE,
-        InspectorTags.TAG_JAVA_DETECTED,
-        InspectorTags.TAG_JAVA_PACKAGE_NAME,
-        InspectorTags.TAG_JAVA_CLASS_NAME,
-        InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME,
-        InspectorTags.TAG_JAVA_CLASS_TYPE
-})
-public class JavaSourceFileDetector implements Inspector<ProjectFile> {
+public class JavaSourceFileDetector implements FileDetector {
 
     private static final Logger logger = LoggerFactory.getLogger(JavaSourceFileDetector.class);
 
@@ -74,34 +59,29 @@ public class JavaSourceFileDetector implements Inspector<ProjectFile> {
     }
 
     @Override
-    public void decorate(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+    public void detect(NodeDecorator<ProjectFile> decorator) {
+        ProjectFile projectFile = decorator.getNode();
 
         try {
             // PHASE 1: Basic Java detection and fundamental tagging
-            // (Merged from IsJavaClassInspector functionality)
-
-            // Set standardized Java language tags using InspectorTags constants
-            projectFile.setTag(TAG_JAVA_IS_SOURCE, true);
-            projectFile.setTag(InspectorTags.JAVA_FORMAT, InspectorTags.FORMAT_SOURCE);
-            projectFile.setTag(InspectorTags.TAG_LANGUAGE, InspectorTags.LANGUAGE_JAVA);
-            projectFile.setTag(InspectorTags.TAG_JAVA_DETECTED, true);
+            decorator.enableTag(TAG_JAVA_IS_SOURCE);
+            decorator.setProperty(JAVA_FORMAT, FORMAT_SOURCE);
+            decorator.setProperty(TAG_LANGUAGE, LANGUAGE_JAVA);
+            decorator.enableTag(TAG_JAVA_DETECTED);
 
             // PHASE 2: Detailed metadata extraction from file content
-            // (Original JavaSourceFileDetector functionality)
-
-            // Read the Java source file content
             String content = Files.readString(projectFile.getFilePath());
 
-            // Extract package name using InspectorTags constants
+            // Extract package name
             String packageName = extractPackageName(content);
             if (packageName != null && !packageName.isEmpty()) {
-                projectFile.setTag(InspectorTags.TAG_JAVA_PACKAGE_NAME, packageName);
+                decorator.setProperty(TAG_JAVA_PACKAGE_NAME, packageName);
             }
 
-            // Extract class name (first public class found)
+            // Extract class name
             String className = extractClassName(content);
             if (className != null && !className.isEmpty()) {
-                projectFile.setTag(InspectorTags.TAG_JAVA_CLASS_NAME, className);
+                decorator.setProperty(TAG_JAVA_CLASS_NAME, className);
             }
 
             // Set the fully qualified name
@@ -109,22 +89,21 @@ public class JavaSourceFileDetector implements Inspector<ProjectFile> {
                 String fullyQualifiedName = packageName != null && !packageName.isEmpty()
                         ? packageName + "." + className
                         : className;
-                projectFile.setTag(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME, fullyQualifiedName);
+                decorator.setProperty(TAG_JAVA_FULLY_QUALIFIED_NAME, fullyQualifiedName);
             }
 
-            // Mark this as having source code using InspectorTags constants
-            projectFile.setTag("java.source_origin", "source");
-            projectFile.setTag(InspectorTags.TAG_JAVA_CLASS_TYPE, ClassType.SOURCE_ONLY.toString());
+            // Mark this as having source code
+            decorator.setProperty(TAG_JAVA_CLASS_TYPE, ClassType.SOURCE_ONLY.toString());
 
             logger.debug("Processed Java source file: {} -> class: {}, package: {}",
                     projectFile.getFileName(), className, packageName);
 
         } catch (IOException e) {
             logger.warn("Failed to read Java source file {}: {}", projectFile.getFilePath(), e.getMessage());
-            projectFileDecorator.error("Failed to read file: " + e.getMessage());
+            decorator.error("Failed to read file: " + e.getMessage());
         } catch (Exception e) {
             logger.warn("Error processing Java source file {}: {}", projectFile.getFilePath(), e.getMessage());
-            projectFileDecorator.error("Processing error: " + e.getMessage());
+            decorator.error("Processing error: " + e.getMessage());
         }
     }
 

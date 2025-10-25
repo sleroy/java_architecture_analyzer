@@ -1,4 +1,5 @@
 package com.analyzer.core.export;
+
 import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.core.inspector.InspectorTags;
@@ -30,9 +31,9 @@ public class ClassCsvRecord implements CsvRecord {
 
     public ClassCsvRecord(ProjectFile clazz) {
         this(
-                (String) clazz.getTag(InspectorTags.TAG_JAVA_CLASS_NAME, ""),
-                (String) clazz.getTag(InspectorTags.TAG_JAVA_PACKAGE_NAME, ""),
-                (String) clazz.getTag(InspectorTags.TAG_JAVA_CLASS_TYPE, ""),
+                clazz.getStringProperty(InspectorTags.TAG_JAVA_CLASS_NAME, ""),
+                clazz.getStringProperty(InspectorTags.TAG_JAVA_PACKAGE_NAME, ""),
+                clazz.getStringProperty(InspectorTags.TAG_JAVA_CLASS_TYPE, ""),
                 clazz.getFilePath().toString(),
                 extractLineCount(clazz));
     }
@@ -41,11 +42,7 @@ public class ClassCsvRecord implements CsvRecord {
      * Extracts line count from inspector results, defaults to 0 if not available.
      */
     private static int extractLineCount(ProjectFile clazz) {
-        Object lineCountResult = clazz.getInspectorResult("lineCount");
-        if (lineCountResult instanceof Integer) {
-            return (Integer) lineCountResult;
-        }
-        return 0;
+        return clazz.getIntegerProperty("lineCount", 0);
     }
 
     @Override

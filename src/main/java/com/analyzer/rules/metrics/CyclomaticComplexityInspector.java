@@ -1,6 +1,6 @@
 package com.analyzer.rules.metrics;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.GraphRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
@@ -18,7 +18,7 @@ import javax.inject.Inject;
 
 /**
  * Inspector that calculates the cyclomatic complexity of Java source files.
- * This rule helps assess code complexity and maintainability using McCabe's cyclomatic complexity metric.
+ * This rule helps assess code complexity and maintainability using McCabe's cyclomatic complexity <fmetric.
  * <p>
  * Returns the total cyclomatic complexity score for all methods in the class.
  * <p>
@@ -42,7 +42,7 @@ import javax.inject.Inject;
 )
 public class CyclomaticComplexityInspector extends AbstractJavaParserInspector {
 
-    public static final String TAG_CYCLOMATIC_COMPLEXITY = "cyclomatic-complexity";
+    public static final String TAG_CYCLOMATIC_COMPLEXITY = "metrics.cyclomatic-complexity";
 
     private final GraphRepository graphRepository;
 
@@ -64,12 +64,12 @@ public class CyclomaticComplexityInspector extends AbstractJavaParserInspector {
 
 
     @Override
-    protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile clazz, ProjectFileDecorator projectFileDecorator) {
+    protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile clazz, NodeDecorator projectFileDecorator) {
         ComplexityCalculator calculator = new ComplexityCalculator();
         cu.accept(calculator, null);
 
         int totalComplexity = calculator.getTotalComplexity();
-        projectFileDecorator.setTag(getColumnName(), totalComplexity);
+        projectFileDecorator.setProperty(getColumnName(), totalComplexity);
     }
 
     /**

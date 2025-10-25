@@ -1,4 +1,5 @@
 package com.analyzer.core.engine;
+
 import com.analyzer.core.inspector.InspectorDependencies;
 
 import org.slf4j.Logger;
@@ -28,7 +29,9 @@ public class ExecutionProfile {
     public enum ExecutionPhase {
         PHASE_1A_FILESYSTEM_SCAN("Phase 1a: Filesystem Scan"),
         PHASE_1C_EXTRACTED_CONTENT("Phase 1c: Extracted Content"),
-        PHASE_2_ANALYSIS_PASS("Phase 2: Analysis Pass");
+        PHASE_2_CLASSNODE_COLLECTION("Phase 2: ClassNode Collection"),
+        PHASE_3_PROJECTFILE_ANALYSIS("Phase 3: ProjectFile Analysis"),
+        PHASE_4_CLASSNODE_ANALYSIS("Phase 4: ClassNode Analysis");
 
         private final String displayName;
 
@@ -46,8 +49,12 @@ public class ExecutionProfile {
                     return "Phase 1a";
                 case PHASE_1C_EXTRACTED_CONTENT:
                     return "Phase 1c";
-                case PHASE_2_ANALYSIS_PASS:
+                case PHASE_2_CLASSNODE_COLLECTION:
                     return "Phase 2";
+                case PHASE_3_PROJECTFILE_ANALYSIS:
+                    return "Phase 3";
+                case PHASE_4_CLASSNODE_ANALYSIS:
+                    return "Phase 4";
                 default:
                     return this.toString();
             }
@@ -357,21 +364,44 @@ public class ExecutionProfile {
         }
 
         private String formatInspectorPhases(List<InspectorExecution> inspectorExecutions) {
-            Set<ExecutionPhase> phases = inspectorExecutions.stream()
-                    .map(InspectorExecution::getPhase)
-                    .collect(Collectors.toSet());
-
-            if (phases.isEmpty()) {
+            if (inspectorExecutions.isEmpty()) {
                 return "-";
             }
 
-            // Sort phases and format for display
-            List<String> phaseNames = phases.stream()
-                    .sorted()
-                    .map(ExecutionPhase::getShortName)
+            // Group executions by phase and collect pass numbers
+            Map<ExecutionPhase, Set<Integer>> phasePassMap = new LinkedHashMap<>();
+
+            for (InspectorExecution execution : inspectorExecutions) {
+                ExecutionPhase phase = execution.getPhase();
+                Integer passNumber = execution.getPassNumber();
+
+                phasePassMap.computeIfAbsent(phase, k -> new TreeSet<>());
+                if (passNumber != null) {
+                    phasePassMap.get(phase).add(passNumber);
+                }
+            }
+
+            // Sort phases and format for display with pass numbers
+            List<String> phaseStrings = phasePassMap.entrySet().stream()
+                    .sorted(Map.Entry.comparingByKey())
+                    .map(entry -> {
+                        ExecutionPhase phase = entry.getKey();
+                        Set<Integer> passes = entry.getValue();
+
+                        if (passes.isEmpty()) {
+                            // Phase without pass numbers (e.g., Phase 1)
+                            return phase.getShortName();
+                        } else {
+                            // Phase with pass numbers (e.g., "Phase 4 Pass 1, Pass 2")
+                            String passStr = passes.stream()
+                                    .map(p -> "Pass " + p)
+                                    .collect(Collectors.joining(", "));
+                            return phase.getShortName() + " " + passStr;
+                        }
+                    })
                     .collect(Collectors.toList());
 
-            return String.join(", ", phaseNames);
+            return String.join("; ", phaseStrings);
         }
 
         private String formatDuration(Duration duration) {

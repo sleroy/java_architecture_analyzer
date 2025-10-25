@@ -1,19 +1,24 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
-import com.analyzer.core.graph.ClassNodeRepository;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.detection.SourceFileTagDetector;
 
 import java.util.*;
 
 /**
  * File detector for application server configuration files.
  * Detects configuration files used by various J2EE application servers.
+ * <p>
+ * This inspector operates on configuration files (XML, properties, etc.) and
+ * stores
+ * analysis data directly on ProjectFile, not on JavaClassNode, since
+ * configuration
+ * files are not Java classes.
  */
-@InspectorDependencies(requires = {}, need = { SourceFileTagDetector.class }, produces = {
+@InspectorDependencies(requires = {InspectorTags.TAG_SOURCE_FILE}, need = {  }, produces = {
         ApplicationServerConfigDetector.TAGS.TAG_APP_SERVER_CONFIG,
         ApplicationServerConfigDetector.TAGS.TAG_FILE_TYPE_SERVER_CONFIG,
         ApplicationServerConfigDetector.TAGS.TAG_APP_SERVER_GENERAL,
@@ -39,13 +44,11 @@ public class ApplicationServerConfigDetector implements Inspector<ProjectFile> {
     private final Set<String> serverConfigFiles;
     private final Set<String> serverConfigPatterns;
     private final int priority;
-    private final ClassNodeRepository classNodeRepository;
 
-    public ApplicationServerConfigDetector(ClassNodeRepository classNodeRepository) {
+    public ApplicationServerConfigDetector() {
         this.name = "Application Server Configuration Detector";
         this.tag = TAGS.TAG_APP_SERVER_CONFIG;
         this.priority = 16; // High priority for server config files
-        this.classNodeRepository = classNodeRepository;
 
         // Common application server configuration files
         this.serverConfigFiles = new HashSet<>(Arrays.asList(
@@ -130,76 +133,50 @@ public class ApplicationServerConfigDetector implements Inspector<ProjectFile> {
     }
 
     @Override
-    public void decorate(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-        classNodeRepository.getOrCreateClassNodeByFqn(projectFile.getFullyQualifiedName()).ifPresent(classNode -> {
-            classNode.setProjectFileId(projectFile.getId());
-            String fileName = projectFile.getFileName().toLowerCase();
+    public void inspect(ProjectFile projectFile, NodeDecorator<ProjectFile> projectFileDecorator) {
+        String fileName = projectFile.getFileName().toLowerCase();
 
-            // Honor produces contract - set ALL produced tags on ProjectFile for dependency
-            // chains
-            projectFileDecorator.setTag(TAGS.TAG_APP_SERVER_CONFIG, true);
-            projectFileDecorator.setTag(TAGS.TAG_FILE_TYPE_SERVER_CONFIG, true);
-            projectFileDecorator.setTag(TAGS.TAG_APP_SERVER_GENERAL, true);
+        // Honor produces contract - set ALL produced tags on ProjectFile for dependency
+        // chains
+        // Configuration files are not Java classes, so all data belongs on ProjectFile
+        projectFileDecorator.setProperty(TAGS.TAG_APP_SERVER_CONFIG, true);
+        projectFileDecorator.setProperty(TAGS.TAG_FILE_TYPE_SERVER_CONFIG, true);
+        projectFileDecorator.setProperty(TAGS.TAG_APP_SERVER_GENERAL, true);
 
-            // Set analysis properties on ClassNode for export data
-            classNode.setProperty(TAGS.TAG_APP_SERVER_CONFIG, true);
-            classNode.setProperty(TAGS.TAG_FILE_TYPE_SERVER_CONFIG, true);
-            classNode.setProperty(TAGS.TAG_APP_SERVER_GENERAL, true);
+        // Set server-specific tags
+        if (isTomcatConfig(fileName)) {
+            projectFileDecorator.setProperty(TAGS.TAG_SERVER_TOMCAT, true);
+            projectFileDecorator.setProperty(TAGS.TAG_CONFIG_TOMCAT, true);
+        } else if (isWebLogicConfig(fileName)) {
+            projectFileDecorator.setProperty(TAGS.TAG_SERVER_WEBLOGIC, true);
+            projectFileDecorator.setProperty(TAGS.TAG_CONFIG_WEBLOGIC, true);
+        } else if (isWebSphereConfig(fileName)) {
+            projectFileDecorator.setProperty(TAGS.TAG_SERVER_WEBSPHERE, true);
+            projectFileDecorator.setProperty(TAGS.TAG_CONFIG_WEBSPHERE, true);
+        } else if (isGlassFishConfig(fileName)) {
+            projectFileDecorator.setProperty(TAGS.TAG_SERVER_GLASSFISH, true);
+            projectFileDecorator.setProperty(TAGS.TAG_CONFIG_GLASSFISH, true);
+        } else if (isOracleConfig(fileName)) {
+            projectFileDecorator.setProperty(TAGS.TAG_SERVER_ORACLE_AS, true);
+            projectFileDecorator.setProperty(TAGS.TAG_CONFIG_ORACLE_AS, true);
+        }
 
-            // Set server-specific tags and properties
-            if (isTomcatConfig(fileName)) {
-                projectFileDecorator.setTag(TAGS.TAG_SERVER_TOMCAT, true);
-                projectFileDecorator.setTag(TAGS.TAG_CONFIG_TOMCAT, true);
-                classNode.setProperty(TAGS.TAG_SERVER_TOMCAT, true);
-                classNode.setProperty(TAGS.TAG_CONFIG_TOMCAT, true);
-            } else if (isWebLogicConfig(fileName)) {
-                projectFileDecorator.setTag(TAGS.TAG_SERVER_WEBLOGIC, true);
-                projectFileDecorator.setTag(TAGS.TAG_CONFIG_WEBLOGIC, true);
-                classNode.setProperty(TAGS.TAG_SERVER_WEBLOGIC, true);
-                classNode.setProperty(TAGS.TAG_CONFIG_WEBLOGIC, true);
-            } else if (isWebSphereConfig(fileName)) {
-                projectFileDecorator.setTag(TAGS.TAG_SERVER_WEBSPHERE, true);
-                projectFileDecorator.setTag(TAGS.TAG_CONFIG_WEBSPHERE, true);
-                classNode.setProperty(TAGS.TAG_SERVER_WEBSPHERE, true);
-                classNode.setProperty(TAGS.TAG_CONFIG_WEBSPHERE, true);
-            } else if (isGlassFishConfig(fileName)) {
-                projectFileDecorator.setTag(TAGS.TAG_SERVER_GLASSFISH, true);
-                projectFileDecorator.setTag(TAGS.TAG_CONFIG_GLASSFISH, true);
-                classNode.setProperty(TAGS.TAG_SERVER_GLASSFISH, true);
-                classNode.setProperty(TAGS.TAG_CONFIG_GLASSFISH, true);
-            } else if (isOracleConfig(fileName)) {
-                projectFileDecorator.setTag(TAGS.TAG_SERVER_ORACLE_AS, true);
-                projectFileDecorator.setTag(TAGS.TAG_CONFIG_ORACLE_AS, true);
-                classNode.setProperty(TAGS.TAG_SERVER_ORACLE_AS, true);
-                classNode.setProperty(TAGS.TAG_CONFIG_ORACLE_AS, true);
-            }
-
-            // Set configuration type tags and properties
-            if (isSecurityConfig(fileName)) {
-                projectFileDecorator.setTag(TAGS.TAG_CONFIG_SECURITY, true);
-                projectFileDecorator.setTag(TAGS.TAG_MIGRATION_PRIORITY, true);
-                classNode.setProperty(TAGS.TAG_CONFIG_SECURITY, true);
-                classNode.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "HIGH");
-            } else if (isDataSourceConfig(fileName)) {
-                projectFileDecorator.setTag(TAGS.TAG_CONFIG_DATASOURCE, true);
-                projectFileDecorator.setTag(TAGS.TAG_MIGRATION_PRIORITY, true);
-                classNode.setProperty(TAGS.TAG_CONFIG_DATASOURCE, true);
-                classNode.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "MEDIUM");
-            } else if (isMessagingConfig(fileName)) {
-                projectFileDecorator.setTag(TAGS.TAG_CONFIG_MESSAGING, true);
-                projectFileDecorator.setTag(TAGS.TAG_MIGRATION_PRIORITY, true);
-                classNode.setProperty(TAGS.TAG_CONFIG_MESSAGING, true);
-                classNode.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "MEDIUM");
-            } else if (isWebConfig(fileName)) {
-                projectFileDecorator.setTag(TAGS.TAG_CONFIG_WEB, true);
-                projectFileDecorator.setTag(TAGS.TAG_MIGRATION_PRIORITY, true);
-                classNode.setProperty(TAGS.TAG_CONFIG_WEB, true);
-                classNode.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "MEDIUM");
-            } else {
-                projectFileDecorator.setTag(TAGS.TAG_MIGRATION_PRIORITY, true);
-                classNode.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "LOW");
-            }
-        });
+        // Set configuration type tags with migration priority
+        if (isSecurityConfig(fileName)) {
+            projectFileDecorator.setProperty(TAGS.TAG_CONFIG_SECURITY, true);
+            projectFileDecorator.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "HIGH");
+        } else if (isDataSourceConfig(fileName)) {
+            projectFileDecorator.setProperty(TAGS.TAG_CONFIG_DATASOURCE, true);
+            projectFileDecorator.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "MEDIUM");
+        } else if (isMessagingConfig(fileName)) {
+            projectFileDecorator.setProperty(TAGS.TAG_CONFIG_MESSAGING, true);
+            projectFileDecorator.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "MEDIUM");
+        } else if (isWebConfig(fileName)) {
+            projectFileDecorator.setProperty(TAGS.TAG_CONFIG_WEB, true);
+            projectFileDecorator.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "MEDIUM");
+        } else {
+            projectFileDecorator.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "LOW");
+        }
     }
 
     /**

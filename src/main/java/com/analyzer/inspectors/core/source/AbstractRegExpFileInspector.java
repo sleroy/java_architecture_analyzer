@@ -1,6 +1,7 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
@@ -9,21 +10,27 @@ import java.io.IOException;
 import java.util.regex.Pattern;
 
 /**
- * Abstract base class for source file inspectors that perform regex pattern matching.
- * Returns boolean result indicating whether the pattern matches in the source file.
+ * Abstract base class for source file inspectors that perform regex pattern
+ * matching.
+ * Returns boolean result indicating whether the pattern matches in the source
+ * file.
  * 
- * Subclasses must implement getName() and getColumnName() methods and can override
- * the pattern matching logic by providing a custom Pattern or overriding matches().
+ * Subclasses must implement getName() and getColumnName() methods and can
+ * override
+ * the pattern matching logic by providing a custom Pattern or overriding
+ * matches().
  */
 public abstract class AbstractRegExpFileInspector extends AbstractSourceFileInspector {
 
     private final Pattern pattern;
 
     /**
-     * Creates a AbstractRegExpFileInspector with the specified regex pattern string.
+     * Creates a AbstractRegExpFileInspector with the specified regex pattern
+     * string.
      * 
      * @param resourceResolver the resolver for accessing source file resources
-     * @param regexPattern the regex pattern string to compile and use for matching
+     * @param regexPattern     the regex pattern string to compile and use for
+     *                         matching
      * @throws IllegalArgumentException if regexPattern is null or invalid
      */
     protected AbstractRegExpFileInspector(ResourceResolver resourceResolver, String regexPattern) {
@@ -38,7 +45,7 @@ public abstract class AbstractRegExpFileInspector extends AbstractSourceFileInsp
      * Creates a AbstractRegExpFileInspector with the specified compiled Pattern.
      * 
      * @param resourceResolver the resolver for accessing source file resources
-     * @param pattern the compiled Pattern to use for matching
+     * @param pattern          the compiled Pattern to use for matching
      * @throws IllegalArgumentException if pattern is null
      */
     protected AbstractRegExpFileInspector(ResourceResolver resourceResolver, Pattern pattern) {
@@ -50,10 +57,30 @@ public abstract class AbstractRegExpFileInspector extends AbstractSourceFileInsp
     }
 
     @Override
-    protected final void analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation, ProjectFileDecorator projectFileDecorator)
+    protected final void analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation,
+            NodeDecorator<ProjectFile> decorator)
             throws IOException {
-
+        try {
+            String content = readFileContent(sourceLocation);
+            boolean matchFound = matches(content);
+            setMatchResult(clazz, matchFound, decorator);
+        } catch (IOException e) {
+            decorator.error("Error reading source file: " + e.getMessage());
+        } catch (Exception e) {
+            decorator.error("Error matching pattern: " + e.getMessage());
+        }
     }
+
+    /**
+     * Sets the match result on the project file.
+     * Subclasses must implement this to set appropriate tags/properties.
+     * 
+     * @param projectFile the project file to set result on
+     * @param matchFound  whether the pattern matched
+     * @param decorator   the decorator for setting properties and tags
+     */
+    protected abstract void setMatchResult(ProjectFile projectFile, boolean matchFound,
+            NodeDecorator<ProjectFile> decorator);
 
     protected abstract String getColumnName();
 

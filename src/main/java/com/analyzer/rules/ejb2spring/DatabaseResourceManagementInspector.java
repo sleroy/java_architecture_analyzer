@@ -1,11 +1,11 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.detection.SourceFileTagDetector;
 import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
@@ -20,7 +20,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -44,8 +43,9 @@ import java.util.regex.Pattern;
  * Tags: EjbMigrationTags.RESOURCE_*, EjbMigrationTags.DATASOURCE_*
  * Target: 6-8 tests
  */
-@InspectorDependencies(requires = {}, need = { SourceFileTagDetector.class }, produces = {
-        "resource.management.analysis" })
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED }, need = {
+         }, produces = {
+                "resource.management.analysis" })
 public class DatabaseResourceManagementInspector extends AbstractSourceFileInspector {
 
     private static final Pattern DATASOURCE_PATTERN = Pattern.compile(
@@ -90,13 +90,15 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
 
     @Override
     protected void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation,
-            ProjectFileDecorator projectFileDecorator) throws IOException {
-        classNodeRepository.getOrCreateClassNodeByFqn(projectFile.getFullyQualifiedName()).ifPresent(classNode -> {
+            NodeDecorator<ProjectFile> decorator) throws IOException {
+        String fqn = projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
+        if (fqn != null && !fqn.isEmpty()) {
+            JavaClassNode classNode = classNodeRepository.getOrCreateByFqn(fqn);
             classNode.setProjectFileId(projectFile.getId());
             try {
                 String content = readFileContent(sourceLocation);
                 if (content == null || content.trim().isEmpty()) {
-                    setBasicTagsForSupportedFile(classNode, projectFile);
+                    setBasicTagsForSupportedFile(classNode, projectFile, decorator);
                     return;
                 }
 
@@ -105,7 +107,7 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
                 generateMigrationRecommendations(classNode, metadata);
 
                 // CRITICAL: Honor produces contract - set the declared tag on ProjectFile
-                projectFile.setTag("resource.management.analysis", true);
+                decorator.enableTag("resource.management.analysis");
 
                 // Create graph relationships for resource dependencies
                 if (metadata.hasResourceConfiguration()) {
@@ -113,17 +115,18 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
                 }
 
             } catch (Exception e) {
-                setBasicTagsForSupportedFile(classNode, projectFile);
+                setBasicTagsForSupportedFile(classNode, projectFile, decorator);
                 classNode.setProperty("resource.analysis_error", e.getMessage());
             }
-        });
+        }
     }
 
     /**
      * Sets basic tags for supported files to ensure they're always present,
      * even if file parsing fails in tests.
      */
-    private void setBasicTagsForSupportedFile(JavaClassNode classNode, ProjectFile projectFile) {
+    private void setBasicTagsForSupportedFile(JavaClassNode classNode, ProjectFile projectFile,
+            NodeDecorator<ProjectFile> decorator) {
         // Set basic properties on ClassNode
         classNode.setProperty(EjbMigrationTags.DATASOURCE_CONFIGURATION, true);
         classNode.setProperty(EjbMigrationTags.RESOURCE_REFERENCE, true);
@@ -140,7 +143,7 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
 
         // CRITICAL: Honor produces contract - set the declared tag on ProjectFile even
         // in error cases
-        projectFile.setTag("resource.management.analysis", true);
+        decorator.enableTag("resource.management.analysis");
     }
 
     private ResourceManagementMetadata analyzeResourceConfiguration(String content, ProjectFile projectFile) {
@@ -427,10 +430,11 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
         if (classNodeRepository != null) {
             try {
                 // Create a simple GraphNode for the resource configuration
-                classNodeRepository.getOrCreateClassNodeByFqn(projectFile.getFullyQualifiedName())
-                        .ifPresent(classNode -> {
-                            classNode.setProperty("resource.config.node", true);
-                        });
+                String fqn = projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
+                if (fqn != null && !fqn.isEmpty()) {
+                    JavaClassNode classNode = classNodeRepository.getOrCreateByFqn(fqn);
+                    classNode.setProperty("resource.config.node", true);
+                }
 
             } catch (Exception e) {
                 // Graph operations are supplementary, don't fail the analysis
@@ -440,11 +444,12 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
 
     /**
      * Serializable POJO for resource analysis results
-     * Combines multiple related properties into a single object (follows guideline #5)
+     * Combines multiple related properties into a single object (follows guideline
+     * #5)
      */
     public static class ResourceAnalysisResult implements java.io.Serializable {
         private static final long serialVersionUID = 1L;
-        
+
         private final int dataSourceCount;
         private final int resourceRefCount;
         private final int poolConfigCount;
@@ -462,17 +467,36 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
             this.hasResourceConfiguration = hasResourceConfiguration;
         }
 
-        public int getDataSourceCount() { return dataSourceCount; }
-        public int getResourceRefCount() { return resourceRefCount; }
-        public int getPoolConfigCount() { return poolConfigCount; }
-        public String getPatternType() { return patternType; }
-        public String getComplexity() { return complexity; }
-        public boolean hasResourceConfiguration() { return hasResourceConfiguration; }
+        public int getDataSourceCount() {
+            return dataSourceCount;
+        }
+
+        public int getResourceRefCount() {
+            return resourceRefCount;
+        }
+
+        public int getPoolConfigCount() {
+            return poolConfigCount;
+        }
+
+        public String getPatternType() {
+            return patternType;
+        }
+
+        public String getComplexity() {
+            return complexity;
+        }
+
+        public boolean hasResourceConfiguration() {
+            return hasResourceConfiguration;
+        }
 
         @Override
         public String toString() {
-            return String.format("ResourceAnalysisResult{dataSourceCount=%d, resourceRefCount=%d, poolConfigCount=%d, patternType='%s', complexity='%s', hasResourceConfiguration=%s}",
-                    dataSourceCount, resourceRefCount, poolConfigCount, patternType, complexity, hasResourceConfiguration);
+            return String.format(
+                    "ResourceAnalysisResult{dataSourceCount=%d, resourceRefCount=%d, poolConfigCount=%d, patternType='%s', complexity='%s', hasResourceConfiguration=%s}",
+                    dataSourceCount, resourceRefCount, poolConfigCount, patternType, complexity,
+                    hasResourceConfiguration);
         }
     }
 

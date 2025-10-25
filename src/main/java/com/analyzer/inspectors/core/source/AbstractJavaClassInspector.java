@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.model.ProjectFile;
@@ -22,15 +22,15 @@ public abstract class AbstractJavaClassInspector extends AbstractJavaParserInspe
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-                                          ProjectFileDecorator projectFileDecorator) {
+                                          NodeDecorator nodeDecorator) {
         cu.getTypes().forEach(type -> {
             classNodeRepository.getOrCreateClassNode(type).ifPresent(classNode -> {
                 classNode.setProjectFileId(projectFile.getId());
-                analyzeClass(projectFile, classNode, type, projectFileDecorator);
+                analyzeClass(projectFile, classNode, type, nodeDecorator);
             });
         });
     }
 
     protected abstract void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-                                         ProjectFileDecorator projectFileDecorator);
+                                         NodeDecorator projectFileDecorator);
 }

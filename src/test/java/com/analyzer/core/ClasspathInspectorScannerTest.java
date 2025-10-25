@@ -31,7 +31,8 @@ public class ClasspathInspectorScannerTest {
     @BeforeEach
     void setUp() {
         resourceResolver = new StubResourceResolver();
-        jarClassLoaderService = new JARClassLoaderService();
+        jarClassLoaderService = new JARClassLoaderService(resourceResolver);
+
 
         // Use PicoContainer to create the scanner with all dependencies
         org.picocontainer.MutablePicoContainer pico = new org.picocontainer.DefaultPicoContainer();

@@ -1,5 +1,4 @@
 package com.analyzer.core.model;
-import com.analyzer.core.inspector.InspectorDependencies;
 
 import java.nio.file.Path;
 import java.util.*;
@@ -13,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * approach.
  */
 public class Project {
+    public static final String DEFAULT_FILE_NAME = "project-analysis.json";
     private final Path projectPath;
     private final String projectName;
     private final Map<String, ProjectFile> projectFiles;
@@ -95,7 +95,7 @@ public class Project {
      */
     public List<ProjectFile> getProjectFilesByTag(String tagName, Object tagValue) {
         return projectFiles.values().stream()
-                .filter(file -> Objects.equals(file.getTag(tagName), tagValue))
+                .filter(file -> Objects.equals(file.getProperty(tagName), tagValue))
                 .toList();
     }
 
@@ -104,7 +104,7 @@ public class Project {
      */
     public List<ProjectFile> getProjectFilesWithTag(String tagName) {
         return projectFiles.values().stream()
-                .filter(file -> file.hasTag(tagName))
+                .filter(file -> file.hasProperty(tagName))
                 .toList();
     }
 
@@ -170,7 +170,7 @@ public class Project {
 
         // Count files by their detected type
         for (ProjectFile file : projectFiles.values()) {
-            String fileType = (String) file.getTag("fileType");
+            String fileType = (String) file.getProperty("fileType");
             if (fileType != null) {
                 fileTypeCount.merge(fileType, 1, Integer::sum);
             }

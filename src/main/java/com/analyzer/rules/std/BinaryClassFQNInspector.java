@@ -1,10 +1,9 @@
 package com.analyzer.rules.std;
 
-import com.analyzer.core.inspector.InspectorDependencies;
-
-import com.analyzer.core.inspector.InspectorTags;
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.inspectors.core.binary.AbstractASMInspector;
 import com.analyzer.resource.ResourceResolver;
@@ -42,7 +41,7 @@ public class BinaryClassFQNInspector extends AbstractASMInspector {
     }
 
     @Override
-    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, NodeDecorator<ProjectFile> projectFileDecorator) {
         return new FQNExtractorVisitor(projectFile, projectFileDecorator);
     }
 
@@ -51,7 +50,7 @@ public class BinaryClassFQNInspector extends AbstractASMInspector {
      */
     private static class FQNExtractorVisitor extends ASMClassVisitor {
 
-        public FQNExtractorVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+        public FQNExtractorVisitor(ProjectFile projectFile, NodeDecorator<ProjectFile> projectFileDecorator) {
             super(projectFile, projectFileDecorator);
         }
 
@@ -74,8 +73,8 @@ public class BinaryClassFQNInspector extends AbstractASMInspector {
                 }
 
                 // Set the fully qualified name using ProjectFile's method
+                //projectFile.setFullQualifiedName(packageName, className);
                 projectFile.setFullQualifiedName(packageName, className);
-
                 logger.debug("Extracted FQN from binary class: {} (package: {}, class: {})",
                         fullyQualifiedName, packageName, className);
             }

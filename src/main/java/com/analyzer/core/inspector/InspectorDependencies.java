@@ -79,37 +79,4 @@ public @interface InspectorDependencies {
      */
     String[] produces();
 
-    /**
-     * Complex tag-based dependency conditions that provide sophisticated
-     * dependency logic beyond simple tag presence checking.
-     * This enables value-based conditions, comparisons, and pattern matching.
-     * 
-     * <p>
-     * Example usage:
-     * </p>
-     * 
-     * <pre>
-     * {
-     *     &#64;code
-     *     &#64;InspectorDependencies(requires = { "JAVA" }, // Simple tag presence
-     *             complexRequires = {
-     *                     &#64;TagCondition(tag = "migrationComplexity", operator = GREATER_THAN_OR_EQUAL, value = "MEDIUM"),
-     *                     &#64;TagCondition(tag = "fileExtension", operator = EQUALS, value = "XML")
-     *             })
-     *     public class AdvancedInspector extends AbstractInspector {
-     *         // Runs only on Java files with medium+ migration complexity AND XML
-     *         // extension
-     *     }
-     * }
-     * </pre>
-     * 
-     * <p>
-     * Complex conditions are evaluated in addition to simple requires conditions.
-     * ALL conditions (both simple and complex) must be satisfied for the inspector
-     * to run.
-     * </p>
-     * 
-     * @return array of complex tag conditions
-     */
-    TagCondition[] complexRequires() default {};
 }

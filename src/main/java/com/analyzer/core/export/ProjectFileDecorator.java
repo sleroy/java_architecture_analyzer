@@ -4,23 +4,27 @@ import com.analyzer.core.inspector.InspectorResult;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 
-public class ProjectFileDecorator {
-    // Complexity levels in ascending order for comparison
-    private static final List<String> COMPLEXITY_LEVELS = Arrays.asList(
-            "NONE", "LOW", "MEDIUM", "HIGH", "CRITICAL"
-    );
-    private final ProjectFile projectFile;
+/**
+ * Specialized decorator for ProjectFile that extends NodeDecorator.
+ * Provides backward-compatible methods and InspectorResult handling.
+ */
+public class ProjectFileDecorator extends NodeDecorator<ProjectFile> {
 
     public ProjectFileDecorator(ProjectFile projectFile) {
-        this.projectFile = projectFile;
+        super(projectFile);
     }
 
+    /**
+     * Gets the ProjectFile being decorated.
+     * 
+     * @return the ProjectFile
+     * @deprecated Use getNode() instead
+     */
+    @Deprecated
     public ProjectFile getProjectFile() {
-        return projectFile;
+        return getNode();
     }
 
     /**
@@ -30,38 +34,62 @@ public class ProjectFileDecorator {
      */
     void store(InspectorResult result) {
         Objects.requireNonNull(result, "InspectorResult cannot be null");
-        // Store the result using ProjectFile's addInspectorResult method
         if (result.isSuccessful()) {
-            projectFile.addInspectorResult(result.getTagName(), result.getValue());
-        } else if (result.isNotApplicable()) {
-            // projectFile.addInspectorResult(inspector.getColumnName(), "N/A");
+            getNode().setProperty(result.getTagName(), result.getValue());
         } else if (result.isError()) {
-            projectFile.addInspectorResult(result.getTagName(),
-                    "ERROR: " + result.getErrorMessage());
+            getNode().setProperty(result.getTagName(), "ERROR: " + result.getErrorMessage());
         }
     }
 
+    /**
+     * Records a processing error.
+     * 
+     * @param errorMessage the error message
+     */
     public void error(String errorMessage) {
-        projectFile.addInspectorResult(InspectorTags.PROCESSING_ERROR, errorMessage);
+        setProperty(InspectorTags.PROCESSING_ERROR, errorMessage);
     }
 
+    /**
+     * Marks the analysis as not applicable (no-op).
+     */
     public void notApplicable() {
         // Nothing to do
     }
 
+    /**
+     * Sets a tag/property value.
+     * 
+     * @param columnName the column/property name
+     * @param value      the value to set
+     * @deprecated Use setProperty() instead
+     */
+    @Deprecated
     public void setTag(String columnName, Object value) {
         store(InspectorResult.success(columnName, value));
     }
 
+    /**
+     * Records an error from a throwable.
+     * 
+     * @param e the throwable
+     */
     public void error(Throwable e) {
         store(InspectorResult.error(InspectorTags.PROCESSING_ERROR, e.getMessage()));
     }
 
+    /**
+     * Records an error with a specific column name.
+     * 
+     * @param columnName the column name
+     * @param e          the exception
+     */
     public void fromThrowable(String columnName, Exception e) {
         store(InspectorResult.fromThrowable(columnName, e));
     }
 
-    // ========== Enhanced Aggregation Methods ==========
+    // ========== Enhanced Aggregation Methods (Delegate to NodeDecorator)
+    // ==========
 
     /**
      * Sets a numeric tag to the maximum of current and new value.
@@ -69,12 +97,11 @@ public class ProjectFileDecorator {
      *
      * @param tagName  the tag name to set
      * @param newValue the new value to compare
+     * @deprecated Use setMaxProperty(tagName, newValue) instead
      */
+    @Deprecated
     public void setMax(String tagName, int newValue) {
-        Integer currentValue = projectFile.getIntegerTag(tagName, 0);
-        if (newValue > currentValue) {
-            projectFile.setTag(tagName, newValue);
-        }
+        setMaxProperty(tagName, newValue);
     }
 
     /**
@@ -83,72 +110,56 @@ public class ProjectFileDecorator {
      *
      * @param tagName  the tag name to set
      * @param newValue the new value to compare
+     * @deprecated Use setMaxProperty(tagName, newValue) instead
      */
+    @Deprecated
     public void setMax(String tagName, double newValue) {
-        Double currentValue = projectFile.getDoubleTag(tagName, 0.0);
-        if (newValue > currentValue) {
-            projectFile.setTag(tagName, newValue);
-        }
+        setMaxProperty(tagName, newValue);
     }
 
     /**
-     * Boolean OR operation: sets tag to true if either current OR new value is true.
+     * Boolean OR operation: sets tag to true if either current OR new value is
+     * true.
      * Useful for aggregating detection flags across multiple inspectors.
-     * Example: or("has_ejb_patterns", true) - marks as true if ANY inspector finds EJB patterns
+     * Example: or("has_ejb_patterns", true) - marks as true if ANY inspector finds
+     * EJB patterns
      *
      * @param tagName  the tag name to set
      * @param newValue the new boolean value to OR with current
+     * @deprecated Use orProperty(tagName, newValue) instead
      */
+    @Deprecated
     public void or(String tagName, boolean newValue) {
-        boolean currentValue = projectFile.getBooleanTag(tagName, false);
-        projectFile.setTag(tagName, currentValue || newValue);
+        orProperty(tagName, newValue);
     }
 
     /**
-     * Boolean AND operation: sets tag to true only if both current AND new are true.
+     * Boolean AND operation: sets tag to true only if both current AND new are
+     * true.
      * Useful for tracking requirements that must ALL be satisfied.
      * Example: and("fully_compatible", isCompatible) - only true if ALL checks pass
      *
      * @param tagName  the tag name to set
      * @param newValue the new boolean value to AND with current
+     * @deprecated Use andProperty(tagName, newValue) instead
      */
+    @Deprecated
     public void and(String tagName, boolean newValue) {
-        boolean currentValue = projectFile.getBooleanTag(tagName, true);
-        projectFile.setTag(tagName, currentValue && newValue);
+        andProperty(tagName, newValue);
     }
 
     /**
      * Sets a String tag to the "higher" complexity level between current and new.
-     * Supports standard complexity progression: NONE < LOW < MEDIUM < HIGH < CRITICAL
+     * Supports standard complexity progression: NONE < LOW < MEDIUM < HIGH <
+     * CRITICAL
      * Useful for aggregating complexity assessments across multiple inspectors.
      *
      * @param tagName       the tag name to set
      * @param newComplexity the new complexity level
+     * @deprecated Use setMaxComplexityProperty(tagName, newComplexity) instead
      */
+    @Deprecated
     public void setMaxComplexity(String tagName, String newComplexity) {
-        String currentComplexity = projectFile.getStringTag(tagName, "NONE");
-        String maxComplexity = getMaxComplexity(currentComplexity, newComplexity);
-        projectFile.setTag(tagName, maxComplexity);
-    }
-
-    /**
-     * Determines the higher complexity level between two complexity strings.
-     *
-     * @param current  the current complexity level
-     * @param newValue the new complexity level to compare
-     * @return the higher complexity level
-     */
-    private String getMaxComplexity(String current, String newValue) {
-        if (current == null) current = "NONE";
-        if (newValue == null) newValue = "NONE";
-
-        int currentIndex = COMPLEXITY_LEVELS.indexOf(current.toUpperCase());
-        int newIndex = COMPLEXITY_LEVELS.indexOf(newValue.toUpperCase());
-
-        // Handle unknown complexity levels by treating them as MEDIUM
-        if (currentIndex == -1) currentIndex = 2; // MEDIUM
-        if (newIndex == -1) newIndex = 2; // MEDIUM
-
-        return COMPLEXITY_LEVELS.get(Math.max(currentIndex, newIndex));
+        setMaxComplexityProperty(tagName, newComplexity);
     }
 }

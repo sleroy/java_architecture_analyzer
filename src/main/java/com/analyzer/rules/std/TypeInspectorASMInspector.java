@@ -1,6 +1,6 @@
 package com.analyzer.rules.std;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.core.graph.GraphRepository;
@@ -23,7 +23,8 @@ import javax.inject.Inject;
  * <p>
  * Extends AbstractASMInspector to use ASM library for bytecode analysis.
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = { TypeInspectorASMInspector.TAGS.TAG_CLASS_TYPE })
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = {
+        TypeInspectorASMInspector.TAGS.TAG_CLASS_TYPE })
 public class TypeInspectorASMInspector extends AbstractASMInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(TypeInspectorASMInspector.class);
@@ -46,7 +47,8 @@ public class TypeInspectorASMInspector extends AbstractASMInspector {
     }
 
     @Override
-    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile,
+            NodeDecorator<ProjectFile> projectFileDecorator) {
         // Always analyze bytecode to determine Java language type (CLASS, INTERFACE,
         // ENUM, etc.)
         // Note: projectFile may have discovery type tags (SOURCE_ONLY, BINARY_ONLY,
@@ -62,20 +64,20 @@ public class TypeInspectorASMInspector extends AbstractASMInspector {
     private static class TypeExtractorVisitor extends ASMClassVisitor {
         private int accessFlags;
 
-        public TypeExtractorVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-            super(projectFile, projectFileDecorator);
+        public TypeExtractorVisitor(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator) {
+            super(projectFile, decorator);
         }
 
         @Override
         public void visit(int version, int access, String name, String signature, String superName,
-                          String[] interfaces) {
+                String[] interfaces) {
             this.accessFlags = access;
             logger.debug("ASM visit() called - access flags: 0x{}, name: {}, superName: {}",
                     Integer.toHexString(access), name, superName);
 
             // Set the result based on the access flags
             String classType = determineTypeFromAccessFlags(accessFlags);
-            setTag(TAGS.TAG_CLASS_TYPE, classType);
+            setProperty(TAGS.TAG_CLASS_TYPE, classType);
         }
     }
 

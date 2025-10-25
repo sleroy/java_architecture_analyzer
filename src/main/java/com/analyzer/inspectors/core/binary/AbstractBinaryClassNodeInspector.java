@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.binary;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.model.ProjectFile;
@@ -15,23 +15,24 @@ public abstract class AbstractBinaryClassNodeInspector extends AbstractBinaryCla
 
     protected ClassNodeRepository classNodeRepository;
 
-    protected AbstractBinaryClassNodeInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
+    protected AbstractBinaryClassNodeInspector(ResourceResolver resourceResolver,
+            ClassNodeRepository classNodeRepository) {
         super(resourceResolver);
         this.classNodeRepository = classNodeRepository;
     }
 
     @Override
     protected void analyzeClassFile(ProjectFile projectFile, ResourceLocation binaryLocation,
-                                    InputStream classInputStream, ProjectFileDecorator projectFileDecorator) throws IOException {
-        String fqn = projectFile.getFullyQualifiedName();
+            InputStream classInputStream, NodeDecorator<ProjectFile> projectFileDecorator) throws IOException {
+        String fqn = projectFile
+                .getStringProperty(com.analyzer.core.inspector.InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
         if (fqn != null) {
-            Optional<JavaClassNode> classNodeOptional = classNodeRepository.getOrCreateClassNodeByFqn(fqn);
-            if (classNodeOptional.isPresent()) {
-                analyzeClassNode(projectFile, classNodeOptional.get(), binaryLocation, classInputStream, projectFileDecorator);
-            }
+            JavaClassNode classNode = classNodeRepository.getOrCreateByFqn(fqn);
+            analyzeClassNode(projectFile, classNode, binaryLocation, classInputStream, projectFileDecorator);
         }
     }
 
-    public abstract void analyzeClassNode(ProjectFile projectFile, JavaClassNode classNode, ResourceLocation binaryLocation,
-                                          InputStream classInputStream, ProjectFileDecorator projectFileDecorator) throws IOException;
+    public abstract void analyzeClassNode(ProjectFile projectFile, JavaClassNode classNode,
+            ResourceLocation binaryLocation,
+            InputStream classInputStream, NodeDecorator<ProjectFile> projectFileDecorator) throws IOException;
 }

@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -63,7 +63,7 @@ public class SecurityFacadeInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-            ProjectFileDecorator projectFileDecorator) {
+                                NodeDecorator projectFileDecorator) {
 
         if (!(type instanceof ClassOrInterfaceDeclaration)) {
             return;
@@ -96,26 +96,26 @@ public class SecurityFacadeInspector extends AbstractJavaClassInspector {
             info.hasSecurityName = hasSecurityName;
 
             // Set tags according to the produces contract
-            projectFileDecorator.setTag(TAGS.TAG_IS_SECURITY_FACADE, true);
-            projectFileDecorator.setTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-            projectFileDecorator.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+            projectFileDecorator.enableTag(TAGS.TAG_IS_SECURITY_FACADE);
+            projectFileDecorator.enableTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION);
+            projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
 
             // Set property on class node for detailed analysis
             classNode.setProperty("security.analysis", info.toString());
 
             // Set analysis statistics
-            projectFileDecorator.setTag("security.principal_calls", info.principalCalls.size());
-            projectFileDecorator.setTag("security.role_checks", info.roleCheckCalls.size());
-            projectFileDecorator.setTag("security.security_method_count", info.securityMethodCount);
+            projectFileDecorator.setProperty("security.principal_calls", info.principalCalls.size());
+            projectFileDecorator.setProperty("security.role_checks", info.roleCheckCalls.size());
+            projectFileDecorator.setProperty("security.security_method_count", info.securityMethodCount);
 
             // Set Spring Boot migration target
-            projectFileDecorator.setTag("spring.conversion.target", "@Service+Spring Security");
+            projectFileDecorator.setProperty("spring.conversion.target", "@Service+Spring Security");
 
             // If custom security implementations are used, migration is more complex
             if (info.hasCustomSecurityLogic) {
-                projectFileDecorator.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
+                projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
                 // Override medium complexity
-                projectFileDecorator.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, false);
+                projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
             }
         }
     }

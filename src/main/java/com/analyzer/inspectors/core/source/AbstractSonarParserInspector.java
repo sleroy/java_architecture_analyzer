@@ -1,6 +1,7 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorResult;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
@@ -9,18 +10,26 @@ import com.analyzer.resource.ResourceResolver;
 import java.io.IOException;
 
 /**
- * Abstract base class for source file inspectors that use SonarSource Java parser for analysis.
+ * Abstract base class for source file inspectors that use SonarSource Java
+ * parser for analysis.
  * Provides advanced parsing capabilities used by SonarQube for static analysis.
  * <p>
- * This inspector handles the parsing of Java source files using the SonarSource Java frontend
- * and provides sophisticated semantic analysis capabilities. The SonarSource parser offers
- * production-grade parsing with advanced features like symbol resolution and semantic analysis.
+ * This inspector handles the parsing of Java source files using the SonarSource
+ * Java frontend
+ * and provides sophisticated semantic analysis capabilities. The SonarSource
+ * parser offers
+ * production-grade parsing with advanced features like symbol resolution and
+ * semantic analysis.
  * <p>
- * NOTE: This is a placeholder implementation. The SonarSource Java frontend has complex
- * dependencies and initialization requirements that may need project-specific configuration.
- * Subclasses should implement the actual SonarSource integration based on their specific needs.
+ * NOTE: This is a placeholder implementation. The SonarSource Java frontend has
+ * complex
+ * dependencies and initialization requirements that may need project-specific
+ * configuration.
+ * Subclasses should implement the actual SonarSource integration based on their
+ * specific needs.
  * <p>
- * Subclasses must implement getName(), getColumnName(), and analyzeSonarSource() methods.
+ * Subclasses must implement getName(), getColumnName(), and
+ * analyzeSonarSource() methods.
  */
 public abstract class AbstractSonarParserInspector extends AbstractSourceFileInspector {
 
@@ -34,20 +43,22 @@ public abstract class AbstractSonarParserInspector extends AbstractSourceFileIns
     }
 
     @Override
-    protected final void analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation, ProjectFileDecorator projectFileDecorator)
+    protected final void analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation,
+            NodeDecorator<ProjectFile> decorator)
             throws IOException {
         try {
             String content = readFileContent(sourceLocation);
-            analyzeSonarSource(content, clazz, sourceLocation, projectFileDecorator);
+            analyzeSonarSource(content, clazz, sourceLocation, decorator);
         } catch (IOException e) {
-            projectFileDecorator.error("Error reading source file: " + e.getMessage());
+            decorator.error("Error reading source file: " + e.getMessage());
         } catch (Exception e) {
-            projectFileDecorator.error("SonarSource analysis error: " + e.getMessage());
+            decorator.error("SonarSource analysis error: " + e.getMessage());
         }
     }
 
     /**
-     * Analyzes the source code using SonarSource Java parser and returns the analysis result.
+     * Analyzes the source code using SonarSource Java parser and returns the
+     * analysis result.
      * Subclasses implement specific SonarSource analysis logic here.
      * <p>
      * This method should integrate with the SonarSource Java frontend to provide:
@@ -56,17 +67,18 @@ public abstract class AbstractSonarParserInspector extends AbstractSourceFileIns
      * - Rule-based static analysis
      * - Production-grade parsing capabilities
      * <p>
-     * Implementation Note: The actual SonarSource integration requires careful setup
+     * Implementation Note: The actual SonarSource integration requires careful
+     * setup
      * of the SonarSource analysis context, file system, and rule configuration.
      * This is a complex integration that may require additional dependencies and
      * configuration specific to the analysis requirements.
      *
-     * @param content         the complete content of the source file
-     * @param clazz           the class being analyzed
-     * @param sourceLocation  the location of the source file
-     * @param projectFileDecorator
+     * @param content        the complete content of the source file
+     * @param clazz          the class being analyzed
+     * @param sourceLocation the location of the source file
+     * @param decorator      the decorator for setting properties and tags
      * @return the result of SonarSource analysis
      */
     protected abstract InspectorResult analyzeSonarSource(String content, ProjectFile clazz,
-                                                          ResourceLocation sourceLocation, ProjectFileDecorator projectFileDecorator);
+            ResourceLocation sourceLocation, NodeDecorator<ProjectFile> decorator);
 }

@@ -2,15 +2,13 @@ package com.analyzer.core.engine;
 
 import com.analyzer.analysis.Analysis;
 import com.analyzer.analysis.AnalysisResult;
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.collector.ClassNodeCollector;
+import com.analyzer.core.collector.CollectionContext;
+import com.analyzer.core.detector.FileDetector;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.filter.FileIgnoreFilter;
-import com.analyzer.core.graph.GraphEdge;
-import com.analyzer.core.graph.GraphNode;
-import com.analyzer.core.graph.GraphRepository;
-import com.analyzer.core.inspector.Inspector;
-import com.analyzer.core.inspector.InspectorProgressTracker;
-import com.analyzer.core.inspector.InspectorRegistry;
-import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.graph.*;
+import com.analyzer.core.inspector.*;
 import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectDeserializer;
 import com.analyzer.core.model.ProjectFile;
@@ -45,40 +43,49 @@ public class AnalysisEngine {
 
     private static final Logger logger = LoggerFactory.getLogger(AnalysisEngine.class);
     private final InspectorRegistry inspectorRegistry;
-    private final List<Inspector<ProjectFile>> fileDetectionInspectors;
     private final List<Analysis> availableAnalyses;
     private final GraphRepository graphRepository;
+    private final ProjectFileRepository projectFileRepository;
+    private final ClassNodeRepository classNodeRepository;
     private final InspectorProgressTracker progressTracker;
 
+    /**
+     * Primary constructor used by PicoContainer for dependency injection.
+     * All dependencies are injected automatically by the container.
+     *
+     * @param inspectorRegistry     the inspector registry
+     * @param graphRepository       the graph repository
+     * @param projectFileRepository the project file repository
+     * @param classNodeRepository   the class node repository
+     * @param progressTracker       the progress tracker
+     */
     public AnalysisEngine(InspectorRegistry inspectorRegistry,
-            List<Inspector<ProjectFile>> fileDetectionInspectors,
-            List<Analysis> availableAnalyses,
             GraphRepository graphRepository,
+            ProjectFileRepository projectFileRepository,
+            ClassNodeRepository classNodeRepository,
             InspectorProgressTracker progressTracker) {
         this.inspectorRegistry = inspectorRegistry;
-        this.fileDetectionInspectors = fileDetectionInspectors != null ? fileDetectionInspectors : new ArrayList<>();
-        this.availableAnalyses = availableAnalyses != null ? availableAnalyses : new ArrayList<>();
+        this.availableAnalyses = new ArrayList<>();
         this.graphRepository = graphRepository;
+        this.projectFileRepository = projectFileRepository;
+        this.classNodeRepository = classNodeRepository;
         this.progressTracker = progressTracker != null ? progressTracker : new InspectorProgressTracker();
     }
 
-    /**
-     * Constructor without InspectorProgressTracker for backward compatibility.
-     */
-    public AnalysisEngine(InspectorRegistry inspectorRegistry,
-            List<Inspector<ProjectFile>> fileDetectionInspectors,
-            List<Analysis> availableAnalyses,
-            GraphRepository graphRepository) {
-        this(inspectorRegistry, fileDetectionInspectors, availableAnalyses, graphRepository, null);
-    }
+
 
     /**
-     * Constructor without GraphRepository for backward compatibility.
+     * Sets the analyses to execute on the project.
+     * This should be called after getting the AnalysisEngine from PicoContainer
+     * and before calling analyzeProject().
+     *
+     * @param analyses list of analyses to execute
      */
-    public AnalysisEngine(InspectorRegistry inspectorRegistry,
-            List<Inspector<ProjectFile>> fileDetectionInspectors,
-            List<Analysis> availableAnalyses) {
-        this(inspectorRegistry, fileDetectionInspectors, availableAnalyses, null, null);
+    public void setAvailableAnalyses(List<Analysis> analyses) {
+        this.availableAnalyses.clear();
+        if (analyses != null) {
+            this.availableAnalyses.addAll(analyses);
+        }
     }
 
     /**
@@ -99,9 +106,13 @@ public class AnalysisEngine {
         // Step 1: Try to reload existing project data for incremental analysis
         Project project = loadExistingProjectOrCreate(projectPath);
 
+
         // PHASE 1: File Discovery with Ignore Filtering
         logger.info("=== PHASE 1: File Discovery with Filtering ===");
         scanProjectFilesWithFiltering(project);
+
+        // PHASE 2: ClassNode Collection
+        collectClassNodesFromFiles(project);
 
         // Step 4: List the analyses available
         logger.info("Found {} available analyses", availableAnalyses.size());
@@ -112,9 +123,13 @@ public class AnalysisEngine {
         // Step 5: Execute all the analyses
         executeAnalyses(project);
 
-        // PHASE 2: Multi-pass Analysis with Convergence Detection
-        logger.info("=== PHASE 2: Multi-pass Inspector Analysis ===");
+        // PHASE 3: Multi-pass ProjectFile Analysis with Convergence Detection
+        logger.info("=== PHASE 3: Multi-pass ProjectFile Analysis ===");
         executeMultiPassInspectors(project, requestedInspectors, maxPasses);
+
+        // PHASE 4: Multi-pass ClassNode Analysis with Convergence Detection
+        logger.info("=== PHASE 4: Multi-pass ClassNode Analysis ===");
+        executeMultiPassOnClassNodes(project, maxPasses);
 
         // Step 7: Store the project data in JSON format
         saveProjectAnalysisToJson(project);
@@ -134,8 +149,8 @@ public class AnalysisEngine {
 
         // Initialize ExecutionProfile for Phase 1 tracking
         ExecutionProfile phase1Profile = new ExecutionProfile(
-                fileDetectionInspectors.stream()
-                        .map(Inspector::getName)
+                this.inspectorRegistry.getFileDetectors().stream()
+                        .map(FileDetector::getName)
                         .toList());
 
         // Initialize file ignore filter
@@ -152,12 +167,8 @@ public class AnalysisEngine {
             // Apply ignore filtering
             List<Path> filteredFiles = allFiles.stream()
                     .filter(filePath -> {
-                        boolean shouldInclude = !ignoreFilter.shouldIgnore(filePath, projectPath);
-                        if (!shouldInclude) {
-                            String relativePath = projectPath.relativize(filePath).toString();
-                            logger.debug("Filtered out file: {}", relativePath);
-                        }
-                        return shouldInclude;
+                        boolean shouldIgnore = ignoreFilter.shouldIgnore(filePath, projectPath);
+                        return !shouldIgnore;
                     })
                     .toList();
 
@@ -169,7 +180,7 @@ public class AnalysisEngine {
             List<ProjectFile> archiveFiles = new ArrayList<>();
 
             try (ProgressBar pb = new ProgressBar("Phase 1a: Filesystem Files", filteredFiles.size())) {
-                logger.info("Using {} file detection inspectors", fileDetectionInspectors.size());
+                logger.info("Using {} file detection inspectors", inspectorRegistry.getFileDetectors().size());
                 for (Path filePath : filteredFiles) {
                     ProjectFile projectFile = scanFile(project, filePath, phase1Profile,
                             ExecutionProfile.ExecutionPhase.PHASE_1A_FILESYSTEM_SCAN);
@@ -221,30 +232,30 @@ public class AnalysisEngine {
         ProjectFile projectFile = project.getOrCreateProjectFile(relativePath, filePath);
 
         // Apply file detection inspectors to identify and tag the file
-        for (Inspector<ProjectFile> inspector : fileDetectionInspectors) {
+        for (FileDetector detector : inspectorRegistry.getFileDetectors()) {
             try {
-                if (inspector.canProcess(projectFile)) {
+                if (detector.supports(projectFile)) {
                     // Record execution start time for performance tracking
                     long startTime = System.nanoTime();
 
-                    executeInspector(projectFile, inspector);
+                    executeDetector(projectFile, detector);
 
                     // Record execution timing in ExecutionProfile
                     if (executionProfile != null) {
                         long executionTimeNanos = System.nanoTime() - startTime;
-                        executionProfile.recordInspectorExecution(inspector.getName(), phase, executionTimeNanos);
+                        executionProfile.recordInspectorExecution(detector.getName(), phase, executionTimeNanos);
                     }
 
-                    logger.debug("File detection inspector {} matched file: {}",
-                            inspector.getName(), relativePath);
+                    logger.debug("File detection detector {} matched file: {}",
+                            detector.getName(), relativePath);
                 }
             } catch (Exception e) {
-                logger.warn("Error applying file detection inspector {} to file {}: {}",
-                        inspector.getName(), filePath, e.getMessage());
+                logger.warn("Error applying file detection detector {} to file {}: {}",
+                        detector.getName(), filePath, e.getMessage());
 
                 // Record failed execution in ExecutionProfile
                 if (executionProfile != null) {
-                    executionProfile.recordInspectorExecution(inspector.getName(), phase, 0); // 0 time for failed
+                    executionProfile.recordInspectorExecution(detector.getName(), phase, 0); // 0 time for failed
                                                                                               // execution
                 }
             }
@@ -394,7 +405,245 @@ public class AnalysisEngine {
     }
 
     /**
-     * PHASE 2: Multi-pass Analysis with Convergence Detection
+     * Gets ClassNode collectors from the inspector registry.
+     *
+     * @return list of ClassNode collectors
+     */
+    private List<ClassNodeCollector> getClassNodeCollectors() {
+        return inspectorRegistry.getClassNodeCollectors();
+    }
+
+    /**
+     * PHASE 2: ClassNode Collection
+     * Creates JavaClassNode objects from ProjectFiles using registered collectors.
+     */
+    private void collectClassNodesFromFiles(Project project) {
+        logger.info("=== PHASE 2: ClassNode Collection ===");
+
+        List<ClassNodeCollector> collectors = getClassNodeCollectors();
+
+        logger.info("Using {} ClassNode collectors", collectors.stream().map(ClassNodeCollector::getName).toList());
+
+        // Check if repositories are configured
+        if (projectFileRepository == null || classNodeRepository == null) {
+            logger.warn("Repositories not configured, skipping ClassNode collection");
+            return;
+        }
+
+        CollectionContext context = new CollectionContext(
+                projectFileRepository,
+                classNodeRepository);
+
+        try (ProgressBar pb = new ProgressBar("Phase 2: Collecting Classes",
+                project.getProjectFiles().size())) {
+            for (ProjectFile projectFile : project.getProjectFiles().values()) {
+                for (ClassNodeCollector collector : collectors) {
+                    try {
+                        if (collector.canCollect(projectFile)) {
+                            collector.collect(projectFile, context);
+                            logger.debug("Collector {} created nodes from {}",
+                                    collector.getName(),
+                                    projectFile.getRelativePath());
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error in collector {} on file {}: {}",
+                                collector.getName(),
+                                projectFile.getRelativePath(),
+                                e.getMessage());
+                    }
+                }
+                pb.step();
+            }
+        }
+
+        int classCount = classNodeRepository.findAll().size();
+        logger.info("Phase 2 completed: {} JavaClassNode objects created", classCount);
+    }
+
+    /**
+     * Gets ClassNode inspectors from the inspector registry.
+     *
+     * @return list of ClassNode inspectors
+     */
+    @SuppressWarnings("unchecked")
+    private List<Inspector<com.analyzer.core.graph.JavaClassNode>> getClassNodeInspectors() {
+        return (List<Inspector<com.analyzer.core.graph.JavaClassNode>>) (List<?>) inspectorRegistry
+                .getClassNodeInspectors();
+    }
+
+    /**
+     * PHASE 4: Multi-pass ClassNode Analysis with Convergence Detection
+     * Executes inspectors on JavaClassNode objects with multiple passes until
+     * convergence.
+     */
+    private void executeMultiPassOnClassNodes(Project project, int maxPasses) {
+        List<Inspector<com.analyzer.core.graph.JavaClassNode>> inspectors = getClassNodeInspectors();
+
+        if (inspectors.isEmpty()) {
+            logger.info("No ClassNode inspectors found, skipping Phase 4");
+            return;
+        }
+
+        // Check if repositories are configured
+        if (classNodeRepository == null) {
+            logger.warn("ClassNodeRepository not configured, skipping Phase 4");
+            return;
+        }
+
+        List<com.analyzer.core.graph.JavaClassNode> classNodes = classNodeRepository.findAll();
+
+        if (classNodes.isEmpty()) {
+            logger.info("No JavaClassNode objects to analyze, skipping Phase 4");
+            return;
+        }
+
+        logger.info("Phase 4: Executing {} inspectors on {} class nodes (max passes: {})",
+                inspectors.size(), classNodes.size(), maxPasses);
+
+        // Initialize execution profile for Phase 4 tracking
+        ExecutionProfile executionProfile = new ExecutionProfile(
+                inspectors.stream()
+                        .map(Inspector::getName)
+                        .toList());
+
+        int pass = 1;
+        boolean hasChanges = true;
+
+        while (hasChanges && pass <= maxPasses) {
+            logger.info("=== Phase 4 Pass {} of {} ===", pass, maxPasses);
+
+            LocalDateTime passStartTime = LocalDateTime.now();
+            int nodesProcessed = 0;
+            int nodesSkipped = 0;
+            Set<String> triggeredInspectors = new HashSet<>();
+
+            try (ProgressBar pb = new ProgressBar("Phase 4 Pass " + pass, classNodes.size())) {
+                for (com.analyzer.core.graph.JavaClassNode classNode : classNodes) {
+                    Set<String> nodeInspectors = analyzeClassNodeWithTracking(classNode, inspectors,
+                            passStartTime, executionProfile, pass);
+                    if (!nodeInspectors.isEmpty()) {
+                        nodesProcessed++;
+                        triggeredInspectors.addAll(nodeInspectors);
+                    } else {
+                        nodesSkipped++;
+                    }
+                    pb.step();
+                }
+            }
+
+            logger.info("Phase 4 Pass {} completed: {} nodes processed, {} nodes skipped (up-to-date)",
+                    pass, nodesProcessed, nodesSkipped);
+
+            // Print triggered inspectors for this pass
+            if (!triggeredInspectors.isEmpty()) {
+                logger.info("Phase 4 Pass {} triggered inspectors: [{}]", pass,
+                        String.join(", ", triggeredInspectors.stream().sorted().toList()));
+            } else {
+                logger.info("Phase 4 Pass {} triggered inspectors: [none]", pass);
+            }
+
+            // Check for convergence - if no nodes were processed, we've converged
+            hasChanges = nodesProcessed > 0;
+
+            if (!hasChanges) {
+                logger.info("Phase 4 convergence achieved after {} passes - no more nodes need processing", pass);
+                break;
+            }
+
+            pass++;
+        }
+
+        if (pass > maxPasses) {
+            logger.warn("Phase 4 reached maximum passes ({}) without full convergence", maxPasses);
+        } else {
+            logger.info("Phase 4 multi-pass analysis completed successfully in {} passes", pass);
+        }
+
+        // Generate and log execution profile report
+        executionProfile.setAnalysisMetrics(pass - 1, classNodes.size());
+        executionProfile.markAnalysisComplete();
+        logger.info("=== Phase 4 Execution Summary ===");
+        executionProfile.logReport();
+        logger.info("=== End Phase 4 Summary ===");
+    }
+
+    /**
+     * Analyzes a single JavaClassNode with execution tracking.
+     * Uses JavaClassNode's execution tracking to determine if inspectors need to
+     * run.
+     *
+     * @param classNode        the class node to analyze
+     * @param inspectors       the inspectors to run
+     * @param passStartTime    the start time of the current pass
+     * @param executionProfile the execution profile for tracking
+     * @param pass             the current pass number
+     * @return set of inspector names that were triggered for this node
+     */
+    private Set<String> analyzeClassNodeWithTracking(com.analyzer.core.graph.JavaClassNode classNode,
+            List<Inspector<com.analyzer.core.graph.JavaClassNode>> inspectors,
+            LocalDateTime passStartTime,
+            ExecutionProfile executionProfile,
+            int pass) {
+        Set<String> triggeredInspectors = new HashSet<>();
+        ExecutionProfile.ExecutionPhase phase = ExecutionProfile.ExecutionPhase.PHASE_4_CLASSNODE_ANALYSIS;
+
+        for (Inspector<com.analyzer.core.graph.JavaClassNode> inspector : inspectors) {
+            try {
+                String inspectorName = inspector.getName();
+                boolean shouldRun = true;
+
+                // Check if this inspector needs to run on this node
+                if (classNode.isInspectorUpToDate(inspectorName)) {
+                    logger.debug("Inspector '{}' up-to-date for class: {}", inspectorName,
+                            classNode.getFullyQualifiedName());
+                    shouldRun = false;
+                }
+
+                if (shouldRun) {
+                    logger.debug("Inspector '{}' needs to run on class: {}", inspectorName,
+                            classNode.getFullyQualifiedName());
+
+                    if (inspector.canProcess(classNode)) {
+                        // Record execution start time for performance tracking
+                        long startTime = System.nanoTime();
+
+                        // Execute inspector
+                        NodeDecorator<com.analyzer.core.graph.JavaClassNode> decorator = new NodeDecorator<>(classNode);
+                        inspector.inspect(classNode, decorator);
+
+                        // Record execution timing in ExecutionProfile
+                        long executionTimeNanos = System.nanoTime() - startTime;
+                        executionProfile.recordInspectorExecution(inspectorName, phase, executionTimeNanos);
+
+                        logger.debug("Inspector '{}' executed on class: {}", inspectorName,
+                                classNode.getFullyQualifiedName());
+
+                        // Mark inspector as executed
+                        classNode.markInspectorExecuted(inspectorName, passStartTime);
+                        triggeredInspectors.add(inspectorName);
+                    } else {
+                        logger.debug("Inspector '{}' not supported for class: {}", inspectorName,
+                                classNode.getFullyQualifiedName());
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Error running inspector '{}' on class '{}': {}",
+                        inspector.getName(), classNode.getFullyQualifiedName(), e.getMessage());
+
+                // Record failed execution in ExecutionProfile
+                executionProfile.recordInspectorExecution(inspector.getName(), phase, 0);
+
+                // Mark as executed to prevent repeated errors
+                classNode.markInspectorExecuted(inspector.getName(), passStartTime);
+                triggeredInspectors.add(inspector.getName());
+            }
+        }
+
+        return triggeredInspectors;
+    }
+
+    /**
+     * PHASE 3: Multi-pass Analysis with Convergence Detection
      * Executes inspectors with multiple passes until convergence or max passes
      * reached.
      */
@@ -406,15 +655,15 @@ public class AnalysisEngine {
             return;
         }
 
-        logger.info("Phase 2: Executing {} inspectors on {} project files (max passes: {})",
+        logger.info("Phase 3: Executing {} inspectors on {} project files (max passes: {})",
                 inspectors.size(), project.getProjectFiles().size(), maxPasses);
 
         // Initialize execution profile for comprehensive tracking
         ExecutionProfile executionProfile = new ExecutionProfile(inspectorRegistry.getInspectorNames());
 
-        // Print list of available inspectors by name during Phase 2
+        // Print list of available inspectors by name during Phase 3
         logger.info("=== Available Inspectors ===");
-        List<String> allInspectorNames = inspectorRegistry.getInspectorNames();
+        List<String> allInspectorNames = new ArrayList<>(inspectorRegistry.getInspectorNames());
         allInspectorNames.sort(String::compareTo); // Sort alphabetically for better readability
         logger.debug("Total available inspectors ({}): [{}]",
                 allInspectorNames.size(),
@@ -561,11 +810,11 @@ public class AnalysisEngine {
         Set<String> triggeredInspectors = new HashSet<>();
 
         // Determine the execution phase based on pass number
-        ExecutionProfile.ExecutionPhase phase = ExecutionProfile.ExecutionPhase.PHASE_2_ANALYSIS_PASS;
+        ExecutionProfile.ExecutionPhase phase = ExecutionProfile.ExecutionPhase.PHASE_3_PROJECTFILE_ANALYSIS;
         if (pass == 1) {
             // First pass could be mixed, but let's classify as Analysis Pass since it's
-            // Phase 2
-            phase = ExecutionProfile.ExecutionPhase.PHASE_2_ANALYSIS_PASS;
+            // Phase 3
+            phase = ExecutionProfile.ExecutionPhase.PHASE_3_PROJECTFILE_ANALYSIS;
         }
 
         for (Inspector<ProjectFile> inspector : inspectors) {
@@ -615,7 +864,7 @@ public class AnalysisEngine {
             } catch (Exception e) {
                 logger.error("Error running inspector '{}' on file '{}': {}",
                         inspector.getName(), projectFile.getRelativePath(), e.getMessage());
-                projectFile.addInspectorResult(InspectorTags.PROCESSING_ERROR, "ERROR: " + e.getMessage());
+                projectFile.setProperty(InspectorTags.PROCESSING_ERROR, "ERROR: " + e.getMessage());
 
                 // Record failed execution in ExecutionProfile
                 if (executionProfile != null) {
@@ -642,24 +891,58 @@ public class AnalysisEngine {
 
         // GraphRepository is now injected via @Inject in inspector constructors
         // No need for manual injection anymore
-        
-        ProjectFileDecorator decorator = new ProjectFileDecorator(projectFile);
-        inspector.decorate(projectFile, decorator);
+
+        NodeDecorator<ProjectFile> decorator = new NodeDecorator<>(projectFile);
+        inspector.inspect(projectFile, decorator);
+    }
+
+
+    private void executeDetector(ProjectFile projectFile, FileDetector fileDetector) {
+        // Record fileDetector trigger for progress tracking
+        progressTracker.recordInspectorTrigger(fileDetector.getName(), projectFile);
+
+        // GraphRepository is now injected via @Inject in fileDetector constructors
+        // No need for manual injection anymore
+
+        NodeDecorator<ProjectFile> decorator = new NodeDecorator<>(projectFile);
+        fileDetector.detect( decorator);
     }
 
     /**
      * Gets ProjectFile inspectors to execute based on request.
-     * Since all inspectors now work with ProjectFile by default, this simply casts
-     * the inspectors.
+     * Uses type-safe filtering with InspectorTargetType to separate inspectors by
+     * phase.
+     *
+     * @param requestedInspectors list of specific inspectors to run, or null for
+     *                            all
+     * @return list of inspectors that target PROJECT_FILE
      */
     @SuppressWarnings("unchecked")
     private List<Inspector<ProjectFile>> getProjectFileInspectors(List<String> requestedInspectors) {
         List<Inspector> allInspectors = getInspectorsToExecute(requestedInspectors);
         List<Inspector<ProjectFile>> projectFileInspectors = new ArrayList<>();
+        int excludedCount = 0;
 
         for (Inspector inspector : allInspectors) {
-            // All inspectors now work with ProjectFile by default
-            projectFileInspectors.add((Inspector<ProjectFile>) inspector);
+            // TYPE-SAFE FILTERING: Use getTargetType() instead of instanceof checks
+            // This is explicit, maintainable, and avoids fragile reflection
+            InspectorTargetType targetType = inspector.getTargetType();
+
+            if (targetType == InspectorTargetType.PROJECT_FILE || targetType == InspectorTargetType.ANY) {
+                // Include inspectors that target PROJECT_FILE or ANY
+                projectFileInspectors.add((Inspector<ProjectFile>) inspector);
+            } else {
+                // Exclude inspectors that target other types (e.g., JAVA_CLASS_NODE)
+                logger.debug("Excluding {} inspector '{}' from Phase 3 (ProjectFile analysis) - " +
+                        "will execute in Phase 4 (target type: {})",
+                        targetType, inspector.getName(), targetType);
+                excludedCount++;
+            }
+        }
+
+        if (excludedCount > 0) {
+            logger.info("Phase 3: Filtered {} non-ProjectFile inspectors from ProjectFile analysis - " +
+                    "they will execute in their appropriate phase", excludedCount);
         }
 
         return projectFileInspectors;
@@ -706,7 +989,7 @@ public class AnalysisEngine {
 
     /**
      * Gets the GraphRepository used by this AnalysisEngine.
-     * 
+     *
      * @return the graph repository, or null if not configured
      */
     public GraphRepository getGraphRepository() {
@@ -715,7 +998,7 @@ public class AnalysisEngine {
 
     /**
      * Builds and returns a graph based on the specified criteria.
-     * 
+     *
      * @param nodeTypes the types of nodes to include (null = all)
      * @param edgeTypes the types of edges to include (null = all)
      * @return the built graph, or null if no GraphRepository is configured
@@ -733,7 +1016,7 @@ public class AnalysisEngine {
      * This enables incremental analysis by reusing previously computed results.
      */
     private Project loadExistingProjectOrCreate(Path projectPath) {
-        Path existingAnalysisFile = projectPath.resolve("project-analysis.json");
+        Path existingAnalysisFile = projectPath.resolve(Project.DEFAULT_FILE_NAME);
 
         if (Files.exists(existingAnalysisFile)) {
             logger.info("Found existing project analysis file, attempting to load: {}", existingAnalysisFile);
@@ -779,7 +1062,7 @@ public class AnalysisEngine {
     private void saveProjectAnalysisToJson(Project project) {
         try {
             GraphSerializer serializer = new GraphSerializer();
-            Path outputPath = project.getProjectPath().resolve("project-analysis.json");
+            Path outputPath = project.getProjectPath().resolve(Project.DEFAULT_FILE_NAME);
             serializer.saveProjectWithGraph(project, graphRepository, outputPath);
 
             // Also save graph-only data
@@ -853,7 +1136,7 @@ public class AnalysisEngine {
 
             // Graph data
             if (graphRepository != null) {
-                data.graphNodes = graphRepository.getAllNodes();
+                data.graphNodes = graphRepository.getNodes();
                 data.graphEdges = graphRepository.getAllEdges();
                 data.nodeCount = graphRepository.getNodeCount();
                 data.edgeCount = graphRepository.getEdgeCount();
@@ -867,7 +1150,7 @@ public class AnalysisEngine {
          */
         public void saveGraphOnly(GraphRepository graphRepository, Path outputPath) throws IOException {
             GraphData graphData = new GraphData();
-            graphData.nodes = graphRepository.getAllNodes();
+            graphData.nodes = graphRepository.getNodes();
             graphData.edges = graphRepository.getAllEdges();
             graphData.nodeCount = graphRepository.getNodeCount();
             graphData.edgeCount = graphRepository.getEdgeCount();

@@ -109,7 +109,7 @@ public final class InspectorTags {
     /**
      * Tag indicating this is a source file
      */
-    public static final String SOURCE_FILE = "source_file";
+    public static final String TAG_SOURCE_FILE = "source_file";
     /**
      * Tag for processing errors
      */
@@ -130,6 +130,19 @@ public final class InspectorTags {
      * Common format value: binary
      */
     public static final String FORMAT_BINARY = "binary";
+
+    // ==================== FILE METRIC TAGS ====================
+    public static final String TAG_METRIC_FILE_SIZE = "metrics.fileSize";
+    public static final String TAG_METRIC_LINES_OF_CODE = "metrics.linesOfCode";
+    public static final String TAG_METRIC_COMMENT_LINES = "metrics.commentLines";
+    public static final String TAG_METRIC_BLANK_LINES = "metrics.blankLines";
+
+    // ==================== CLASS METRIC TAGS ====================
+    public static final String TAG_METRICS_METHOD_COUNT = "metrics.methodCount";
+    public static final String TAG_METRICS_FIELD_COUNT = "metrics.fieldCount";
+    public static final String TAG_METRICS_WEIGHTED_METHODS_PER_CLASS = "metrics.weightedMethodsPerClass";
+    public static final String TAG_METRICS_EFFERENT_COUPLING = "metrics.efferentCoupling";
+    public static final String TAG_METRICS_CYCLOMATIC_COMPLEXITY = "metrics.cyclomaticComplexity";
 
     // Prevent instantiation
     private InspectorTags() {

@@ -1,11 +1,11 @@
 package com.analyzer.inspectors.core;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.inspector.InspectorTargetType;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.detection.SourceFileTagDetector;
 
 /**
  * Base abstract class for inspectors that analyze ProjectFile objects.
@@ -20,22 +20,27 @@ import com.analyzer.inspectors.core.detection.SourceFileTagDetector;
  * - Default support checking logic
  * - Template method pattern for analysis
  */
-@InspectorDependencies(need = {SourceFileTagDetector.class}, requires = {}, produces = {})
+@InspectorDependencies(need = {  }, requires = {}, produces = {})
 public abstract class AbstractProjectFileInspector implements Inspector<ProjectFile> {
 
-    public final void decorate(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-
+    @Override
+    public final void inspect(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator) {
         try {
-            analyzeProjectFile(projectFile, projectFileDecorator);
+            analyzeProjectFile(projectFile, decorator);
         } catch (Exception e) {
-            projectFileDecorator.error(
-                    "Error analyzing project file: " + e.getMessage());
+            decorator.error("Error analyzing project file: " + e.getMessage());
         }
     }
 
+    @Override
     public boolean supports(ProjectFile projectFile) {
         // By default, support any ProjectFile - subclasses can override
         return projectFile != null;
+    }
+
+    @Override
+    public InspectorTargetType getTargetType() {
+        return InspectorTargetType.PROJECT_FILE;
     }
 
     /**
@@ -43,10 +48,10 @@ public abstract class AbstractProjectFileInspector implements Inspector<ProjectF
      * This method is called when a ProjectFile has been validated and
      * is ready for analysis.
      *
-     * @param projectFile     the ProjectFile to analyze
-     * @param projectFileDecorator
+     * @param projectFile the ProjectFile to analyze
+     * @param decorator   the decorator for setting properties and tags
      */
-    protected abstract void analyzeProjectFile(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator);
+    protected abstract void analyzeProjectFile(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator);
 
     /**
      * Utility method to check if the ProjectFile has a specific tag.
@@ -55,8 +60,8 @@ public abstract class AbstractProjectFileInspector implements Inspector<ProjectF
      * @param tagName     the name of the tag
      * @return true if the tag exists, false otherwise
      */
-    protected boolean hasTag(ProjectFile projectFile, String tagName) {
-        return projectFile.hasTag(tagName);
+    protected boolean hasProperty(ProjectFile projectFile, String propertyName) {
+        return projectFile.hasProperty(propertyName);
     }
 
     /**
@@ -67,10 +72,10 @@ public abstract class AbstractProjectFileInspector implements Inspector<ProjectF
      * @param expectedType the expected type of the tag value
      * @param <T>          the type parameter
      * @return the tag value cast to the expected type, or null if not found or
-     * wrong type
+     *         wrong type
      */
-    protected <T> T getTag(ProjectFile projectFile, String tagName, Class<T> expectedType) {
-        Object value = projectFile.getTag(tagName);
+    protected <T> T getProperty(ProjectFile projectFile, String propertyName, Class<T> expectedType) {
+        Object value = projectFile.getProperty(propertyName);
         if (value != null && expectedType.isInstance(value)) {
             return expectedType.cast(value);
         }
@@ -85,8 +90,8 @@ public abstract class AbstractProjectFileInspector implements Inspector<ProjectF
      * @return true if this appears to be a Java class file
      */
     protected boolean isJavaClass(ProjectFile projectFile) {
-        return projectFile.getBooleanTag(InspectorTags.TAG_JAVA_IS_SOURCE, false) ||
-                projectFile.getBooleanTag(InspectorTags.TAG_JAVA_IS_BINARY, false);
+        return projectFile.getBooleanProperty(InspectorTags.TAG_JAVA_IS_SOURCE, false) ||
+                projectFile.getBooleanProperty(InspectorTags.TAG_JAVA_IS_BINARY, false);
     }
 
     /**
@@ -97,6 +102,6 @@ public abstract class AbstractProjectFileInspector implements Inspector<ProjectF
      * @return the fully qualified class name, or null if not available
      */
     protected String getClassName(ProjectFile projectFile) {
-        return projectFile.getFullyQualifiedName();
+        return projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
     }
 }

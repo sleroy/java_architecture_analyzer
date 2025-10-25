@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
@@ -51,7 +51,7 @@ public abstract class AbstractCountRegexpInspector extends AbstractSourceFileIns
     }
 
     @Override
-    protected final void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation, ProjectFileDecorator projectFileDecorator)
+    protected final void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation, NodeDecorator<ProjectFile> projectFileDecorator)
             throws IOException {
         try {
             String content = readFileContent(sourceLocation);

@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -61,7 +61,7 @@ public class DaoRepositoryInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-            ProjectFileDecorator projectFileDecorator) {
+                                NodeDecorator projectFileDecorator) {
 
         if (!(type instanceof ClassOrInterfaceDeclaration)) {
             return;
@@ -69,7 +69,7 @@ public class DaoRepositoryInspector extends AbstractJavaClassInspector {
 
         ClassOrInterfaceDeclaration classDecl = (ClassOrInterfaceDeclaration) type;
         String className = classDecl.getNameAsString();
-        String packageName = projectFile.getPackageName();
+        String packageName = (String) projectFile.getProperty("packageName");
 
         // Initial assessment based on class name
         boolean hasDAOName = className.endsWith("DAO") || className.endsWith("Dao")
@@ -100,27 +100,27 @@ public class DaoRepositoryInspector extends AbstractJavaClassInspector {
             info.inDAOPackage = inDataAccessPackage;
 
             // Set tags according to the produces contract
-            projectFileDecorator.setTag(TAGS.TAG_IS_DAO, true);
-            projectFileDecorator.setTag(EjbMigrationTags.DATA_ACCESS_OBJECT_PATTERN, true);
-            projectFileDecorator.setTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
+            projectFileDecorator.enableTag(TAGS.TAG_IS_DAO);
+            projectFileDecorator.enableTag(EjbMigrationTags.DATA_ACCESS_OBJECT_PATTERN);
+            projectFileDecorator.enableTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION);
 
             // Choose between JPA repository or standard @Repository based on JDBC usage
             if (info.jdbcCallCount > 0) {
-                projectFileDecorator.setTag(EjbMigrationTags.JPA_REPOSITORY_CONVERSION, true);
-                projectFileDecorator.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-                projectFileDecorator.setTag("spring.conversion.target", "JpaRepository");
+                projectFileDecorator.enableTag(EjbMigrationTags.JPA_REPOSITORY_CONVERSION);
+                projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+                projectFileDecorator.setProperty("spring.conversion.target", "JpaRepository");
             } else {
-                projectFileDecorator.setTag("spring.conversion.target", "@Repository");
-                projectFileDecorator.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW, true);
+                projectFileDecorator.setProperty("spring.conversion.target", "@Repository");
+                projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW);
             }
 
             // Set property on class node for detailed analysis
             classNode.setProperty("dao.analysis", info.toString());
 
             // Set analysis statistics
-            projectFileDecorator.setTag("dao.jdbc_calls", info.jdbcCallCount);
-            projectFileDecorator.setTag("dao.crud_methods", info.crudMethodCount);
-            projectFileDecorator.setTag("dao.entity_methods", info.entityMethodCount);
+            projectFileDecorator.setProperty("dao.jdbc_calls", info.jdbcCallCount);
+            projectFileDecorator.setProperty("dao.crud_methods", info.crudMethodCount);
+            projectFileDecorator.setProperty("dao.entity_methods", info.entityMethodCount);
         }
     }
 

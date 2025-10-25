@@ -1,11 +1,9 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
-import com.analyzer.core.inspector.InspectorDependencies;
-
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
+import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.detection.JavaSourceFileDetector;
 import com.analyzer.inspectors.core.source.AbstractJavaParserInspector;
 import com.analyzer.resource.ResourceResolver;
 import com.github.javaparser.ast.CompilationUnit;
@@ -25,7 +23,7 @@ import java.util.List;
  * that need to be eliminated in Spring Boot migration.
  */
 @InspectorDependencies(need = {
-        JavaSourceFileDetector.class
+
 }, produces = {
         EjbHomeInterfaceInspector.TAGS.TAG_IS_HOME_INTERFACE
 })
@@ -44,7 +42,7 @@ public class EjbHomeInterfaceInspector extends AbstractJavaParserInspector {
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-            ProjectFileDecorator projectFileDecorator) {
+                                          NodeDecorator projectFileDecorator) {
         classNodeRepository.getOrCreateClassNode(cu).ifPresent(classNode -> {
             classNode.setProjectFileId(projectFile.getId());
             EjbHomeInterfaceDetector detector = new EjbHomeInterfaceDetector();
@@ -52,11 +50,10 @@ public class EjbHomeInterfaceInspector extends AbstractJavaParserInspector {
 
             if (detector.isEjbHomeInterface()) {
                 EjbHomeInterfaceInfo info = detector.getEjbHomeInterfaceInfo();
-                classNode.setProperty(TAGS.TAG_IS_HOME_INTERFACE, info.toJson());
+                projectFileDecorator.setProperty(TAGS.TAG_IS_HOME_INTERFACE, info);
                 return;
             }
 
-            classNode.setProperty(TAGS.TAG_IS_HOME_INTERFACE, false);
         });
     }
 
@@ -160,20 +157,5 @@ public class EjbHomeInterfaceInspector extends AbstractJavaParserInspector {
         public List<String> removeMethods = new ArrayList<>();
         public List<String> businessMethods = new ArrayList<>();
 
-        public String toJson() {
-            StringBuilder json = new StringBuilder();
-            json.append("{");
-            json.append("\"interfaceName\":\"").append(interfaceName != null ? interfaceName : "").append("\",");
-            json.append("\"homeType\":\"").append(homeType != null ? homeType : "").append("\",");
-            json.append("\"migrationAction\":\"").append(migrationAction != null ? migrationAction : "").append("\",");
-            json.append("\"migrationComplexity\":\"").append(migrationComplexity != null ? migrationComplexity : "")
-                    .append("\",");
-            json.append("\"createMethodCount\":").append(createMethods.size()).append(",");
-            json.append("\"finderMethodCount\":").append(finderMethods.size()).append(",");
-            json.append("\"removeMethodCount\":").append(removeMethods.size()).append(",");
-            json.append("\"businessMethodCount\":").append(businessMethods.size());
-            json.append("}");
-            return json.toString();
-        }
     }
 }

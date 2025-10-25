@@ -1,13 +1,13 @@
 package com.analyzer.inspectors.core;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.GraphRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.JARClassLoaderService;
-import com.analyzer.resource.ResourceResolver;
 import com.analyzer.inspectors.core.classloader.AbstractProjectFileClassLoaderInspector;
+import com.analyzer.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,24 +19,24 @@ import java.lang.annotation.Annotation;
  * present on a class.
  * This includes both class-level annotations and annotations on methods,
  * fields, and constructors.
- * 
+ * <p>
  * This is the ProjectFile equivalent of AnnotationCountInspectorAbstract,
  * demonstrating
  * how existing ProjectFile-based inspectors can be migrated to the new
  * architecture.
- * 
+ * <p>
  * The inspector works by:
  * 1. Using ProjectFile tags to identify Java class files
  * 2. Loading classes at runtime using the shared ClassLoader
  * 3. Using reflection to analyze annotation metadata
  * 4. Gracefully handling classes that cannot be loaded
- * 
+ * <p>
  * This type of analysis requires runtime class loading and would not be
  * possible
  * with static bytecode analysis alone, as it needs access to actual annotation
  * metadata and potentially annotation values.
  */
-@InspectorDependencies(need = {}, produces = {})
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_DETECTED}, produces = {})
 public class AbstractJavaAnnotationCountInspector extends AbstractProjectFileClassLoaderInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractJavaAnnotationCountInspector.class);
@@ -46,7 +46,7 @@ public class AbstractJavaAnnotationCountInspector extends AbstractProjectFileCla
     /**
      * Creates a new AbstractJavaAnnotationCountInspector with the required
      * dependencies.
-     * 
+     *
      * @param resourceResolver   the resolver for accessing resources
      * @param classLoaderService the service providing the shared ClassLoader
      * @param graphRepository    the graph repository for storing analysis results
@@ -69,14 +69,15 @@ public class AbstractJavaAnnotationCountInspector extends AbstractProjectFileCla
     }
 
     @Override
-    protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+    protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile,
+                                      NodeDecorator<ProjectFile> projectFileDecorator) {
         try {
             int annotationCount = countAllAnnotations(loadedClass);
 
             logger.debug("Found {} annotations on class {} (ProjectFile: {})",
                     annotationCount, loadedClass.getName(), projectFile.getRelativePath());
 
-            projectFileDecorator.setTag(getColumnName(), annotationCount);
+            projectFileDecorator.setProperty(getColumnName(), annotationCount);
 
         } catch (Exception e) {
             logger.warn("Error analyzing annotations for class {} (ProjectFile: {}): {}",
@@ -158,8 +159,8 @@ public class AbstractJavaAnnotationCountInspector extends AbstractProjectFileCla
     public boolean supports(ProjectFile projectFile) {
         // Support Java class files that have been detected and tagged appropriately
         return super.supports(projectFile) &&
-                (hasTag(projectFile, InspectorTags.TAG_JAVA_DETECTED) ||
-                        hasTag(projectFile, InspectorTags.TAG_JAVA_IS_BINARY) ||
-                        hasTag(projectFile, InspectorTags.TAG_JAVA_IS_SOURCE));
+                (projectFile.hasTag(InspectorTags.TAG_JAVA_DETECTED) ||
+                        projectFile.hasTag(InspectorTags.TAG_JAVA_IS_BINARY) ||
+                        projectFile.hasTag(InspectorTags.TAG_JAVA_IS_SOURCE));
     }
 }

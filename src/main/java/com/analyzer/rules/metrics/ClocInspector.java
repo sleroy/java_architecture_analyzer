@@ -1,6 +1,6 @@
 package com.analyzer.rules.metrics;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
@@ -12,13 +12,14 @@ import java.io.IOException;
 
 /**
  * Inspector that counts lines of code (CLOC) in Java source files.
- * This is a concrete implementation of AbstractSourceFileInspector that provides
+ * This is a concrete implementation of AbstractSourceFileInspector that
+ * provides
  * basic line counting functionality for source code analysis.
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED }, produces = {ClocInspector.TAG_CLOC})
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED }, produces = { ClocInspector.TAG_CLOC })
 public class ClocInspector extends AbstractSourceFileInspector {
 
-    public static final String TAG_CLOC = "cloc";
+    public static final String TAG_CLOC = "metrics.cloc";
 
     /**
      * Creates a ClocInspector with the specified ResourceResolver.
@@ -34,18 +35,18 @@ public class ClocInspector extends AbstractSourceFileInspector {
         return "Number of lines of code";
     }
 
-
     public String getColumnName() {
         return TAG_CLOC;
     }
 
     @Override
-    protected void analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation, ProjectFileDecorator projectFileDecorator) throws IOException {
+    protected void analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation,
+            NodeDecorator<ProjectFile> decorator) throws IOException {
         try {
             long lineCount = countLines(sourceLocation);
-            projectFileDecorator.setTag(getColumnName(), lineCount);
+            decorator.setProperty(getColumnName(), lineCount);
         } catch (IOException e) {
-            projectFileDecorator.error("Error counting lines: " + e.getMessage());
+            decorator.error("Error counting lines: " + e.getMessage());
         }
     }
 }

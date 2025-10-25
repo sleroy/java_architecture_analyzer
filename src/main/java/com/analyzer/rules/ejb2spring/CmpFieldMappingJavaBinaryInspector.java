@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -32,10 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * Phase 1 - Foundation Inspector (P0 Critical Priority)
  */
-@InspectorDependencies(
-        need = { BinaryJavaClassNodeInspector.class },
-        requires = { InspectorTags.TAG_JAVA_DETECTED },
-        produces = {
+@InspectorDependencies(need = { BinaryJavaClassNodeInspector.class }, requires = {
+        InspectorTags.TAG_JAVA_DETECTED }, produces = {
                 EjbMigrationTags.EJB_CMP_FIELD_MAPPING,
                 EjbMigrationTags.EJB_CMP_FIELD,
                 EjbMigrationTags.EJB_CMR_RELATIONSHIP,
@@ -54,7 +52,8 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
     private final Map<String, CmpEntityMetadata> cmpEntityCache;
 
     @Inject
-    public CmpFieldMappingJavaBinaryInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
+    public CmpFieldMappingJavaBinaryInspector(ResourceResolver resourceResolver,
+            ClassNodeRepository classNodeRepository) {
         super(resourceResolver, classNodeRepository);
         this.cmpEntityCache = new ConcurrentHashMap<>();
     }
@@ -65,7 +64,8 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
     }
 
     @Override
-    public void analyzeClassNode(ProjectFile projectFile, JavaClassNode classNode, ResourceLocation binaryLocation, InputStream classInputStream, ProjectFileDecorator projectFileDecorator) throws java.io.IOException {
+    public void analyzeClassNode(ProjectFile projectFile, JavaClassNode classNode, ResourceLocation binaryLocation,
+            InputStream classInputStream, NodeDecorator<ProjectFile> projectFileDecorator) throws java.io.IOException {
         classNode.setProjectFileId(projectFile.getId());
 
         try {
@@ -77,7 +77,6 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
         }
     }
 
-
     /**
      * ASM visitor that analyzes CMP field mappings in entity bean classes
      */
@@ -86,9 +85,10 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
         private CmpEntityMetadata metadata;
         private final JavaClassNode graphNode;
         private final ProjectFile projectFile;
-        private final ProjectFileDecorator projectFileDecorator;
+        private final NodeDecorator<ProjectFile> projectFileDecorator;
 
-        public CmpFieldMappingVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator, JavaClassNode graphNode) {
+        public CmpFieldMappingVisitor(ProjectFile projectFile, NodeDecorator<ProjectFile> projectFileDecorator,
+                JavaClassNode graphNode) {
             super(Opcodes.ASM9);
             this.classNode = new ClassNode();
             this.graphNode = graphNode;
@@ -98,10 +98,11 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
 
         @Override
         public void visit(int version, int access, String name, String signature, String superName,
-                          String[] interfaces) {
+                String[] interfaces) {
             classNode.visit(version, access, name, signature, superName, interfaces);
 
-            // Initialize metadata for any supported file (will be used if it's a proper CMP entity)
+            // Initialize metadata for any supported file (will be used if it's a proper CMP
+            // entity)
             metadata = new CmpEntityMetadata(name, extractEntityName(classNode));
 
             super.visit(version, access, name, signature, superName, interfaces);
@@ -122,11 +123,12 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
         }
 
         private void setTag(String tag, Object value) {
-            projectFileDecorator.setTag(tag, value);
+            projectFileDecorator.setProperty(tag, value);
         }
 
         private void setAllTagsAndProperties() {
-            // Honor produces contract - set ALL produced tags on ProjectFile for dependency chains
+            // Honor produces contract - set ALL produced tags on ProjectFile for dependency
+            // chains
             setTag(EjbMigrationTags.EJB_CMP_FIELD_MAPPING, true);
             setTag(EjbMigrationTags.EJB_CMP_FIELD, true);
             setTag(EjbMigrationTags.EJB_CMR_RELATIONSHIP, true);
@@ -141,7 +143,7 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
             // Generate basic recommendations
             List<String> recommendations = List.of("Convert CMP entity to JPA @Entity");
             setProperty("cmp_field_mapping.jpa_recommendations", String.join("; ", recommendations));
-            
+
             // Perform detailed analysis if we have proper CMP metadata
             setDetailedAnalysisResults();
         }
@@ -182,7 +184,7 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
             }
 
             // Store detailed metadata as analysis property
-            setProperty("cmp_field_mapping.metadata", metadata.toJson());
+            setProperty("cmp_field_mapping.metadata", metadata);
 
             // Generate detailed JPA migration recommendations (override basic ones)
             List<String> recommendations = generateJpaRecommendations(metadata);
@@ -471,15 +473,6 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
             return cmrRelationships;
         }
 
-        public String toJson() {
-            String json = "{" +
-                    "\"className\":\"" + className + "\"," +
-                    "\"entityName\":\"" + entityName + "\"," +
-                    "\"fieldCount\":" + cmpFields.size() + "," +
-                    "\"relationshipCount\":" + cmrRelationships.size() +
-                    "}";
-            return json;
-        }
     }
 
     public static class CmpFieldInfo {

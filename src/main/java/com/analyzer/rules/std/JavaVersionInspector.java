@@ -1,6 +1,6 @@
 package com.analyzer.rules.std;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.GraphRepository;
 import com.analyzer.core.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -23,29 +23,17 @@ import java.util.Map;
  * versions.
  * Sets standardized tags for Java version information.
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED }, produces = {
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_DETECTED}, produces = {
         JavaVersionInspector.TAGS.TAG_JAVA_VERSION,
         JavaVersionInspector.TAGS.TAG_JAVA_MAJOR_VERSION,
-        JavaVersionInspector.TAGS.TAG_JAVA_VERSION_SOURCE })
+        JavaVersionInspector.TAGS.TAG_JAVA_VERSION_SOURCE})
 public class JavaVersionInspector implements Inspector<ProjectFile> {
-
-    private static final Logger logger = LoggerFactory.getLogger(JavaVersionInspector.class);
-
-    /**
-     * Tag constants owned by this inspector.
-     * Other inspectors can reference these using JavaVersionInspector.TAGS.TAG_*
-     */
-    public static class TAGS {
-        public static final String TAG_JAVA_VERSION = "java.version";
-        public static final String TAG_JAVA_MAJOR_VERSION = "java.major_version";
-        public static final String TAG_JAVA_VERSION_SOURCE = "java.version_source";
-    }
 
     // Version source values
     public static final String VERSION_SOURCE_BYTECODE = "bytecode";
     public static final String VERSION_SOURCE_PARSER = "parser";
     public static final String VERSION_SOURCE_UNKNOWN = "unknown";
-
+    private static final Logger logger = LoggerFactory.getLogger(JavaVersionInspector.class);
     // Major version to Java version mapping
     private static final Map<Integer, String> MAJOR_VERSION_MAP = new HashMap<>();
 
@@ -93,8 +81,12 @@ public class JavaVersionInspector implements Inspector<ProjectFile> {
     }
 
     @Override
-    public void decorate(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+    public boolean canProcess(ProjectFile objectToAnalyze) {
+        return Inspector.super.canProcess(objectToAnalyze);
+    }
 
+    @Override
+    public void inspect(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator) {
         try {
             String version = null;
             String versionSource = VERSION_SOURCE_UNKNOWN;
@@ -110,14 +102,14 @@ public class JavaVersionInspector implements Inspector<ProjectFile> {
             }
 
             if (version != null) {
-                projectFile.setTag(TAGS.TAG_JAVA_VERSION, version);
-                projectFile.setTag(TAGS.TAG_JAVA_VERSION_SOURCE, versionSource);
+                decorator.setProperty(TAGS.TAG_JAVA_VERSION, version);
+                decorator.setProperty(TAGS.TAG_JAVA_VERSION_SOURCE, versionSource);
 
                 // Also set major version for binary files
                 if (VERSION_SOURCE_BYTECODE.equals(versionSource)) {
                     Integer majorVersion = getMajorVersionForJavaVersion(version);
                     if (majorVersion != null) {
-                        projectFile.setTag(TAGS.TAG_JAVA_MAJOR_VERSION, majorVersion);
+                        decorator.setProperty(TAGS.TAG_JAVA_MAJOR_VERSION, majorVersion);
                     }
                 }
 
@@ -129,7 +121,7 @@ public class JavaVersionInspector implements Inspector<ProjectFile> {
 
         } catch (Exception e) {
             logger.warn("Error detecting Java version for file {}: {}", projectFile.getFilePath(), e.getMessage());
-            projectFile.addInspectorResult(InspectorTags.PROCESSING_ERROR, "ERROR: " + e.getMessage());
+            decorator.error("ERROR: " + e.getMessage());
         }
     }
 
@@ -214,6 +206,16 @@ public class JavaVersionInspector implements Inspector<ProjectFile> {
             }
         }
         return null;
+    }
+
+    /**
+     * Tag constants owned by this inspector.
+     * Other inspectors can reference these using JavaVersionInspector.TAGS.TAG_*
+     */
+    public static class TAGS {
+        public static final String TAG_JAVA_VERSION = "java.version";
+        public static final String TAG_JAVA_MAJOR_VERSION = "java.major_version";
+        public static final String TAG_JAVA_VERSION_SOURCE = "java.version_source";
     }
 
 }

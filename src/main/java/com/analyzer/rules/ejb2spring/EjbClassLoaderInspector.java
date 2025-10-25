@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -106,39 +106,38 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
 
     @Override
     protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile,
-            ProjectFileDecorator projectFileDecorator) {
+            NodeDecorator<ProjectFile> projectFileDecorator) {
         logger.debug("Analyzing loaded class for EJB components: {}", loadedClass.getName());
 
-        classNodeRepository.getOrCreateClassNodeByFqn(loadedClass.getName()).ifPresent(classNode -> {
-            classNode.setProjectFileId(projectFile.getId());
-            EjbRuntimeAnalysis analysis = new EjbRuntimeAnalysis(loadedClass);
+        JavaClassNode classNode = classNodeRepository.getOrCreateByFqn(loadedClass.getName());
+        classNode.setProjectFileId(projectFile.getId());
+        EjbRuntimeAnalysis analysis = new EjbRuntimeAnalysis(loadedClass);
 
-            // Perform comprehensive runtime analysis
-            boolean isEjbComponent = false;
+        // Perform comprehensive runtime analysis
+        boolean isEjbComponent = false;
 
-            // Analyze EJB 3.x annotations with full metadata
-            if (analyzeEjb3Annotations(analysis, classNode, projectFile)) {
-                isEjbComponent = true;
-            }
+        // Analyze EJB 3.x annotations with full metadata
+        if (analyzeEjb3Annotations(analysis, classNode, projectFile)) {
+            isEjbComponent = true;
+        }
 
-            // Analyze EJB 2.x interface implementations
-            if (analyzeEjb2Interfaces(analysis, classNode, projectFile)) {
-                isEjbComponent = true;
-            }
+        // Analyze EJB 2.x interface implementations
+        if (analyzeEjb2Interfaces(analysis, classNode, projectFile)) {
+            isEjbComponent = true;
+        }
 
-            // Analyze EJB standard interfaces
-            if (analyzeEjbStandardInterfaces(analysis, classNode, projectFile)) {
-                isEjbComponent = true;
-            }
+        // Analyze EJB standard interfaces
+        if (analyzeEjbStandardInterfaces(analysis, classNode, projectFile)) {
+            isEjbComponent = true;
+        }
 
-            // If EJB component found, perform enhanced analysis
-            if (isEjbComponent) {
-                projectFile.setTag(EjbMigrationTags.EJB_BEAN_DETECTED, true);
-                Map<String, Object> result = performEnhancedAnalysis(analysis, classNode);
-                classNode.setProperty("ejb.runtime.analysis", createAnalysisJson(result));
-                logger.info("EJB component runtime analysis complete: {}", loadedClass.getName());
-            }
-        });
+        // If EJB component found, perform enhanced analysis
+        if (isEjbComponent) {
+            classNode.addTag(EjbMigrationTags.EJB_BEAN_DETECTED);
+            Map<String, Object> result = performEnhancedAnalysis(analysis, classNode);
+            classNode.setProperty("ejb.runtime.analysis", createAnalysisJson(result));
+            logger.info("EJB component runtime analysis complete: {}", loadedClass.getName());
+        }
     }
 
     private boolean analyzeEjb3Annotations(EjbRuntimeAnalysis analysis, JavaClassNode classNode,
@@ -156,30 +155,30 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
                 switch (annotationName) {
                     case "javax.ejb.Stateless":
                     case "jakarta.ejb.Stateless":
-                        projectFile.setTag(EjbMigrationTags.EJB_STATELESS_SESSION_BEAN, true);
-                        projectFile.setTag(EjbMigrationTags.EJB_SESSION_BEAN, true);
+                        classNode.addTag(EjbMigrationTags.EJB_STATELESS_SESSION_BEAN);
+                        classNode.addTag(EjbMigrationTags.EJB_SESSION_BEAN);
                         extractStatelessAnnotationMetadata(annotation, classNode);
                         found = true;
                         break;
 
                     case "javax.ejb.Stateful":
                     case "jakarta.ejb.Stateful":
-                        projectFile.setTag(EjbMigrationTags.EJB_STATEFUL_SESSION_BEAN, true);
-                        projectFile.setTag(EjbMigrationTags.EJB_SESSION_BEAN, true);
+                        classNode.addTag(EjbMigrationTags.EJB_STATEFUL_SESSION_BEAN);
+                        classNode.addTag(EjbMigrationTags.EJB_SESSION_BEAN);
                         extractStatefulAnnotationMetadata(annotation, classNode);
                         found = true;
                         break;
 
                     case "javax.persistence.Entity":
                     case "jakarta.persistence.Entity":
-                        projectFile.setTag(EjbMigrationTags.EJB_ENTITY_BEAN, true);
+                        classNode.addTag(EjbMigrationTags.EJB_ENTITY_BEAN);
                         extractEntityAnnotationMetadata(annotation, classNode);
                         found = true;
                         break;
 
                     case "javax.ejb.MessageDriven":
                     case "jakarta.ejb.MessageDriven":
-                        projectFile.setTag(EjbMigrationTags.EJB_MESSAGE_DRIVEN_BEAN, true);
+                        classNode.addTag(EjbMigrationTags.EJB_MESSAGE_DRIVEN_BEAN);
                         extractMessageDrivenAnnotationMetadata(annotation, classNode);
                         found = true;
                         break;
@@ -208,21 +207,21 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
                 switch (interfaceName) {
                     case "javax.ejb.SessionBean":
                     case "jakarta.ejb.SessionBean":
-                        projectFile.setTag(EjbMigrationTags.EJB_SESSION_BEAN, true);
+                        classNode.addTag(EjbMigrationTags.EJB_SESSION_BEAN);
                         analyzeSessionBeanMethods(clazz, classNode);
                         found = true;
                         break;
 
                     case "javax.ejb.EntityBean":
                     case "jakarta.ejb.EntityBean":
-                        projectFile.setTag(EjbMigrationTags.EJB_ENTITY_BEAN, true);
+                        classNode.addTag(EjbMigrationTags.EJB_ENTITY_BEAN);
                         analyzeEntityBeanMethods(clazz, classNode);
                         found = true;
                         break;
 
                     case "javax.ejb.MessageDrivenBean":
                     case "jakarta.ejb.MessageDrivenBean":
-                        projectFile.setTag(EjbMigrationTags.EJB_MESSAGE_DRIVEN_BEAN, true);
+                        classNode.addTag(EjbMigrationTags.EJB_MESSAGE_DRIVEN_BEAN);
                         analyzeMessageDrivenBeanMethods(clazz, classNode);
                         found = true;
                         break;
@@ -255,28 +254,28 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
                 switch (interfaceName) {
                     case "javax.ejb.EJBHome":
                     case "jakarta.ejb.EJBHome":
-                        projectFile.setTag(EjbMigrationTags.EJB_HOME_INTERFACE, true);
+                        classNode.addTag(EjbMigrationTags.EJB_HOME_INTERFACE);
                         analyzeHomeInterfaceMethods(clazz, classNode);
                         found = true;
                         break;
 
                     case "javax.ejb.EJBObject":
                     case "jakarta.ejb.EJBObject":
-                        projectFile.setTag(EjbMigrationTags.EJB_REMOTE_INTERFACE, true);
+                        classNode.addTag(EjbMigrationTags.EJB_REMOTE_INTERFACE);
                         analyzeRemoteInterfaceMethods(clazz, classNode);
                         found = true;
                         break;
 
                     case "javax.ejb.EJBLocalHome":
                     case "jakarta.ejb.EJBLocalHome":
-                        projectFile.setTag(EjbMigrationTags.EJB_LOCAL_HOME_INTERFACE, true);
+                        classNode.addTag(EjbMigrationTags.EJB_LOCAL_HOME_INTERFACE);
                         analyzeLocalHomeInterfaceMethods(clazz, classNode);
                         found = true;
                         break;
 
                     case "javax.ejb.EJBLocalObject":
                     case "jakarta.ejb.EJBLocalObject":
-                        projectFile.setTag(EjbMigrationTags.EJB_LOCAL_INTERFACE, true);
+                        classNode.addTag(EjbMigrationTags.EJB_LOCAL_INTERFACE);
                         analyzeLocalInterfaceMethods(clazz, classNode);
                         found = true;
                         break;

@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
@@ -44,7 +44,7 @@ public class MessageDrivenBeanInspector extends AbstractJavaParserInspector {
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-            ProjectFileDecorator projectFileDecorator) {
+                                          NodeDecorator projectFileDecorator) {
         classNodeRepository.getOrCreateClassNode(cu).ifPresent(classNode -> {
             classNode.setProjectFileId(projectFile.getId());
             MessageDrivenBeanDetector detector = new MessageDrivenBeanDetector();
@@ -54,12 +54,12 @@ public class MessageDrivenBeanInspector extends AbstractJavaParserInspector {
                 MessageDrivenBeanInfo info = detector.getMessageDrivenBeanInfo();
 
                 // Set tags on ProjectFile (for dependency chains) - honoring produces contract
-                projectFileDecorator.setTag(TAGS.TAG_EJB_MESSAGE_DRIVEN_BEAN, true);
-                projectFileDecorator.setTag(TAGS.TAG_EJB_MDB_DETECTED, true);
-                projectFileDecorator.setTag(TAGS.TAG_JMS_CONSUMER, true);
+                projectFileDecorator.setProperty(TAGS.TAG_EJB_MESSAGE_DRIVEN_BEAN, true);
+                projectFileDecorator.setProperty(TAGS.TAG_EJB_MDB_DETECTED, true);
+                projectFileDecorator.setProperty(TAGS.TAG_JMS_CONSUMER, true);
 
                 if ("3.x".equals(info.ejbVersion)) {
-                    projectFileDecorator.setTag(TAGS.TAG_ANNOTATION_MESSAGE_DRIVEN, true);
+                    projectFileDecorator.setProperty(TAGS.TAG_ANNOTATION_MESSAGE_DRIVEN, true);
                 }
 
                 // Set analysis data as single property on ClassNode (consolidated POJO)
