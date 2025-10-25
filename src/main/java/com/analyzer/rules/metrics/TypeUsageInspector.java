@@ -1,5 +1,6 @@
 package com.analyzer.rules.metrics;
-import com.analyzer.core.export.ProjectFileDecorator;
+
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.core.inspector.InspectorTags;
@@ -111,21 +112,16 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
     }
 
     @Override
-    protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+    protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile,
+            NodeDecorator<ProjectFile> projectFileDecorator) {
         try {
             logger.debug("Analyzing type usage for class: {}", loadedClass.getName());
 
             // Perform comprehensive type usage analysis
             TypeUsageMetrics metrics = analyzeTypeUsage(loadedClass, projectFile);
 
-            // Attach metrics to JavaClassNode and store as tags
-            attachTypeMetricsToGraphNode(projectFile, metrics, projectFileDecorator);
-
-            // Add summary tags for quick access
-            projectFileDecorator.setTag("type_usage.analyzed", "true");
-            projectFileDecorator.setTag("type_usage.complexity_level",
-                    metrics.getComplexityScore() > 10.0 ? "high"
-                            : metrics.getComplexityScore() > 5.0 ? "medium" : "low");
+            // Attach metrics to JavaClassNode
+            attachTypeMetricsToGraphNode(projectFile, metrics);
 
             logger.debug("Successfully analyzed type usage with {} unique types for class: {}",
                     metrics.getTotalUniqueTypes(), loadedClass.getName());
@@ -388,40 +384,47 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
     /**
      * Attaches comprehensive type usage metrics to the corresponding JavaClassNode.
      */
-    private void attachTypeMetricsToGraphNode(ProjectFile projectFile, TypeUsageMetrics metrics,
-            ProjectFileDecorator projectFileDecorator) {
+    private void attachTypeMetricsToGraphNode(ProjectFile projectFile, TypeUsageMetrics metrics) {
         if (graphRepository == null) {
-            logger.warn("GraphRepository not available - metrics will be stored as tags only");
-        } else {
-            String fullyQualifiedName = projectFile.getFullyQualifiedName();
-            if (fullyQualifiedName != null) {
-                JavaClassNode classNode = (JavaClassNode) graphRepository.getNode(fullyQualifiedName).orElse(null);
-                if (classNode != null) {
-                    logger.debug("JavaClassNode found in graph for type usage analysis: {}", fullyQualifiedName);
-                    // Future: Direct property setting when JavaClassNode API is extended
-                } else {
-                    logger.debug("JavaClassNode not found in graph for: {} - metrics stored as tags only",
-                            fullyQualifiedName);
-                }
-            }
+            logger.warn("GraphRepository not available - metrics cannot be attached to JavaClassNode.");
+            return;
         }
 
-        // Store comprehensive type usage metrics as detailed tags
-        projectFileDecorator.setTag(PROP_TYPES_TOTAL_UNIQUE, metrics.getTotalUniqueTypes());
-        projectFileDecorator.setTag(PROP_TYPES_FIELD_COUNT, metrics.getFieldTypeCount());
-        projectFileDecorator.setTag(PROP_TYPES_PARAMETER_COUNT, metrics.getParameterTypeCount());
-        projectFileDecorator.setTag(PROP_TYPES_RETURN_COUNT, metrics.getReturnTypeCount());
-        projectFileDecorator.setTag(PROP_TYPES_EXCEPTION_COUNT, metrics.getExceptionTypeCount());
-        projectFileDecorator.setTag(PROP_TYPES_ANNOTATION_COUNT, metrics.getAnnotationTypeCount());
-        projectFileDecorator.setTag(PROP_TYPES_PRIMITIVE_COUNT, metrics.getPrimitiveTypeCount());
-        projectFileDecorator.setTag(PROP_TYPES_REFERENCE_COUNT, metrics.getReferenceTypeCount());
-        projectFileDecorator.setTag(PROP_TYPES_COLLECTION_COUNT, metrics.getCollectionTypeCount());
-        projectFileDecorator.setTag(PROP_TYPES_FRAMEWORK_COUNT, metrics.getFrameworkTypeCount());
-        projectFileDecorator.setTag(PROP_TYPES_COMPLEXITY_SCORE, metrics.getComplexityScore());
-        projectFileDecorator.setTag(PROP_TYPES_GENERIC_COUNT, metrics.getGenericTypeCount());
+        String fullyQualifiedName = (String) projectFile.getProperty("fullyQualifiedName");
+        if (fullyQualifiedName == null) {
+            logger.warn("Could not find fullyQualifiedName for project file: {}", projectFile.getProperty("filePath"));
+            return;
+        }
 
-        logger.debug("Stored comprehensive type usage metrics as tags: {} (total={}, complexity={})",
-                projectFile.getFullyQualifiedName(), metrics.getTotalUniqueTypes(), metrics.getComplexityScore());
+        graphRepository.getNodeById(fullyQualifiedName).ifPresent(node -> {
+            if (node instanceof JavaClassNode) {
+                JavaClassNode classNode = (JavaClassNode) node;
+                logger.debug("Attaching type usage metrics to JavaClassNode: {}", fullyQualifiedName);
+
+                classNode.setProperty(PROP_TYPES_TOTAL_UNIQUE, metrics.getTotalUniqueTypes());
+                classNode.setProperty(PROP_TYPES_FIELD_COUNT, metrics.getFieldTypeCount());
+                classNode.setProperty(PROP_TYPES_PARAMETER_COUNT, metrics.getParameterTypeCount());
+                classNode.setProperty(PROP_TYPES_RETURN_COUNT, metrics.getReturnTypeCount());
+                classNode.setProperty(PROP_TYPES_EXCEPTION_COUNT, metrics.getExceptionTypeCount());
+                classNode.setProperty(PROP_TYPES_ANNOTATION_COUNT, metrics.getAnnotationTypeCount());
+                classNode.setProperty(PROP_TYPES_PRIMITIVE_COUNT, metrics.getPrimitiveTypeCount());
+                classNode.setProperty(PROP_TYPES_REFERENCE_COUNT, metrics.getReferenceTypeCount());
+                classNode.setProperty(PROP_TYPES_COLLECTION_COUNT, metrics.getCollectionTypeCount());
+                classNode.setProperty(PROP_TYPES_FRAMEWORK_COUNT, metrics.getFrameworkTypeCount());
+                classNode.setProperty(PROP_TYPES_COMPLEXITY_SCORE, metrics.getComplexityScore());
+                classNode.setProperty(PROP_TYPES_GENERIC_COUNT, metrics.getGenericTypeCount());
+
+                classNode.addTag("type_usage.analyzed");
+                classNode.setProperty("type_usage.complexity_level",
+                        metrics.getComplexityScore() > 10.0 ? "high"
+                                : metrics.getComplexityScore() > 5.0 ? "medium" : "low");
+
+                logger.debug("Stored comprehensive type usage metrics on JavaClassNode: {} (total={}, complexity={})",
+                        fullyQualifiedName, metrics.getTotalUniqueTypes(), metrics.getComplexityScore());
+            } else {
+                logger.debug("Node found for {} is not a JavaClassNode", fullyQualifiedName);
+            }
+        });
     }
 
     /**

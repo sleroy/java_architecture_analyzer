@@ -1,6 +1,6 @@
 package com.analyzer.rules.metrics;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.GraphRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
@@ -30,12 +30,12 @@ import static com.analyzer.rules.metrics.AnnotationCountInspector.TAG_ANNOTATION
  * alone, as it requires access to the actual annotation metadata and
  * potentially annotation values that are only available at runtime.
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED }, produces = { TAG_ANNOTATION_COUNT })
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_DETECTED},
+        produces = {TAG_ANNOTATION_COUNT})
 public class AnnotationCountInspector extends AbstractClassLoaderBasedInspector {
 
-    private static final Logger logger = LoggerFactory.getLogger(AnnotationCountInspector.class);
     public static final String TAG_ANNOTATION_COUNT = "annotation-count";
-
+    private static final Logger logger = LoggerFactory.getLogger(AnnotationCountInspector.class);
     private final GraphRepository graphRepository;
 
     /**
@@ -47,8 +47,8 @@ public class AnnotationCountInspector extends AbstractClassLoaderBasedInspector 
      */
     @Inject
     public AnnotationCountInspector(ResourceResolver resourceResolver,
-            JARClassLoaderService classLoaderService,
-            GraphRepository graphRepository) {
+                                    JARClassLoaderService classLoaderService,
+                                    GraphRepository graphRepository) {
         super(resourceResolver, classLoaderService);
         this.graphRepository = graphRepository;
     }
@@ -64,13 +64,13 @@ public class AnnotationCountInspector extends AbstractClassLoaderBasedInspector 
 
     @Override
     protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile,
-            ProjectFileDecorator projectFileDecorator) {
+                                      NodeDecorator<ProjectFile> projectFileDecorator) {
         try {
             int annotationCount = countAllAnnotations(loadedClass);
 
             logger.debug("Found {} annotations on class {}", annotationCount, loadedClass.getName());
 
-            projectFileDecorator.setTag(getColumnName(), annotationCount);
+            projectFileDecorator.setProperty(getColumnName(), annotationCount);
 
         } catch (Exception e) {
             logger.warn("Error analyzing annotations for class {}: {}",

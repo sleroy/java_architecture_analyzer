@@ -1,10 +1,10 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import ch.qos.logback.classic.Logger;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.detection.JavaSourceFileDetector;
 import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
 import com.analyzer.resource.ResourceResolver;
 import com.github.javaparser.ast.CompilationUnit;
@@ -15,7 +15,6 @@ import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -26,11 +25,12 @@ import java.util.Set;
  * Identifies JNDI usage that needs to be replaced with Spring dependency
  * injection.
  */
-@InspectorDependencies(need = { JavaSourceFileDetector.class }, produces = {
+@InspectorDependencies(need = {}, produces = {
         JndiLookupInspector.TAGS.TAG_USES_JNDI,
-        JndiLookupInspector.TAGS.TAG_JNDI_COMPLEXITY })
+        JndiLookupInspector.TAGS.TAG_JNDI_COMPLEXITY})
 public class JndiLookupInspector extends AbstractSourceFileInspector {
 
+    private static final Logger logger = (Logger) org.slf4j.LoggerFactory.getLogger(JndiLookupInspector.class);
     private final ClassNodeRepository classNodeRepository;
 
     public JndiLookupInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
@@ -42,10 +42,10 @@ public class JndiLookupInspector extends AbstractSourceFileInspector {
 
     @Override
     protected void analyzeSourceFile(ProjectFile projectFile, com.analyzer.resource.ResourceLocation sourceLocation,
-            ProjectFileDecorator projectFileDecorator) throws java.io.IOException {
+                                     NodeDecorator<ProjectFile> projectFileDecorator) throws java.io.IOException {
         String content = readFileContent(sourceLocation);
         if (content == null || content.trim().isEmpty()) {
-            projectFileDecorator.notApplicable();
+            logger.error("Empty Java source file: {}", sourceLocation);
             return;
         }
 
@@ -67,7 +67,7 @@ public class JndiLookupInspector extends AbstractSourceFileInspector {
     }
 
     private void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-            ProjectFileDecorator projectFileDecorator) {
+                                        NodeDecorator<ProjectFile> nodeDecorator) {
         classNodeRepository.getOrCreateClassNode(cu).ifPresent(classNode -> {
             classNode.setProjectFileId(projectFile.getId());
             JndiLookupDetector detector = new JndiLookupDetector();
@@ -77,7 +77,7 @@ public class JndiLookupInspector extends AbstractSourceFileInspector {
                 JndiLookupInfo info = detector.getJndiLookupInfo();
 
                 // Honor produces contract - set tags on ProjectFile (dependency chain)
-                setProducedTags(projectFileDecorator, info);
+                setProducedTags(nodeDecorator, info);
 
                 // Store detailed analysis data as consolidated POJO on ClassNode (no toJson() -
                 // direct POJO storage)
@@ -85,7 +85,6 @@ public class JndiLookupInspector extends AbstractSourceFileInspector {
                 return;
             }
 
-            projectFileDecorator.notApplicable();
         });
     }
 
@@ -98,10 +97,10 @@ public class JndiLookupInspector extends AbstractSourceFileInspector {
      * Honor produces contract - set tags on ProjectFile as required
      * by @InspectorDependencies
      */
-    private void setProducedTags(ProjectFileDecorator projectFileDecorator, JndiLookupInfo info) {
+    private void setProducedTags(NodeDecorator<ProjectFile> projectFileDecorator, JndiLookupInfo info) {
         // Set the main produced tags on ProjectFile (dependency chain)
-        projectFileDecorator.setTag(TAGS.TAG_USES_JNDI, true);
-        projectFileDecorator.setTag(TAGS.TAG_JNDI_COMPLEXITY, info.getMigrationComplexity());
+        projectFileDecorator.setProperty(TAGS.TAG_USES_JNDI, true);
+        projectFileDecorator.setProperty(TAGS.TAG_JNDI_COMPLEXITY, info.getMigrationComplexity());
     }
 
     public static class TAGS {
@@ -117,6 +116,14 @@ public class JndiLookupInspector extends AbstractSourceFileInspector {
      * 3. Service Locator patterns
      */
     private static class JndiLookupDetector extends VoidVisitorAdapter<Void> {
+        // Predefined collections to replace long equals chains
+        private static final Set<String> EJB_PREFIXES = Set.of("java:comp/env/ejb/");
+        private static final Set<String> JDBC_PREFIXES = Set.of("java:comp/env/jdbc/");
+        private static final Set<String> JMS_PREFIXES = Set.of("java:comp/env/jms/");
+        private static final Set<String> ENV_PREFIXES = Set.of("java:comp/env/");
+        private static final Set<String> EJB_PATTERNS = Set.of("ejb/");
+        private static final Set<String> JDBC_PATTERNS = Set.of("jdbc/");
+        private static final Set<String> JMS_PATTERNS = Set.of("jms/");
         private boolean hasJndiLookups = false;
         private JndiLookupInfo jndiInfo = new JndiLookupInfo();
 
@@ -179,15 +186,6 @@ public class JndiLookupInspector extends AbstractSourceFileInspector {
 
             super.visit(methodCall, arg);
         }
-
-        // Predefined collections to replace long equals chains
-        private static final Set<String> EJB_PREFIXES = Set.of("java:comp/env/ejb/");
-        private static final Set<String> JDBC_PREFIXES = Set.of("java:comp/env/jdbc/");
-        private static final Set<String> JMS_PREFIXES = Set.of("java:comp/env/jms/");
-        private static final Set<String> ENV_PREFIXES = Set.of("java:comp/env/");
-        private static final Set<String> EJB_PATTERNS = Set.of("ejb/");
-        private static final Set<String> JDBC_PATTERNS = Set.of("jdbc/");
-        private static final Set<String> JMS_PATTERNS = Set.of("jms/");
 
         private void categorizeJndiName(String jndiName) {
             if (EJB_PREFIXES.stream().anyMatch(jndiName::startsWith)) {

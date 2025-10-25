@@ -1,8 +1,12 @@
 package com.analyzer.core.graph;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Abstract base class for graph nodes that provides common property management
@@ -22,6 +26,7 @@ import java.util.Objects;
 public abstract class BaseGraphNode implements GraphNode {
 
     private final Map<String, Object> properties;
+    private final Set<String> tags;
     private final String nodeId;
     private final String nodeType;
 
@@ -35,6 +40,7 @@ public abstract class BaseGraphNode implements GraphNode {
         this.nodeId = Objects.requireNonNull(nodeId, "Node ID cannot be null");
         this.nodeType = Objects.requireNonNull(nodeType, "Node type cannot be null");
         this.properties = new HashMap<>();
+        this.tags = ConcurrentHashMap.newKeySet();
     }
 
     @Override
@@ -58,7 +64,7 @@ public abstract class BaseGraphNode implements GraphNode {
      * @param key   Property key
      * @param value Property value (null values remove the property)
      */
-    protected void setProperty(String key, Object value) {
+    public void setProperty(String key, Object value) {
         Objects.requireNonNull(key, "Property key cannot be null");
         if (value == null) {
             properties.remove(key);
@@ -167,5 +173,25 @@ public abstract class BaseGraphNode implements GraphNode {
     @SuppressWarnings("unchecked")
     public <T> T getProperty(java.lang.String propertyKey) {
         return (T) properties.get(propertyKey);
+    }
+
+    @Override
+    public void addTag(String tag) {
+        this.tags.add(tag);
+    }
+
+    @Override
+    public boolean hasTag(String tag) {
+        return this.tags.contains(tag);
+    }
+
+    @Override
+    public Set<String> getTags() {
+        return Collections.unmodifiableSet(tags);
+    }
+
+    @Override
+    public void removeTag(String tag) {
+        this.tags.remove(tag);
     }
 }

@@ -1,9 +1,10 @@
 package com.analyzer.inspectors.packages;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorResult;
 import com.analyzer.core.model.Package;
+import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceResolver;
 
 /**
@@ -36,11 +37,7 @@ public abstract class PackageInspector implements Inspector<Package> {
         return resourceResolver;
     }
 
-    public void decorate(Package packageToAnalyze, ProjectFileDecorator projectFileDecorator) {
-        if (!supports(packageToAnalyze)) {
-            projectFileDecorator.notApplicable();
-            return ;
-        }
+    public void decorate(Package packageToAnalyze, NodeDecorator<ProjectFile> projectFileDecorator) {
 
         try {
             analyzePackage(packageToAnalyze, projectFileDecorator);
@@ -61,5 +58,5 @@ public abstract class PackageInspector implements Inspector<Package> {
      * @param projectFileDecorator
      * @return the result of the analysis
      */
-    protected abstract InspectorResult analyzePackage(Package packageToAnalyze, ProjectFileDecorator projectFileDecorator);
+    protected abstract InspectorResult analyzePackage(Package packageToAnalyze, NodeDecorator<ProjectFile> projectFileDecorator);
 }

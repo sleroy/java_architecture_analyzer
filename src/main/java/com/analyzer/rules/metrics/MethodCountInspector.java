@@ -1,5 +1,6 @@
 package com.analyzer.rules.metrics;
-import com.analyzer.core.export.ProjectFileDecorator;
+
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.core.graph.GraphRepository;
@@ -30,9 +31,8 @@ import javax.inject.Inject;
  * <p>
  * Returns the total count of methods found in the class bytecode.
  */
-@InspectorDependencies(
-        requires = { InspectorTags.TAG_JAVA_IS_BINARY },
-        produces = { MethodCountInspector.TAG_METHOD_COUNT })
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = {
+        MethodCountInspector.TAG_METHOD_COUNT })
 public class MethodCountInspector extends AbstractASMInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(MethodCountInspector.class);
@@ -56,7 +56,8 @@ public class MethodCountInspector extends AbstractASMInspector {
     }
 
     @Override
-    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile,
+            NodeDecorator<ProjectFile> projectFileDecorator) {
         return new MethodCountVisitor(projectFile, projectFileDecorator);
     }
 
@@ -66,13 +67,13 @@ public class MethodCountInspector extends AbstractASMInspector {
     private static class MethodCountVisitor extends ASMClassVisitor {
         private int methodCount = 0;
 
-        public MethodCountVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-            super(projectFile, projectFileDecorator);
+        public MethodCountVisitor(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator) {
+            super(projectFile, decorator);
         }
 
         @Override
         public void visit(int version, int access, String name, String signature, String superName,
-                          String[] interfaces) {
+                String[] interfaces) {
             // Reset counter for each class
             methodCount = 0;
             logger.debug("Starting method count analysis for class: {}", name);
@@ -80,7 +81,7 @@ public class MethodCountInspector extends AbstractASMInspector {
 
         @Override
         public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
-                                         String[] exceptions) {
+                String[] exceptions) {
             methodCount++;
             logger.debug("Found method: {} with descriptor: {} (count: {})", name, descriptor, methodCount);
 
@@ -91,7 +92,7 @@ public class MethodCountInspector extends AbstractASMInspector {
         @Override
         public void visitEnd() {
             logger.debug("Method count analysis complete. Total methods: {}", methodCount);
-            setTag(TAG_METHOD_COUNT, methodCount);
+            setProperty(TAG_METHOD_COUNT, methodCount);
         }
     }
 }

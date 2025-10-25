@@ -1,6 +1,7 @@
 package com.analyzer.inspectors.core.binary;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorResult;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
@@ -13,15 +14,20 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Abstract base class for binary class inspectors that use Apache BCEL for bytecode analysis.
- * Provides parsed JavaClass to subclasses for comprehensive bytecode examination.
+ * Abstract base class for binary class inspectors that use Apache BCEL for
+ * bytecode analysis.
+ * Provides parsed JavaClass to subclasses for comprehensive bytecode
+ * examination.
  * 
- * This inspector handles the parsing of Java class files using the Apache BCEL library
- * and provides the resulting JavaClass representation to subclasses for analysis.
+ * This inspector handles the parsing of Java class files using the Apache BCEL
+ * library
+ * and provides the resulting JavaClass representation to subclasses for
+ * analysis.
  * BCEL offers high-level abstractions for bytecode analysis and is an excellent
  * alternative to ASM for many use cases.
  * 
- * Subclasses must implement getName(), getColumnName(), and analyzeJavaClass() methods.
+ * Subclasses must implement getName(), getColumnName(), and analyzeJavaClass()
+ * methods.
  */
 public abstract class AbstractBCELInspectorAbstract extends AbstractBinaryClassInspector {
 
@@ -36,20 +42,20 @@ public abstract class AbstractBCELInspectorAbstract extends AbstractBinaryClassI
 
     @Override
     protected final void analyzeClassFile(ProjectFile clazz, ResourceLocation binaryLocation,
-                                          InputStream classInputStream, ProjectFileDecorator projectFileDecorator) throws IOException {
+            InputStream classInputStream, NodeDecorator<ProjectFile> decorator) throws IOException {
         try {
             // Parse class file using BCEL
-            ClassParser classParser = new ClassParser(classInputStream, clazz.getClassName());
+            ClassParser classParser = new ClassParser(classInputStream, (String) clazz.getProperty("className"));
             JavaClass javaClass = classParser.parse();
-            
-            analyzeJavaClass(javaClass, clazz, projectFileDecorator);
-            
+
+            analyzeJavaClass(javaClass, clazz, decorator);
+
         } catch (ClassFormatException e) {
-            projectFileDecorator.error("BCEL class format error: " + e.getMessage());
+            decorator.error("BCEL class format error: " + e.getMessage());
         } catch (IOException e) {
-            projectFileDecorator.error( "Error reading class file: " + e.getMessage());
+            decorator.error("Error reading class file: " + e.getMessage());
         } catch (Exception e) {
-            projectFileDecorator.error( "BCEL analysis error: " + e.getMessage());
+            decorator.error("BCEL analysis error: " + e.getMessage());
         }
     }
 
@@ -67,10 +73,11 @@ public abstract class AbstractBCELInspectorAbstract extends AbstractBinaryClassI
      * BCEL's JavaClass offers more abstraction than ASM's raw bytecode visiting,
      * making it easier to implement certain types of analysis.
      *
-     * @param javaClass       the BCEL JavaClass representation of the bytecode
-     * @param clazz           the class being analyzed
-     * @param projectFileDecorator
+     * @param javaClass the BCEL JavaClass representation of the bytecode
+     * @param clazz     the class being analyzed
+     * @param decorator the decorator for setting properties and tags
      * @return the result of bytecode analysis
      */
-    protected abstract InspectorResult analyzeJavaClass(JavaClass javaClass, ProjectFile clazz, ProjectFileDecorator projectFileDecorator);
+    protected abstract InspectorResult analyzeJavaClass(JavaClass javaClass, ProjectFile clazz,
+            NodeDecorator<ProjectFile> decorator);
 }

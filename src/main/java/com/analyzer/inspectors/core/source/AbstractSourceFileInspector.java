@@ -1,6 +1,7 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.Inspector;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
@@ -16,9 +17,10 @@ import java.nio.charset.StandardCharsets;
  * sources.
  *
  * <p>
- * This class automatically requires the SOURCE_FILE tag, ensuring that inspectors
+ * This class automatically requires the SOURCE_FILE tag, ensuring that
+ * inspectors
  * extending this class only run on files that have been validated as supported
- * source files by the SourceFileTagDetector.
+ * source files by the SourceFileDetector.
  * </p>
  */
 public abstract class AbstractSourceFileInspector implements Inspector<ProjectFile> {
@@ -29,21 +31,21 @@ public abstract class AbstractSourceFileInspector implements Inspector<ProjectFi
         this.resourceResolver = resourceResolver;
     }
 
-    public final void decorate(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-
+    @Override
+    public final void inspect(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator) {
         try {
             // Create ResourceLocation from the project file path
             ResourceLocation sourceLocation = new ResourceLocation(projectFile.getFilePath().toUri());
 
             if (!resourceResolver.exists(sourceLocation)) {
-                projectFileDecorator.error("Source file not found: " + sourceLocation);
+                decorator.error("Source file not found: " + sourceLocation);
                 return;
             }
 
-            analyzeSourceFile(projectFile, sourceLocation, projectFileDecorator);
+            analyzeSourceFile(projectFile, sourceLocation, decorator);
 
         } catch (Exception e) {
-            projectFileDecorator.error("Error analyzing source file: " + e.getMessage());
+            decorator.error("Error analyzing source file: " + e.getMessage());
         }
     }
 
@@ -51,17 +53,17 @@ public abstract class AbstractSourceFileInspector implements Inspector<ProjectFi
         return projectFile != null;
     }
 
-
     /**
      * Analyzes the source file for the given class.
      * Subclasses must implement this method to provide specific analysis logic.
      *
-     * @param projectFile     the project file to analyze
-     * @param sourceLocation  the ResourceLocation of the source file
-     * @param projectFileDecorator the result decorator for recording analysis results
+     * @param projectFile    the project file to analyze
+     * @param sourceLocation the ResourceLocation of the source file
+     * @param decorator      the decorator for setting properties and tags
      * @throws IOException if there's an error reading the source file
      */
-    protected abstract void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation, ProjectFileDecorator projectFileDecorator)
+    protected abstract void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation,
+            NodeDecorator<ProjectFile> decorator)
             throws IOException;
 
     /**
@@ -94,8 +96,8 @@ public abstract class AbstractSourceFileInspector implements Inspector<ProjectFi
      */
     protected long countLines(ResourceLocation sourceLocation) throws IOException {
         try (InputStream inputStream = resourceResolver.openStream(sourceLocation);
-             BufferedReader reader = new BufferedReader(
-                     new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
 
             return reader.lines().count();
         }

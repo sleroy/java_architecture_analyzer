@@ -30,36 +30,29 @@ public class InspectorDependencyGraphCommand implements Callable<Integer> {
     @Parameters(paramLabel = "OUTPUT_FILE", description = "Output file path for the dependency graph (e.g., dependencies.graphml)")
     private File outputFile;
 
-    @Option(names = { "-f",
-            "--format" }, description = "Output format: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE})", defaultValue = "graphml")
+    @Option(names = {"-f",
+            "--format"}, description = "Output format: ${COMPLETION-CANDIDATES} (default: ${DEFAULT-VALUE})", defaultValue = "graphml")
     private GraphFormat format = GraphFormat.graphml;
 
-    @Option(names = { "-s", "--source" }, description = "Source directories to analyze (for context)", split = ",")
+    @Option(names = {"-s", "--source"}, description = "Source directories to analyze (for context)", split = ",")
     private File[] sourceDirs = {};
 
-    @Option(names = { "-b", "--binary" }, description = "Binary files/JARs to analyze (for context)", split = ",")
+    @Option(names = {"-b", "--binary"}, description = "Binary files/JARs to analyze (for context)", split = ",")
     private File[] binaryFiles = {};
 
-    @Option(names = { "--plugins" }, description = "Directory containing plugin JAR files", defaultValue = "plugins")
-    private File pluginsDir = new File("plugins");
-
-    @Option(names = { "--include-unused" }, description = "Include analysis of unused tags", defaultValue = "true")
+    @Option(names = {"--include-unused"}, description = "Include analysis of unused tags", defaultValue = "true")
     private boolean includeUnusedTags = true;
 
     @Option(names = {
-            "--include-semantics" }, description = "Include semantic duplication analysis", defaultValue = "true")
+            "--include-semantics"}, description = "Include semantic duplication analysis", defaultValue = "true")
     private boolean includeSemanticsAnalysis = true;
 
     @Option(names = {
-            "--min-chain-length" }, description = "Minimum dependency chain length to highlight (default: ${DEFAULT-VALUE})", defaultValue = "3")
+            "--min-chain-length"}, description = "Minimum dependency chain length to highlight (default: ${DEFAULT-VALUE})", defaultValue = "3")
     private int minChainLength = 3;
 
-    @Option(names = { "--verbose", "-v" }, description = "Enable verbose output")
+    @Option(names = {"--verbose", "-v"}, description = "Enable verbose output")
     private boolean verbose = false;
-
-    public enum GraphFormat {
-        graphml, dot, json
-    }
 
     @Override
     public Integer call() throws Exception {
@@ -78,7 +71,7 @@ public class InspectorDependencyGraphCommand implements Callable<Integer> {
             ResourceResolver resourceResolver = createResourceResolver();
 
             // Create inspector registry to load all inspectors
-            InspectorRegistry inspectorRegistry = new InspectorRegistry(pluginsDir, resourceResolver);
+            InspectorRegistry inspectorRegistry = InspectorRegistry.newInspectorRegistry(resourceResolver);
 
             if (verbose) {
                 logger.info("Loaded {} inspectors", inspectorRegistry.getInspectorCount());
@@ -211,7 +204,8 @@ public class InspectorDependencyGraphCommand implements Callable<Integer> {
         // Complex dependency chains
         if (!result.complexChains().isEmpty()) {
             System.out.printf("🔗 Complex Dependency Chains (%d):%n", result.complexChains().size());
-            result.complexChains().forEach(chain -> System.out.println("   Length " + chain.size() + ": " + String.join(" → ", chain)));
+            result.complexChains().forEach(
+                    chain -> System.out.println("   Length " + chain.size() + ": " + String.join(" → ", chain)));
             System.out.println();
         }
 
@@ -232,5 +226,9 @@ public class InspectorDependencyGraphCommand implements Callable<Integer> {
         }
 
         System.out.printf("Graph exported to: %s%n", outputFile.getAbsolutePath());
+    }
+
+    public enum GraphFormat {
+        graphml, dot, json
     }
 }

@@ -1,4 +1,5 @@
 package com.analyzer.core.filter;
+
 import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.core.model.Package;
@@ -94,7 +95,7 @@ public class PackageFilter {
 
         for (Map.Entry<String, ProjectFile> entry : classes.entrySet()) {
             ProjectFile clazz = entry.getValue();
-            String packageName = clazz.getPackageName();
+            String packageName = (String) clazz.getProperty("packageName");
 
             if (matchesAnyFilter(packageName, cleanFilters)) {
                 filteredClasses.put(entry.getKey(), clazz);

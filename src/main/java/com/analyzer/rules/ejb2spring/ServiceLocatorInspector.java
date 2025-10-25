@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -15,7 +15,6 @@ import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -59,7 +58,7 @@ public class ServiceLocatorInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-            ProjectFileDecorator projectFileDecorator) {
+                                NodeDecorator projectFileDecorator) {
 
         ServiceLocatorDetector detector = new ServiceLocatorDetector();
         type.accept(detector, null);
@@ -68,16 +67,16 @@ public class ServiceLocatorInspector extends AbstractJavaClassInspector {
             ServiceLocatorInfo info = detector.getServiceLocatorInfo();
 
             // Set tags according to the produces contract
-            projectFileDecorator.setTag(EjbMigrationTags.EJB_SERVICE_LOCATOR, true);
-            projectFileDecorator.setTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-            projectFileDecorator.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+            projectFileDecorator.setProperty(EjbMigrationTags.EJB_SERVICE_LOCATOR, true);
+            projectFileDecorator.setProperty(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
+            projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
 
             // Set property on class node for detailed analysis
             classNode.setProperty("service.locator.analysis", info.toString());
 
             // Set analysis statistics
-            projectFileDecorator.setTag("service.locator.jndi_calls", info.jndiLookupCount);
-            projectFileDecorator.setTag("service.locator.factory_methods", info.factoryMethodCount);
+            projectFileDecorator.setProperty("service.locator.jndi_calls", info.jndiLookupCount);
+            projectFileDecorator.setProperty("service.locator.factory_methods", info.factoryMethodCount);
         }
     }
 

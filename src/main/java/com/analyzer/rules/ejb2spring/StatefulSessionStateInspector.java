@@ -1,12 +1,11 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
-import com.analyzer.core.graph.ClassNodeRepository;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.JavaClassNode;
+import com.analyzer.core.graph.ProjectFileRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
-import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.binary.AbstractASMInspector;
+import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -17,163 +16,80 @@ import javax.inject.Inject;
 import java.util.*;
 
 /**
- * Inspector I-0905: Stateful Session State Inspector
+ * Class-centric stateful session state inspector - Phase 3 migration.
+ * 
  * <p>
  * Analyzes stateful session beans to identify state management patterns,
  * conversational state variables, and cross-method state dependencies.
  * Provides recommendations for migrating to Spring scope patterns.
+ * </p>
+ * 
+ * <p>
+ * <strong>Analysis Performed:</strong>
+ * </p>
+ * <ul>
+ * <li>State field identification and role classification</li>
+ * <li>Cross-method dependency tracking</li>
+ * <li>Complexity assessment based on field types and interactions</li>
+ * <li>Spring scope migration strategy determination</li>
+ * <li>Serialization and collection pattern detection</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>Key Differences from StatefulSessionStateInspector:</strong>
+ * </p>
+ * <ul>
+ * <li>Extends AbstractASMClassInspector (class-centric) instead of
+ * AbstractASMInspector (file-centric)</li>
+ * <li>Receives JavaClassNode directly instead of creating it</li>
+ * <li>Writes all analysis results to JavaClassNode properties</li>
+ * <li>Uses NodeDecorator for type-safe property access</li>
+ * <li>Simplified lifecycle without supports() method</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>Migration Strategies Generated:</strong>
+ * </p>
+ * <ul>
+ * <li>SESSION_SCOPED - For user-data and collection-heavy beans</li>
+ * <li>REQUEST_SCOPED - For low-complexity calculated state</li>
+ * <li>STATELESS_REFACTOR - For simple state that can be externalized</li>
+ * <li>MANUAL_REVIEW - For critical complexity requiring detailed analysis</li>
+ * </ul>
+ * 
+ * @since Phase 3 - Systematic Inspector Migration
+ * @see StatefulSessionStateInspector Original file-centric version
  */
-@InspectorDependencies(requires = {EjbMigrationTags.EJB_STATEFUL_SESSION_BEAN, InspectorTags.TAG_JAVA_IS_BINARY}, produces = {
+@InspectorDependencies(requires = {
+        EjbMigrationTags.EJB_STATEFUL_SESSION_BEAN,
+        InspectorTags.TAG_JAVA_IS_BINARY
+}, produces = {
         EjbMigrationTags.STATEFUL_SESSION_STATE,
         EjbMigrationTags.CONVERSATIONAL_STATE,
         EjbMigrationTags.CROSS_METHOD_DEPENDENCY,
         EjbMigrationTags.SPRING_SCOPE_MIGRATION
 })
-public class StatefulSessionStateInspector extends AbstractASMInspector {
-
-    private final ClassNodeRepository classNodeRepository;
+public class StatefulSessionStateInspector extends AbstractASMClassInspector {
 
     @Inject
-    public StatefulSessionStateInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
-        this.classNodeRepository = classNodeRepository;
+    public StatefulSessionStateInspector(ProjectFileRepository projectFileRepository,
+            ResourceResolver resourceResolver) {
+        super(projectFileRepository, resourceResolver);
     }
-
-    
 
     @Override
     public String getName() {
-        return "Stateful Session State Inspector";
-    }
-
-    
-
-    @Override
-    public boolean supports(ProjectFile file) {
-        // Trust @InspectorDependencies for tag filtering, no need to check tags here
-        return true;
-    }
-
-    /**
-     * Sets basic tags for supported stateful session bean files.
-     * This is called when ASM parsing fails with invalid bytecode.
-     */
-    private void setBasicTagsForSupportedFile(ProjectFileDecorator decorator, JavaClassNode classNode) {
-        // Set primary analysis tags on the classNode
-        classNode.setProperty(EjbMigrationTags.STATEFUL_SESSION_STATE, true);
-        classNode.setProperty(EjbMigrationTags.CONVERSATIONAL_STATE, true);
-        classNode.setProperty(EjbMigrationTags.SPRING_SCOPE_MIGRATION, true);
-
-        // Set default complexity and strategy for cases where detailed analysis fails
-        StateAnalysisData defaultData = new StateAnalysisData();
-        defaultData.fieldCount = 0;
-        defaultData.crossMethodDependencies = 0;
-        defaultData.complexity = "LOW";
-        defaultData.migrationStrategy = "SESSION_SCOPED";
-        defaultData.recommendations = Collections.singletonList("Convert to @Scope(\"session\") Spring bean");
-        defaultData.fieldMetadata = new ArrayList<>();
-        
-        // Store the POJO as a property
-        classNode.setProperty("stateful_state.analysis_data", defaultData);
-
-        // Use decorator to set tags that are listed in produces
-        decorator.setTag(EjbMigrationTags.STATEFUL_SESSION_STATE, true);
-        decorator.setTag(EjbMigrationTags.CONVERSATIONAL_STATE, true);
-        decorator.setTag(EjbMigrationTags.SPRING_SCOPE_MIGRATION, true);
-
-        // Detect test scenarios for proper test behavior
-        detectTestScenarioFromProjectFile(decorator, classNode);
-    }
-
-    /**
-     * Detects test scenarios by examining the filename and sets appropriate data.
-     * This helps provide expected behavior in unit tests.
-     */
-    private void detectTestScenarioFromProjectFile(ProjectFileDecorator decorator, JavaClassNode classNode) {
-        String fileName = decorator.getProjectFile().getFilePath().toString();
-        StateAnalysisData testData = new StateAnalysisData();
-        
-        // Check if this is a test scenario based on filename patterns
-        if (fileName.contains("ComplexStateful") || fileName.contains("HighComplexity")) {
-            testData.complexity = "HIGH";
-            testData.fieldCount = 5;
-            testData.crossMethodDependencies = 3;
-            testData.recommendations = Arrays.asList(
-                "Convert to @Scope(\"session\") Spring bean", 
-                "Consider using ScopedProxyMode.TARGET_CLASS"
-            );
-            
-            // Set the CROSS_METHOD_DEPENDENCY tag as it's in the produces list
-            decorator.setTag(EjbMigrationTags.CROSS_METHOD_DEPENDENCY, true);
-            classNode.setProperty(EjbMigrationTags.CROSS_METHOD_DEPENDENCY, true);
-        } else if (fileName.contains("CriticalStateful") || fileName.contains("CriticalComplexity")) {
-            testData.complexity = "CRITICAL";
-            testData.fieldCount = 8;
-            testData.crossMethodDependencies = 6;
-            testData.migrationStrategy = "MANUAL_REVIEW";
-            testData.recommendations = Arrays.asList(
-                "Complex state requires manual migration review", 
-                "Consider breaking into smaller, focused services"
-            );
-            
-            // Set the CROSS_METHOD_DEPENDENCY tag as it's in the produces list
-            decorator.setTag(EjbMigrationTags.CROSS_METHOD_DEPENDENCY, true);
-            classNode.setProperty(EjbMigrationTags.CROSS_METHOD_DEPENDENCY, true);
-        } else if (fileName.contains("RequestScoped")) {
-            testData.migrationStrategy = "REQUEST_SCOPED";
-            testData.recommendations = Collections.singletonList("Convert to @Scope(\"request\") Spring bean");
-        } else if (fileName.contains("StatelessRefactor")) {
-            testData.migrationStrategy = "STATELESS_REFACTOR";
-            testData.recommendations = Arrays.asList(
-                "Refactor to stateless service with external state storage",
-                "Consider using database or Redis for state persistence"
-            );
-        } else if (fileName.contains("Collection")) {
-            // For collection-related tests
-            testData.recommendations = Arrays.asList(
-                "Convert to @Scope(\"session\") Spring bean", 
-                "Optimize collection fields for memory usage"
-            );
-            
-            StateField field = new StateField();
-            field.name = "items";
-            field.type = "List";
-            field.isCollection = true;
-            testData.fieldMetadata.add(field);
-        } else if (fileName.contains("Serializable")) {
-            // For serializable-related tests
-            testData.recommendations = Arrays.asList(
-                "Convert to @Scope(\"session\") Spring bean", 
-                "Review serializable fields for session storage"
-            );
-        } else {
-            // Default case - ensure session scoped recommendations include both parts
-            testData.recommendations = Arrays.asList(
-                "Convert to @Scope(\"session\") Spring bean", 
-                "Consider using ScopedProxyMode.TARGET_CLASS"
-            );
-        }
-        
-        // Store the POJO as a property
-        classNode.setProperty("stateful_state.analysis_data", testData);
+        return "Stateful Session State Inspector V2 (Class-Centric ASM)";
     }
 
     @Override
-    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-        JavaClassNode classNode = classNodeRepository.getOrCreateClassNodeByFqn(projectFile.getFullyQualifiedName()).orElseThrow();
-        classNode.setProjectFileId(projectFile.getId());
-        
-        // If we're in an error handling situation, ensure basic tags are set
-        // This handles the case where the following ASM visitor might fail
-        if (projectFile.hasTag(EjbMigrationTags.EJB_STATEFUL_SESSION_BEAN)) {
-            setBasicTagsForSupportedFile(projectFileDecorator, classNode);
-        }
-        
-        return new StatefulBeanAnalysisVisitor(projectFile, projectFileDecorator, classNode);
+    protected ASMClassNodeVisitor createClassVisitor(JavaClassNode classNode,
+            NodeDecorator<JavaClassNode> decorator) {
+        return new StatefulBeanAnalysisVisitor(classNode, decorator);
     }
 
-    // Utility methods
-    private boolean isSerializableType(String descriptor) {
+    // Utility methods for field and method analysis
+    private static boolean isSerializableType(String descriptor) {
         String type = Type.getType(descriptor).getClassName();
         return type.equals("java.io.Serializable") ||
                 type.startsWith("java.lang.") ||
@@ -181,7 +97,7 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
                 type.endsWith("Serializable");
     }
 
-    private boolean isCollectionType(String descriptor) {
+    private static boolean isCollectionType(String descriptor) {
         String type = Type.getType(descriptor).getClassName();
         return type.startsWith("java.util.List") ||
                 type.startsWith("java.util.Set") ||
@@ -190,7 +106,7 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
                 type.endsWith("[]");
     }
 
-    private StateFieldRole determineFieldRole(String name, String descriptor) {
+    private static StateFieldRole determineFieldRole(String name, String descriptor) {
         String lowerName = name.toLowerCase();
 
         if (lowerName.contains("user") || lowerName.contains("customer") ||
@@ -210,13 +126,13 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
         return StateFieldRole.BUSINESS_DATA;
     }
 
-    private boolean isEjbLifecycleMethod(String name) {
+    private static boolean isEjbLifecycleMethod(String name) {
         return name.equals("ejbCreate") || name.equals("ejbRemove") ||
                 name.equals("ejbActivate") || name.equals("ejbPassivate") ||
                 name.equals("setSessionContext");
     }
 
-    private MethodRole determineMethodRole(String name) {
+    private static MethodRole determineMethodRole(String name) {
         if (isEjbLifecycleMethod(name)) {
             return MethodRole.LIFECYCLE;
         }
@@ -242,6 +158,9 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
         return MethodRole.BUSINESS;
     }
 
+    /**
+     * Enumeration of state field roles for classification.
+     */
     private enum StateFieldRole {
         USER_DATA,
         BUSINESS_DATA,
@@ -249,6 +168,9 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
         CACHE
     }
 
+    /**
+     * Enumeration of method roles for lifecycle and access pattern analysis.
+     */
     private enum MethodRole {
         INITIALIZER,
         MUTATOR,
@@ -258,7 +180,9 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
         BUSINESS
     }
 
-    // Data classes - using proper serializable POJOs
+    /**
+     * Data class representing a state field in the stateful bean.
+     */
     private static class StateField {
         String name;
         String descriptor;
@@ -268,11 +192,14 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
         StateFieldRole role;
         int readers;
         int writers;
-        
-        // Default constructor needed for Jackson
-        public StateField() {}
+
+        public StateField() {
+        }
     }
 
+    /**
+     * Data class representing a method in the stateful bean.
+     */
     private static class StateMethod {
         String name;
         String descriptor;
@@ -281,11 +208,15 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
         MethodRole role;
         Set<String> readsFields;
         Set<String> writesFields;
-        
-        // Default constructor needed for Jackson
-        public StateMethod() {}
+
+        public StateMethod() {
+        }
     }
-    
+
+    /**
+     * Comprehensive analysis data POJO for stateful bean state patterns.
+     * This consolidates all analysis results into a single serializable object.
+     */
     private static class StateAnalysisData {
         int fieldCount;
         int crossMethodDependencies;
@@ -293,8 +224,7 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
         String migrationStrategy;
         List<String> recommendations;
         List<StateField> fieldMetadata;
-        
-        // Default constructor with initializations
+
         public StateAnalysisData() {
             this.recommendations = new ArrayList<>();
             this.fieldMetadata = new ArrayList<>();
@@ -303,22 +233,27 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
         }
     }
 
-    private class StatefulBeanAnalysisVisitor extends ASMClassVisitor {
+    /**
+     * ASM visitor that analyzes stateful session bean state patterns.
+     * Tracks field usage, method interactions, and generates migration
+     * recommendations.
+     */
+    private static class StatefulBeanAnalysisVisitor extends ASMClassNodeVisitor {
         private final List<StateField> stateFields = new ArrayList<>();
         private final List<StateMethod> stateMethods = new ArrayList<>();
         private final Map<String, Set<String>> fieldReaders = new HashMap<>();
         private final Map<String, Set<String>> fieldWriters = new HashMap<>();
 
         private String className;
-        private final JavaClassNode classNode;
 
-        public StatefulBeanAnalysisVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator, JavaClassNode classNode) {
-            super(projectFile, projectFileDecorator);
-            this.classNode = classNode;
+        protected StatefulBeanAnalysisVisitor(JavaClassNode classNode,
+                NodeDecorator<JavaClassNode> decorator) {
+            super(classNode, decorator);
         }
 
         @Override
-        public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+        public void visit(int version, int access, String name, String signature, String superName,
+                String[] interfaces) {
             this.className = name.replace('/', '.');
             super.visit(version, access, name, signature, superName, interfaces);
         }
@@ -344,7 +279,8 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
         }
 
         @Override
-        public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
+        public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
+                String[] exceptions) {
             StateMethod method = new StateMethod();
             method.name = name;
             method.descriptor = descriptor;
@@ -354,7 +290,7 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
 
             stateMethods.add(method);
 
-            return new StateFieldTrackingVisitor(method);
+            return new StateFieldTrackingVisitor(method, className, fieldReaders, fieldWriters);
         }
 
         @Override
@@ -363,9 +299,14 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
             super.visitEnd();
         }
 
+        /**
+         * Performs comprehensive stateful bean analysis and writes results to
+         * JavaClassNode.
+         */
         private void analyzeStatefulBean() {
             if (stateFields.isEmpty()) {
-                projectFileDecorator.notApplicable();
+                // No state fields found - this is unusual for a stateful bean
+                setProperty("stateful_state.no_fields_detected", true);
                 return;
             }
 
@@ -375,36 +316,37 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
             String complexity = assessComplexity(stateFieldCount, crossMethodDeps);
             String migrationStrategy = determineMigrationStrategy(complexity, stateFields);
 
-            // Create a POJO to hold all analysis data
+            // Create consolidated analysis data POJO
             StateAnalysisData analysisData = new StateAnalysisData();
             analysisData.fieldCount = stateFieldCount;
             analysisData.crossMethodDependencies = crossMethodDeps;
             analysisData.complexity = complexity;
             analysisData.migrationStrategy = migrationStrategy;
-            
-            // Generate recommendations
             analysisData.recommendations = generateRecommendations(complexity, migrationStrategy, stateFields);
-            
-            // Create field metadata
             analysisData.fieldMetadata = createFieldMetadataObjects(stateFields);
-            
-            // Store the entire analysis data as a single property
-            classNode.setProperty("stateful_state.analysis_data", analysisData);
-            
-            // Set the tags that are in the produces annotation
-            projectFileDecorator.setTag(EjbMigrationTags.STATEFUL_SESSION_STATE, true);
-            projectFileDecorator.setTag(EjbMigrationTags.CONVERSATIONAL_STATE, true);
-            projectFileDecorator.setTag(EjbMigrationTags.SPRING_SCOPE_MIGRATION, true);
-            
+
+            // Write comprehensive analysis data to JavaClassNode as single property
+            setProperty("stateful_state.analysis_data", analysisData);
+
+            // Enable tags for dependency resolution
+            enableTag(EjbMigrationTags.STATEFUL_SESSION_STATE);
+            enableTag(EjbMigrationTags.CONVERSATIONAL_STATE);
+            enableTag(EjbMigrationTags.SPRING_SCOPE_MIGRATION);
+
             if (crossMethodDeps > 0) {
-                projectFileDecorator.setTag(EjbMigrationTags.CROSS_METHOD_DEPENDENCY, true);
+                enableTag(EjbMigrationTags.CROSS_METHOD_DEPENDENCY);
             }
-            
-            // Add a brief summary as a tag for quick reference
-            projectFileDecorator.setTag("stateful_state.analysis",
-                    "Found " + stateFieldCount + " state fields with " + complexity.toLowerCase() + " complexity");
+
+            // Add summary properties for quick access
+            setProperty("stateful_state.field_count", stateFieldCount);
+            setProperty("stateful_state.complexity", complexity);
+            setProperty("stateful_state.migration_strategy", migrationStrategy);
         }
 
+        /**
+         * Calculates the number of cross-method dependencies by analyzing field access
+         * patterns.
+         */
         private int calculateCrossMethodDependencies() {
             int dependencies = 0;
 
@@ -421,7 +363,8 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
                                 break; // Count each field only once
                             }
                         }
-                        if (dependencies > 0) break; // Already counted this field
+                        if (dependencies > 0)
+                            break; // Already counted this field
                     }
                 }
             }
@@ -429,22 +372,35 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
             return dependencies;
         }
 
+        /**
+         * Assesses the complexity of state management based on multiple factors.
+         */
         private String assessComplexity(int stateFieldCount, int crossMethodDeps) {
             int complexityScore = stateFieldCount * 2 + crossMethodDeps * 3;
 
             // Add complexity for special field types
             for (StateField field : stateFields) {
-                if (field.isCollection) complexityScore += 2;
-                if (field.isSerializable) complexityScore += 1;
-                if (field.role == StateFieldRole.CALCULATED) complexityScore += 2;
+                if (field.isCollection)
+                    complexityScore += 2;
+                if (field.isSerializable)
+                    complexityScore += 1;
+                if (field.role == StateFieldRole.CALCULATED)
+                    complexityScore += 2;
             }
 
-            if (complexityScore <= 8) return "LOW";
-            if (complexityScore <= 16) return "MEDIUM";
-            if (complexityScore <= 24) return "HIGH";
+            if (complexityScore <= 8)
+                return "LOW";
+            if (complexityScore <= 16)
+                return "MEDIUM";
+            if (complexityScore <= 24)
+                return "HIGH";
             return "CRITICAL";
         }
 
+        /**
+         * Determines the most appropriate migration strategy based on complexity and
+         * field patterns.
+         */
         private String determineMigrationStrategy(String complexity, List<StateField> fields) {
             if ("CRITICAL".equals(complexity)) {
                 return "MANUAL_REVIEW";
@@ -470,6 +426,9 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
             return "SESSION_SCOPED";
         }
 
+        /**
+         * Generates specific migration recommendations based on analysis results.
+         */
         private List<String> generateRecommendations(String complexity, String strategy, List<StateField> fields) {
             List<String> recommendations = new ArrayList<>();
 
@@ -505,9 +464,12 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
             return recommendations;
         }
 
+        /**
+         * Creates detailed field metadata objects with usage statistics.
+         */
         private List<StateField> createFieldMetadataObjects(List<StateField> fields) {
             List<StateField> fieldMetadata = new ArrayList<>();
-            
+
             for (StateField originalField : fields) {
                 StateField field = new StateField();
                 field.name = originalField.name;
@@ -515,53 +477,65 @@ public class StatefulSessionStateInspector extends AbstractASMInspector {
                 field.role = originalField.role;
                 field.isCollection = originalField.isCollection;
                 field.isSerializable = originalField.isSerializable;
-                
+
                 Set<String> readers = fieldReaders.get(field.name);
                 Set<String> writers = fieldWriters.get(field.name);
                 field.readers = readers != null ? readers.size() : 0;
                 field.writers = writers != null ? writers.size() : 0;
-                
+
                 fieldMetadata.add(field);
             }
-            
+
             return fieldMetadata;
         }
+    }
 
-        private class StateFieldTrackingVisitor extends MethodVisitor {
-            private final StateMethod currentMethod;
-            private final Set<String> readsFields = new HashSet<>();
-            private final Set<String> writesFields = new HashSet<>();
+    /**
+     * Method visitor that tracks field access patterns within methods.
+     * Used to identify cross-method state dependencies.
+     */
+    private static class StateFieldTrackingVisitor extends MethodVisitor {
+        private final StateMethod currentMethod;
+        private final String className;
+        private final Map<String, Set<String>> fieldReaders;
+        private final Map<String, Set<String>> fieldWriters;
+        private final Set<String> readsFields = new HashSet<>();
+        private final Set<String> writesFields = new HashSet<>();
 
-            public StateFieldTrackingVisitor(StateMethod method) {
-                super(Opcodes.ASM9);
-                this.currentMethod = method;
-            }
+        public StateFieldTrackingVisitor(StateMethod method, String className,
+                Map<String, Set<String>> fieldReaders,
+                Map<String, Set<String>> fieldWriters) {
+            super(Opcodes.ASM9);
+            this.currentMethod = method;
+            this.className = className;
+            this.fieldReaders = fieldReaders;
+            this.fieldWriters = fieldWriters;
+        }
 
-            @Override
-            public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
-                // Track field access patterns for this class only
-                if (owner.replace('/', '.').equals(className)) {
-                    switch (opcode) {
-                        case Opcodes.GETFIELD:
-                            readsFields.add(name);
-                            fieldReaders.computeIfAbsent(name, k -> new HashSet<>()).add(currentMethod.name);
-                            break;
-                        case Opcodes.PUTFIELD:
-                            writesFields.add(name);
-                            fieldWriters.computeIfAbsent(name, k -> new HashSet<>()).add(currentMethod.name);
-                            break;
-                    }
+        @Override
+        public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
+            // Track field access patterns for this class only
+            if (owner.replace('/', '.').equals(className)) {
+                switch (opcode) {
+                    case Opcodes.GETFIELD:
+                        readsFields.add(name);
+                        fieldReaders.computeIfAbsent(name, k -> new HashSet<>()).add(currentMethod.name);
+                        break;
+                    case Opcodes.PUTFIELD:
+                        writesFields.add(name);
+                        fieldWriters.computeIfAbsent(name, k -> new HashSet<>()).add(currentMethod.name);
+                        break;
                 }
-
-                super.visitFieldInsn(opcode, owner, name, descriptor);
             }
 
-            @Override
-            public void visitEnd() {
-                currentMethod.readsFields = readsFields;
-                currentMethod.writesFields = writesFields;
-                super.visitEnd();
-            }
+            super.visitFieldInsn(opcode, owner, name, descriptor);
+        }
+
+        @Override
+        public void visitEnd() {
+            currentMethod.readsFields = readsFields;
+            currentMethod.writesFields = writesFields;
+            super.visitEnd();
         }
     }
 }

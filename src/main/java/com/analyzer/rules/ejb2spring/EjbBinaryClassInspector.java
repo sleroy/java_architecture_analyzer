@@ -1,12 +1,11 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
-import com.analyzer.core.graph.ClassNodeRepository;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.JavaClassNode;
+import com.analyzer.core.graph.ProjectFileRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
-import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.binary.AbstractASMInspector;
+import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.Opcodes;
@@ -17,27 +16,52 @@ import javax.inject.Inject;
 import java.util.*;
 
 /**
- * Binary class inspector that detects all types of EJB beans using ASM bytecode
- * analysis.
- * This inspector analyzes .class files to identify EJB components without
- * requiring
- * class loading, making it ideal for JAR scanning and dependency analysis.
+ * Class-centric EJB binary inspector - Phase 3 migration.
  * 
  * <p>
- * Detects:
+ * Detects all types of EJB beans using ASM bytecode analysis without requiring
+ * class loading.
+ * This inspector analyzes .class files to identify EJB components, making it
+ * ideal for JAR
+ * scanning and dependency analysis.
+ * </p>
+ * 
+ * <p>
+ * <strong>Detects:</strong>
  * </p>
  * <ul>
  * <li>EJB 3.x annotation-based beans
  * (@Stateless, @Stateful, @Entity, @MessageDriven)</li>
  * <li>EJB 2.x interface-based beans (SessionBean, EntityBean,
  * MessageDrivenBean)</li>
- * <li>EJB interfaces (EJBHome, EJBObject, EJBLocalHome, EJBLocalObject)</li>
- * <li>Primary key classes and CMP field mappings</li>
+ * <li>EJB standard interfaces (EJBHome, EJBObject, EJBLocalHome,
+ * EJBLocalObject)</li>
+ * <li>Both javax.ejb and jakarta.ejb namespaces</li>
  * </ul>
  * 
  * <p>
- * Uses modern simplified dependency architecture.
+ * <strong>Architecture:</strong>
  * </p>
+ * <ul>
+ * <li>Extends AbstractASMClassInspector (class-centric architecture)</li>
+ * <li>Receives JavaClassNode directly instead of creating it</li>
+ * <li>Writes all analysis results to JavaClassNode properties</li>
+ * <li>Uses NodeDecorator for type-safe property access</li>
+ * <li>Simplified constructor with standard injection pattern</li>
+ * </ul>
+ * 
+ * <p>
+ * <strong>Migration Tags Applied:</strong>
+ * </p>
+ * <ul>
+ * <li>Spring conversion recommendations (Service, Component, Repository)</li>
+ * <li>JPA entity conversion for entity beans</li>
+ * <li>Complexity ratings (Low, Medium, High) for migration effort
+ * estimation</li>
+ * </ul>
+ * 
+ * @since Phase 3 - Systematic Inspector Migration (Replaced with class-centric
+ *        architecture)
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = {
         EjbMigrationTags.EJB_BEAN_DETECTED,
@@ -61,29 +85,25 @@ import java.util.*;
         EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM,
         EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH
 })
-public class EjbBinaryClassInspector extends AbstractASMInspector {
+public class EjbBinaryClassInspector extends AbstractASMClassInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(EjbBinaryClassInspector.class);
 
-    private final ClassNodeRepository classNodeRepository;
-
     @Inject
-    public EjbBinaryClassInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
-        this.classNodeRepository = classNodeRepository;
+    public EjbBinaryClassInspector(ProjectFileRepository projectFileRepository,
+            ResourceResolver resourceResolver) {
+        super(projectFileRepository, resourceResolver);
     }
 
     @Override
     public String getName() {
-        return "EJB Binary Class Inspector";
+        return "EJB Binary Class Inspector (Class-Centric ASM)";
     }
 
     @Override
-    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-        JavaClassNode classNode = classNodeRepository.getOrCreateClassNodeByFqn(projectFile.getFullyQualifiedName())
-                .orElseThrow();
-        classNode.setProjectFileId(projectFile.getId());
-        return new EjbBytecodeVisitor(projectFile, projectFileDecorator, classNode);
+    protected ASMClassNodeVisitor createClassVisitor(JavaClassNode classNode,
+            NodeDecorator<JavaClassNode> decorator) {
+        return new EjbBytecodeVisitor(classNode, decorator);
     }
 
     /**
@@ -91,13 +111,19 @@ public class EjbBinaryClassInspector extends AbstractASMInspector {
      * analysis.
      * Analyzes annotations, interfaces, and method patterns to identify all EJB
      * components.
+     * 
+     * <p>
+     * This visitor maintains the complete detection logic from the original
+     * inspector while
+     * adapting to the class-centric architecture by writing all results to
+     * JavaClassNode
+     * properties through the NodeDecorator.
+     * </p>
      */
-    private static class EjbBytecodeVisitor extends ASMClassVisitor {
+    private static class EjbBytecodeVisitor extends ASMClassNodeVisitor {
 
-        private final JavaClassNode classNode;
         private final Set<String> ejbAnnotations = new HashSet<>();
         private final Set<String> implementedInterfaces = new HashSet<>();
-        private final Set<String> ejbMethods = new HashSet<>();
         private final Map<String, Object> annotationParameters = new HashMap<>();
 
         private String className;
@@ -136,10 +162,8 @@ public class EjbBinaryClassInspector extends AbstractASMInspector {
                 "javax/ejb/EJBLocalObject",
                 "jakarta/ejb/EJBLocalObject");
 
-        public EjbBytecodeVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator,
-                JavaClassNode classNode) {
-            super(projectFile, projectFileDecorator);
-            this.classNode = classNode;
+        protected EjbBytecodeVisitor(JavaClassNode classNode, NodeDecorator<JavaClassNode> decorator) {
+            super(classNode, decorator);
         }
 
         @Override
@@ -198,6 +222,12 @@ public class EjbBinaryClassInspector extends AbstractASMInspector {
             super.visitEnd();
         }
 
+        /**
+         * Performs comprehensive EJB component analysis and writes results to
+         * JavaClassNode.
+         * Analyzes EJB 3.x annotations, EJB 2.x interfaces, and EJB standard
+         * interfaces.
+         */
         private void analyzeEjbComponents() {
             boolean isEjbComponent = false;
 
@@ -216,14 +246,20 @@ public class EjbBinaryClassInspector extends AbstractASMInspector {
                 isEjbComponent = true;
             }
 
-            // Honor produces contract: set tags on ProjectFile if EJB component found
+            // Write overall detection result to JavaClassNode
             if (isEjbComponent) {
-                projectFile.setTag(EjbMigrationTags.EJB_BEAN_DETECTED, true);
-                classNode.setProperty("ejb.binary.detected", true);
+                setProperty("ejb.binary.detected", true);
+                setProperty("ejb.component.type", determineComponentType());
                 logger.info("EJB component detected: {}", className);
             }
         }
 
+        /**
+         * Analyzes EJB 3.x annotation-based components.
+         * Detects @Stateless, @Stateful, @Entity, and @MessageDriven beans.
+         * 
+         * @return true if any EJB 3.x annotation was found
+         */
         private boolean analyzeEjb3Annotations() {
             boolean found = false;
 
@@ -231,45 +267,62 @@ public class EjbBinaryClassInspector extends AbstractASMInspector {
                 switch (annotation) {
                     case "Ljavax/ejb/Stateless;":
                     case "Ljakarta/ejb/Stateless;":
-                        // Honor produces contract: set tags on ProjectFile
-                        projectFile.setTag(EjbMigrationTags.EJB_STATELESS_SESSION_BEAN, true);
-                        projectFile.setTag(EjbMigrationTags.EJB_SESSION_BEAN, true);
-                        projectFile.setTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION, true);
-                        projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW, true);
-                        // Store analysis data as single property on ClassNode
-                        classNode.setProperty("ejb.stateless.analysis", "EJB 3.x Stateless Session Bean detected");
+                        setProperty("ejb.stateless.detected", true);
+                        setProperty("ejb.session.bean.type", "stateless");
+                        setProperty("ejb.version", "3.x");
+                        setProperty("ejb.annotation.type", annotation);
+                        setProperty("ejb.migration.spring.recommendation", "Spring @Service");
+                        setProperty("ejb.migration.complexity", "LOW");
+                        enableTag(EjbMigrationTags.EJB_STATELESS_SESSION_BEAN);
+                        enableTag(EjbMigrationTags.EJB_SESSION_BEAN);
+                        enableTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION);
+                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW);
                         logger.debug("Detected Stateless Session Bean: {}", className);
                         found = true;
                         break;
 
                     case "Ljavax/ejb/Stateful;":
                     case "Ljakarta/ejb/Stateful;":
-                        projectFile.setTag(EjbMigrationTags.EJB_STATEFUL_SESSION_BEAN, true);
-                        projectFile.setTag(EjbMigrationTags.EJB_SESSION_BEAN, true);
-                        projectFile.setTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-                        projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-                        classNode.setProperty("ejb.stateful.analysis", "EJB 3.x Stateful Session Bean detected");
+                        setProperty("ejb.stateful.detected", true);
+                        setProperty("ejb.session.bean.type", "stateful");
+                        setProperty("ejb.version", "3.x");
+                        setProperty("ejb.annotation.type", annotation);
+                        setProperty("ejb.migration.spring.recommendation", "Spring @Component with @Scope");
+                        setProperty("ejb.migration.complexity", "MEDIUM");
+                        enableTag(EjbMigrationTags.EJB_STATEFUL_SESSION_BEAN);
+                        enableTag(EjbMigrationTags.EJB_SESSION_BEAN);
+                        enableTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION);
+                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
                         logger.debug("Detected Stateful Session Bean: {}", className);
                         found = true;
                         break;
 
                     case "Ljavax/persistence/Entity;":
                     case "Ljakarta/persistence/Entity;":
-                        projectFile.setTag(EjbMigrationTags.EJB_ENTITY_BEAN, true);
-                        projectFile.setTag(EjbMigrationTags.EJB_CMP_ENTITY, true);
-                        projectFile.setTag(EjbMigrationTags.JPA_ENTITY_CONVERSION, true);
-                        projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW, true);
-                        classNode.setProperty("ejb.entity.analysis", "JPA Entity detected");
+                        setProperty("ejb.entity.detected", true);
+                        setProperty("ejb.entity.type", "JPA");
+                        setProperty("ejb.version", "3.x");
+                        setProperty("ejb.annotation.type", annotation);
+                        setProperty("ejb.migration.spring.recommendation", "JPA @Entity (already compatible)");
+                        setProperty("ejb.migration.complexity", "LOW");
+                        enableTag(EjbMigrationTags.EJB_ENTITY_BEAN);
+                        enableTag(EjbMigrationTags.EJB_CMP_ENTITY);
+                        enableTag(EjbMigrationTags.JPA_ENTITY_CONVERSION);
+                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW);
                         logger.debug("Detected JPA Entity: {}", className);
                         found = true;
                         break;
 
                     case "Ljavax/ejb/MessageDriven;":
                     case "Ljakarta/ejb/MessageDriven;":
-                        projectFile.setTag(EjbMigrationTags.EJB_MESSAGE_DRIVEN_BEAN, true);
-                        projectFile.setTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-                        projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-                        classNode.setProperty("ejb.messagedriven.analysis", "EJB 3.x Message-Driven Bean detected");
+                        setProperty("ejb.messagedriven.detected", true);
+                        setProperty("ejb.version", "3.x");
+                        setProperty("ejb.annotation.type", annotation);
+                        setProperty("ejb.migration.spring.recommendation", "Spring @Component with JMS listener");
+                        setProperty("ejb.migration.complexity", "MEDIUM");
+                        enableTag(EjbMigrationTags.EJB_MESSAGE_DRIVEN_BEAN);
+                        enableTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION);
+                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
                         logger.debug("Detected Message-Driven Bean: {}", className);
                         found = true;
                         break;
@@ -279,6 +332,12 @@ public class EjbBinaryClassInspector extends AbstractASMInspector {
             return found;
         }
 
+        /**
+         * Analyzes EJB 2.x interface-based components.
+         * Detects SessionBean, EntityBean, and MessageDrivenBean implementations.
+         * 
+         * @return true if any EJB 2.x interface was found
+         */
         private boolean analyzeEjb2Interfaces() {
             boolean found = false;
 
@@ -286,31 +345,47 @@ public class EjbBinaryClassInspector extends AbstractASMInspector {
                 switch (iface) {
                     case "javax/ejb/SessionBean":
                     case "jakarta/ejb/SessionBean":
-                        projectFile.setTag(EjbMigrationTags.EJB_SESSION_BEAN, true);
-                        projectFile.setTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION, true);
-                        projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
-                        classNode.setProperty("ejb.session2x.analysis", "EJB 2.x Session Bean interface detected");
+                        setProperty("ejb.session.bean.detected", true);
+                        setProperty("ejb.version", "2.x");
+                        setProperty("ejb.interface.type", iface);
+                        setProperty("ejb.migration.spring.recommendation", "Spring @Service");
+                        setProperty("ejb.migration.complexity", "HIGH");
+                        setProperty("ejb.migration.notes", "EJB 2.x requires callback method migration");
+                        enableTag(EjbMigrationTags.EJB_SESSION_BEAN);
+                        enableTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION);
+                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
                         logger.debug("Detected EJB 2.x Session Bean: {}", className);
                         found = true;
                         break;
 
                     case "javax/ejb/EntityBean":
                     case "jakarta/ejb/EntityBean":
-                        projectFile.setTag(EjbMigrationTags.EJB_ENTITY_BEAN, true);
-                        projectFile.setTag(EjbMigrationTags.EJB_BMP_ENTITY, true);
-                        projectFile.setTag(EjbMigrationTags.JPA_REPOSITORY_CONVERSION, true);
-                        projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
-                        classNode.setProperty("ejb.entity2x.analysis", "EJB 2.x Entity Bean interface detected");
+                        setProperty("ejb.entity.bean.detected", true);
+                        setProperty("ejb.entity.type", "BMP");
+                        setProperty("ejb.version", "2.x");
+                        setProperty("ejb.interface.type", iface);
+                        setProperty("ejb.migration.spring.recommendation", "JPA Repository Pattern");
+                        setProperty("ejb.migration.complexity", "HIGH");
+                        setProperty("ejb.migration.notes", "BMP requires manual data access migration");
+                        enableTag(EjbMigrationTags.EJB_ENTITY_BEAN);
+                        enableTag(EjbMigrationTags.EJB_BMP_ENTITY);
+                        enableTag(EjbMigrationTags.JPA_REPOSITORY_CONVERSION);
+                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
                         logger.debug("Detected EJB 2.x Entity Bean: {}", className);
                         found = true;
                         break;
 
                     case "javax/ejb/MessageDrivenBean":
                     case "jakarta/ejb/MessageDrivenBean":
-                        projectFile.setTag(EjbMigrationTags.EJB_MESSAGE_DRIVEN_BEAN, true);
-                        projectFile.setTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-                        projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
-                        classNode.setProperty("ejb.mdb2x.analysis", "EJB 2.x Message-Driven Bean interface detected");
+                        setProperty("ejb.messagedriven.bean.detected", true);
+                        setProperty("ejb.version", "2.x");
+                        setProperty("ejb.interface.type", iface);
+                        setProperty("ejb.migration.spring.recommendation", "Spring JMS Listener");
+                        setProperty("ejb.migration.complexity", "HIGH");
+                        setProperty("ejb.migration.notes", "EJB 2.x MDB requires JMS configuration migration");
+                        enableTag(EjbMigrationTags.EJB_MESSAGE_DRIVEN_BEAN);
+                        enableTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION);
+                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
                         logger.debug("Detected EJB 2.x Message-Driven Bean: {}", className);
                         found = true;
                         break;
@@ -320,6 +395,12 @@ public class EjbBinaryClassInspector extends AbstractASMInspector {
             return found;
         }
 
+        /**
+         * Analyzes EJB standard interfaces.
+         * Detects EJBHome, EJBObject, EJBLocalHome, and EJBLocalObject implementations.
+         * 
+         * @return true if any EJB standard interface was found
+         */
         private boolean analyzeEjbStandardInterfaces() {
             if (!isInterface) {
                 return false; // Only interfaces can be EJB standard interfaces
@@ -331,38 +412,54 @@ public class EjbBinaryClassInspector extends AbstractASMInspector {
                 switch (iface) {
                     case "javax/ejb/EJBHome":
                     case "jakarta/ejb/EJBHome":
-                        projectFile.setTag(EjbMigrationTags.EJB_HOME_INTERFACE, true);
-                        projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
-                        classNode.setProperty("ejb.home.analysis", "EJB Home Interface detected");
+                        setProperty("ejb.home.interface.detected", true);
+                        setProperty("ejb.interface.type", "EJBHome");
+                        setProperty("ejb.migration.spring.recommendation", "Remove (not needed in Spring)");
+                        setProperty("ejb.migration.complexity", "HIGH");
+                        setProperty("ejb.migration.notes", "Home interfaces are EJB-specific, remove in Spring");
+                        enableTag(EjbMigrationTags.EJB_HOME_INTERFACE);
+                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
                         logger.debug("Detected EJB Home Interface: {}", className);
                         found = true;
                         break;
 
                     case "javax/ejb/EJBObject":
                     case "jakarta/ejb/EJBObject":
-                        projectFile.setTag(EjbMigrationTags.EJB_REMOTE_INTERFACE, true);
-                        projectFile.setTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION, true);
-                        projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-                        classNode.setProperty("ejb.remote.analysis", "EJB Remote Interface detected");
+                        setProperty("ejb.remote.interface.detected", true);
+                        setProperty("ejb.interface.type", "EJBObject");
+                        setProperty("ejb.migration.spring.recommendation", "Convert to Spring @Service interface");
+                        setProperty("ejb.migration.complexity", "MEDIUM");
+                        setProperty("ejb.migration.notes", "Business methods can be retained");
+                        enableTag(EjbMigrationTags.EJB_REMOTE_INTERFACE);
+                        enableTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION);
+                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
                         logger.debug("Detected EJB Remote Interface: {}", className);
                         found = true;
                         break;
 
                     case "javax/ejb/EJBLocalHome":
                     case "jakarta/ejb/EJBLocalHome":
-                        projectFile.setTag(EjbMigrationTags.EJB_LOCAL_HOME_INTERFACE, true);
-                        projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
-                        classNode.setProperty("ejb.localhome.analysis", "EJB Local Home Interface detected");
+                        setProperty("ejb.localhome.interface.detected", true);
+                        setProperty("ejb.interface.type", "EJBLocalHome");
+                        setProperty("ejb.migration.spring.recommendation", "Remove (not needed in Spring)");
+                        setProperty("ejb.migration.complexity", "HIGH");
+                        setProperty("ejb.migration.notes", "Local home interfaces are EJB-specific, remove in Spring");
+                        enableTag(EjbMigrationTags.EJB_LOCAL_HOME_INTERFACE);
+                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
                         logger.debug("Detected EJB Local Home Interface: {}", className);
                         found = true;
                         break;
 
                     case "javax/ejb/EJBLocalObject":
                     case "jakarta/ejb/EJBLocalObject":
-                        projectFile.setTag(EjbMigrationTags.EJB_LOCAL_INTERFACE, true);
-                        projectFile.setTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION, true);
-                        projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-                        classNode.setProperty("ejb.local.analysis", "EJB Local Interface detected");
+                        setProperty("ejb.local.interface.detected", true);
+                        setProperty("ejb.interface.type", "EJBLocalObject");
+                        setProperty("ejb.migration.spring.recommendation", "Convert to Spring @Service interface");
+                        setProperty("ejb.migration.complexity", "MEDIUM");
+                        setProperty("ejb.migration.notes", "Business methods can be retained");
+                        enableTag(EjbMigrationTags.EJB_LOCAL_INTERFACE);
+                        enableTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION);
+                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
                         logger.debug("Detected EJB Local Interface: {}", className);
                         found = true;
                         break;
@@ -371,7 +468,6 @@ public class EjbBinaryClassInspector extends AbstractASMInspector {
 
             // Check if this interface extends EJB standard interfaces directly
             if (superClassName != null && EJB_STANDARD_INTERFACES.contains(superClassName)) {
-                // Interface extends an EJB standard interface
                 analyzeEjbInterfaceInheritance(superClassName);
                 found = true;
             }
@@ -379,38 +475,91 @@ public class EjbBinaryClassInspector extends AbstractASMInspector {
             return found;
         }
 
+        /**
+         * Analyzes interfaces that extend EJB standard interfaces.
+         * 
+         * @param superInterface The parent EJB interface
+         */
         private void analyzeEjbInterfaceInheritance(String superInterface) {
+            setProperty("ejb.interface.inheritance.detected", true);
+            setProperty("ejb.interface.parent", superInterface);
+
             switch (superInterface) {
                 case "javax/ejb/EJBHome":
                 case "jakarta/ejb/EJBHome":
-                    projectFile.setTag(EjbMigrationTags.EJB_HOME_INTERFACE, true);
-                    projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
-                    classNode.setProperty("ejb.home.inheritance", "Extends EJB Home Interface");
+                    setProperty("ejb.home.interface.inheritance", "Extends EJB Home Interface");
+                    enableTag(EjbMigrationTags.EJB_HOME_INTERFACE);
+                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
                     break;
 
                 case "javax/ejb/EJBObject":
                 case "jakarta/ejb/EJBObject":
-                    projectFile.setTag(EjbMigrationTags.EJB_REMOTE_INTERFACE, true);
-                    projectFile.setTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION, true);
-                    projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-                    classNode.setProperty("ejb.remote.inheritance", "Extends EJB Remote Interface");
+                    setProperty("ejb.remote.interface.inheritance", "Extends EJB Remote Interface");
+                    enableTag(EjbMigrationTags.EJB_REMOTE_INTERFACE);
+                    enableTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION);
+                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
                     break;
 
                 case "javax/ejb/EJBLocalHome":
                 case "jakarta/ejb/EJBLocalHome":
-                    projectFile.setTag(EjbMigrationTags.EJB_LOCAL_HOME_INTERFACE, true);
-                    projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
-                    classNode.setProperty("ejb.localhome.inheritance", "Extends EJB Local Home Interface");
+                    setProperty("ejb.localhome.interface.inheritance", "Extends EJB Local Home Interface");
+                    enableTag(EjbMigrationTags.EJB_LOCAL_HOME_INTERFACE);
+                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
                     break;
 
                 case "javax/ejb/EJBLocalObject":
                 case "jakarta/ejb/EJBLocalObject":
-                    projectFile.setTag(EjbMigrationTags.EJB_LOCAL_INTERFACE, true);
-                    projectFile.setTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION, true);
-                    projectFile.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-                    classNode.setProperty("ejb.local.inheritance", "Extends EJB Local Interface");
+                    setProperty("ejb.local.interface.inheritance", "Extends EJB Local Interface");
+                    enableTag(EjbMigrationTags.EJB_LOCAL_INTERFACE);
+                    enableTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION);
+                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
                     break;
             }
+        }
+
+        /**
+         * Determines the overall EJB component type for summary reporting.
+         * 
+         * @return A string describing the detected component type
+         */
+        private String determineComponentType() {
+            if (ejbAnnotations.contains("Ljavax/ejb/Stateless;") ||
+                    ejbAnnotations.contains("Ljakarta/ejb/Stateless;")) {
+                return "Stateless Session Bean (EJB 3.x)";
+            }
+            if (ejbAnnotations.contains("Ljavax/ejb/Stateful;") ||
+                    ejbAnnotations.contains("Ljakarta/ejb/Stateful;")) {
+                return "Stateful Session Bean (EJB 3.x)";
+            }
+            if (ejbAnnotations.contains("Ljavax/persistence/Entity;") ||
+                    ejbAnnotations.contains("Ljakarta/persistence/Entity;")) {
+                return "JPA Entity (EJB 3.x)";
+            }
+            if (ejbAnnotations.contains("Ljavax/ejb/MessageDriven;") ||
+                    ejbAnnotations.contains("Ljakarta/ejb/MessageDriven;")) {
+                return "Message-Driven Bean (EJB 3.x)";
+            }
+
+            // Check EJB 2.x interfaces
+            for (String iface : implementedInterfaces) {
+                if (iface.contains("SessionBean")) {
+                    return "Session Bean (EJB 2.x)";
+                }
+                if (iface.contains("EntityBean")) {
+                    return "Entity Bean (EJB 2.x)";
+                }
+                if (iface.contains("MessageDrivenBean")) {
+                    return "Message-Driven Bean (EJB 2.x)";
+                }
+                if (iface.contains("EJBHome") || iface.contains("EJBLocalHome")) {
+                    return "Home Interface";
+                }
+                if (iface.contains("EJBObject") || iface.contains("EJBLocalObject")) {
+                    return "Business Interface";
+                }
+            }
+
+            return "Unknown EJB Component";
         }
     }
 }

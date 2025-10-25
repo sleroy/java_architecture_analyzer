@@ -1,15 +1,20 @@
 package com.analyzer.cli;
 
 import com.analyzer.analysis.Analysis;
+import com.analyzer.core.AnalysisConstants;
+import com.analyzer.core.collector.CollectorBeanFactory;
 import com.analyzer.core.engine.AnalysisEngine;
 import com.analyzer.core.export.CsvExporter;
+import com.analyzer.core.export.ProjectSerializer;
 import com.analyzer.core.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorRegistry;
 import com.analyzer.core.model.Project;
-import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.detection.FileExtensionDetector;
-import com.analyzer.inspectors.core.detection.FilenameInspector;
+import com.analyzer.inspectors.core.detection.FileDetectionBeanFactory;
 import com.analyzer.resource.CompositeResourceResolver;
+import com.analyzer.rules.ejb2spring.Ejb2SpringInspectorBeanFactory;
+import com.analyzer.rules.graph.GraphInspectorBeanFactory;
+import com.analyzer.rules.metrics.MetricsInspectorBeanFactory;
+import com.analyzer.rules.std.StdInspectorBeanFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -49,10 +54,6 @@ public class InventoryCommand implements Callable<Integer> {
     private List<String> inspectors;
 
     @Option(names = {
-            "--plugins" }, description = "Directory containing inspector plugins (JAR files)", defaultValue = "plugins")
-    private File pluginsDirectory;
-
-    @Option(names = {
             "--packages" }, description = "Comma-separated list of package prefixes to include (e.g., com.example,com.company). Includes subpackages.", split = ",")
     private List<String> packageFilters;
 
@@ -75,7 +76,6 @@ public class InventoryCommand implements Callable<Integer> {
         logger.info("  Encoding: {}", encoding);
         logger.info("  Java version: {}", javaVersion);
         logger.info("  Inspectors: {}", inspectors);
-        logger.info("  Plugins directory: {}", pluginsDirectory);
         logger.info("  Package filters: {}", packageFilters);
         logger.info("  Max passes: {}", maxPasses);
 
@@ -83,19 +83,34 @@ public class InventoryCommand implements Callable<Integer> {
             // Initialize ResourceResolver system
             CompositeResourceResolver resolver = CompositeResourceResolver.createDefault();
 
-            // 1. Initialize Inspector Registry with plugins
-            InspectorRegistry inspectorRegistry = new InspectorRegistry(pluginsDirectory, resolver);
-            logger.info("{}", inspectorRegistry.getStatistics());
+            // 1. Initialize Inspector Registry
+            InspectorRegistry inspectorRegistry = InspectorRegistry.newInspectorRegistry(resolver);
+            inspectorRegistry.registerComponents(FileDetectionBeanFactory.class);
+            inspectorRegistry.registerComponents(CollectorBeanFactory.class);
+            inspectorRegistry.registerComponents(StdInspectorBeanFactory.class);
+            inspectorRegistry.registerComponents(Ejb2SpringInspectorBeanFactory.class);
+            inspectorRegistry.registerComponents(GraphInspectorBeanFactory.class);
+            inspectorRegistry.registerComponents(MetricsInspectorBeanFactory.class);
 
-            // 2. Create default file detection inspectors
-            List<Inspector<ProjectFile>> fileDetectionInspectors = createDefaultFileInspectors();
-            logger.info("Created {} file detection inspectors", fileDetectionInspectors.size());
+            logger.info("{}", inspectorRegistry.getStatistics());
 
             // 3. Create empty analysis list (will be enhanced later)
             List<Analysis> analyses = new ArrayList<>();
 
-            // 4. Initialize Analysis Engine with new architecture
-            AnalysisEngine analysisEngine = new AnalysisEngine(inspectorRegistry, fileDetectionInspectors, analyses);
+
+            // 4. Create fresh analysis container for this analysis run
+
+            // 5. Get Analysis Engine from analysis container (all dependencies
+            // auto-injected)
+            AnalysisEngine analysisEngine = inspectorRegistry.getAnalysisEngine();
+            if (analysisEngine == null) {
+                logger.error("Failed to get AnalysisEngine from analysis container");
+                return 1;
+            }
+
+            // Configure the engine with file detection inspectors and analyses
+            analysisEngine.setAvailableAnalyses(analyses);
+
             logger.info("{}", analysisEngine.getStatistics());
 
             // 5. Analyze the project using new architecture with multi-pass algorithm
@@ -112,34 +127,22 @@ public class InventoryCommand implements Callable<Integer> {
             logger.info("Exporting results to CSV...");
             csvExporter.exportToCsv(project, inspectorList);
 
+            // Export project data as JSON - compute path relative to project directory
+            File jsonOutputDir = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
+                    .resolve(AnalysisConstants.PROJECT_DATA_DIR).toFile();
+            ProjectSerializer projectSerializer = new ProjectSerializer(jsonOutputDir);
+            logger.info("Serializing project data to JSON...");
+            projectSerializer.serialize(project);
+
             logger.info("Analysis completed successfully!");
             logger.info("Results written to: {}", outputFile.getAbsolutePath());
+            logger.info("Project data serialized to: {}", jsonOutputDir.getAbsolutePath());
 
             return 0;
         } catch (Exception e) {
             logger.error("Error during analysis: {}", e.getMessage(), e);
             return 1;
         }
-    }
-
-    /**
-     * Creates default file detection inspectors for common file types.
-     */
-    private List<Inspector<ProjectFile>> createDefaultFileInspectors() {
-        List<Inspector<ProjectFile>> inspectors = new ArrayList<>();
-
-        // Add core file detection inspectors
-        inspectors.add(FileExtensionDetector.createJavaInspector());
-        inspectors.add(FileExtensionDetector.createXmlInspector());
-        inspectors.add(FileExtensionDetector.createConfigInspector());
-        inspectors.add(FileExtensionDetector.createBinaryInspector());
-
-        // Add filename-based inspectors
-        inspectors.add(FilenameInspector.createBuildFileInspector());
-        inspectors.add(FilenameInspector.createReadmeInspector());
-        inspectors.add(FilenameInspector.createDockerInspector());
-
-        return inspectors;
     }
 
     /**
@@ -191,13 +194,6 @@ public class InventoryCommand implements Callable<Integer> {
             return false;
         }
 
-        // Validate plugins directory
-        if (pluginsDirectory != null && !pluginsDirectory.exists()) {
-            logger.warn("Warning: Plugins directory does not exist: {}", pluginsDirectory);
-            logger.info("Creating plugins directory...");
-            pluginsDirectory.mkdirs();
-        }
-
         return true;
     }
 
@@ -224,10 +220,6 @@ public class InventoryCommand implements Callable<Integer> {
 
     public List<String> getInspectors() {
         return inspectors;
-    }
-
-    public File getPluginsDirectory() {
-        return pluginsDirectory;
     }
 
     public List<String> getPackageFilters() {

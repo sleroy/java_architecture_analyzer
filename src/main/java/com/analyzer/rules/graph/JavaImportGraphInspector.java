@@ -1,6 +1,6 @@
 package com.analyzer.rules.graph;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.GraphNode;
 import com.analyzer.core.graph.GraphRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -66,8 +66,7 @@ public class JavaImportGraphInspector extends AbstractProjectFileInspector {
     }
 
     @Override
-    protected void analyzeProjectFile(ProjectFile file, ProjectFileDecorator projectFileDecorator) {
-
+    protected void analyzeProjectFile(ProjectFile file, NodeDecorator<ProjectFile> decorator) {
         try {
             // Read file content
             String content = readFileContent(file);
@@ -90,11 +89,11 @@ public class JavaImportGraphInspector extends AbstractProjectFileInspector {
                 processImportDependency(fileNode, importedClass, currentPackage, file);
             }
 
-            projectFileDecorator.setTag(TAGS.TAG_IMPORT_DEPENDENCIES_PROCESSED, String.valueOf(imports.size()));
+            decorator.setProperty(TAGS.TAG_IMPORT_DEPENDENCIES_PROCESSED, String.valueOf(imports.size()));
 
         } catch (Exception e) {
             logger.warn("Error processing Java import graph for file {}: {}", file.getRelativePath(), e.getMessage());
-            projectFileDecorator.error(e.getMessage());
+            decorator.error(e.getMessage());
         }
     }
 
@@ -147,92 +146,99 @@ public class JavaImportGraphInspector extends AbstractProjectFileInspector {
     }
 
     private GraphNode createJavaFileNode(ProjectFile file) {
-        return new GraphNode() {
-            @Override
-            public String getId() {
-                return file.getId(); // Uses absolute path from ProjectFile.getId()
-            }
+        JavaFileGraphNode node = new JavaFileGraphNode(file.getId(), file);
 
-            @Override
-            public String getNodeType() {
-                return "java_file";
-            }
+        // Set properties
+        node.setProperty("file_name", file.getFileName());
+        node.setProperty("relative_path", file.getRelativePath());
+        node.setProperty("absolute_path", file.getId());
 
-            @Override
-            public java.util.Map<String, Object> getNodeProperties() {
-                java.util.Map<String, Object> props = new java.util.HashMap<>();
-                props.put("file_name", file.getFileName());
-                props.put("relative_path", file.getRelativePath());
-                props.put("absolute_path", file.getId()); // Use getId() which returns absolute path
+        // Try to get file size from filesystem
+        try {
+            node.setProperty("file_size", Files.size(file.getFilePath()));
+        } catch (IOException e) {
+            node.setProperty("file_size", -1);
+        }
 
-                // Try to get file size from filesystem
-                try {
-                    props.put("file_size", java.nio.file.Files.size(file.getFilePath()));
-                } catch (java.io.IOException e) {
-                    props.put("file_size", -1); // Unknown size
-                }
+        // Add existing tags from the ProjectFile
+        java.util.Map<String, Object> existingTags = file.getAllProperties();
+        if (existingTags != null && !existingTags.isEmpty()) {
+            node.setProperty("project_file_tags", existingTags);
+        }
 
-                // Add existing tags from the ProjectFile as a nested map
-                java.util.Map<String, Object> existingTags = file.getAllTags();
-                if (existingTags != null && !existingTags.isEmpty()) {
-                    props.put("project_file_tags", existingTags);
-                }
+        return node;
+    }
 
-                return props;
-            }
+    /**
+     * Concrete GraphNode implementation for Java file nodes in the import graph.
+     */
+    private static class JavaFileGraphNode extends com.analyzer.core.graph.BaseGraphNode {
+        private final ProjectFile sourceFile;
 
-            @Override
-            public String getDisplayLabel() {
-                return file.getFileName() + " (Java File)";
-            }
-        };
+        public JavaFileGraphNode(String nodeId, ProjectFile sourceFile) {
+            super(nodeId, "java_file");
+            this.sourceFile = sourceFile;
+        }
+
+        @Override
+        public String getDisplayLabel() {
+            return sourceFile.getFileName() + " (Java File)";
+        }
     }
 
     private GraphNode createImportedClassNode(String fullyQualifiedClassName) {
-        return new GraphNode() {
-            @Override
-            public String getId() {
-                return fullyQualifiedClassName;
+        ImportedClassGraphNode node = new ImportedClassGraphNode(fullyQualifiedClassName);
+
+        // Set properties
+        node.setProperty("fully_qualified_name", fullyQualifiedClassName);
+        node.setProperty("simple_name", getSimpleName(fullyQualifiedClassName));
+        node.setProperty("package", getPackageName(fullyQualifiedClassName));
+
+        // Add classification based on package
+        node.setProperty("is_jdk_class", fullyQualifiedClassName.startsWith("java.") ||
+                fullyQualifiedClassName.startsWith("javax."));
+        node.setProperty("is_third_party", !fullyQualifiedClassName.startsWith("com.analyzer.") &&
+                !fullyQualifiedClassName.startsWith("java.") &&
+                !fullyQualifiedClassName.startsWith("javax."));
+
+        return node;
+    }
+
+    /**
+     * Concrete GraphNode implementation for imported class nodes in the import
+     * graph.
+     */
+    private static class ImportedClassGraphNode extends com.analyzer.core.graph.BaseGraphNode {
+        private final String fullyQualifiedClassName;
+
+        public ImportedClassGraphNode(String fullyQualifiedClassName) {
+            super(fullyQualifiedClassName, determineNodeType(fullyQualifiedClassName));
+            this.fullyQualifiedClassName = fullyQualifiedClassName;
+        }
+
+        private static String determineNodeType(String fqn) {
+            if (fqn.startsWith("java.")) {
+                return "java_api_class";
+            } else if (fqn.startsWith("javax.")) {
+                return "javaee_api_class";
+            } else if (fqn.startsWith("org.springframework.")) {
+                return "spring_class";
+            } else if (fqn.startsWith("com.analyzer.")) {
+                return "project_class";
+            } else {
+                return "external_class";
             }
+        }
 
-            @Override
-            public String getNodeType() {
-                // Determine type based on package structure
-                if (fullyQualifiedClassName.startsWith("java.")) {
-                    return "java_api_class";
-                } else if (fullyQualifiedClassName.startsWith("javax.")) {
-                    return "javaee_api_class";
-                } else if (fullyQualifiedClassName.startsWith("org.springframework.")) {
-                    return "spring_class";
-                } else if (fullyQualifiedClassName.startsWith("com.analyzer.")) {
-                    return "project_class";
-                } else {
-                    return "external_class";
-                }
+        @Override
+        public String getDisplayLabel() {
+            String simpleName = fullyQualifiedClassName;
+            int lastDot = fullyQualifiedClassName.lastIndexOf('.');
+            if (lastDot >= 0) {
+                simpleName = fullyQualifiedClassName.substring(lastDot + 1);
             }
-
-            @Override
-            public java.util.Map<String, Object> getNodeProperties() {
-                java.util.Map<String, Object> props = new java.util.HashMap<>();
-                props.put("fully_qualified_name", fullyQualifiedClassName);
-                props.put("simple_name", getSimpleName(fullyQualifiedClassName));
-                props.put("package", getPackageName(fullyQualifiedClassName));
-
-                // Add classification based on package
-                props.put("is_jdk_class", fullyQualifiedClassName.startsWith("java.") ||
-                        fullyQualifiedClassName.startsWith("javax."));
-                props.put("is_third_party", !fullyQualifiedClassName.startsWith("com.analyzer.") &&
-                        !fullyQualifiedClassName.startsWith("java.") &&
-                        !fullyQualifiedClassName.startsWith("javax."));
-
-                return props;
-            }
-
-            @Override
-            public String getDisplayLabel() {
-                return getSimpleName(fullyQualifiedClassName) + " (Class)";
-            }
-        };
+            return simpleName + " (Class)";
+        }
     }
 
     private String getSimpleName(String fullyQualifiedName) {

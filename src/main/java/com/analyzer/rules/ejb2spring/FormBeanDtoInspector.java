@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -60,7 +60,7 @@ public class FormBeanDtoInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-            ProjectFileDecorator projectFileDecorator) {
+                                NodeDecorator projectFileDecorator) {
 
         // Only analyze non-abstract classes
         if (!(type instanceof ClassOrInterfaceDeclaration) ||
@@ -70,7 +70,7 @@ public class FormBeanDtoInspector extends AbstractJavaClassInspector {
         }
 
         ClassOrInterfaceDeclaration classDecl = (ClassOrInterfaceDeclaration) type;
-        String packageName = projectFile.getPackageName();
+        String packageName = (String) projectFile.getProperty("packageName");
         String className = classDecl.getNameAsString();
 
         // Initial assessment based on package and class name
@@ -112,24 +112,24 @@ public class FormBeanDtoInspector extends AbstractJavaClassInspector {
             info.hasDtoNamePattern = hasDtoName;
 
             // Set tags according to the produces contract
-            projectFileDecorator.setTag(TAGS.TAG_IS_DTO, true);
-            projectFileDecorator.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW, true);
+            projectFileDecorator.enableTag(TAGS.TAG_IS_DTO);
+            projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW);
 
             // Set appropriate Spring Boot migration target
             if (info.isMutable) {
-                projectFileDecorator.setTag("spring.conversion.target", "@Data class");
+                projectFileDecorator.setProperty("spring.conversion.target", "@Data class");
             } else {
-                projectFileDecorator.setTag("spring.conversion.target", "Record");
+                projectFileDecorator.setProperty("spring.conversion.target", "Record");
             }
 
             // Set property on class node for detailed analysis
             classNode.setProperty("dto.analysis", info.toString());
 
             // Set analysis statistics
-            projectFileDecorator.setTag("dto.property_count", info.propertyCount);
-            projectFileDecorator.setTag("dto.getter_setter_ratio",
+            projectFileDecorator.setProperty("dto.property_count", info.propertyCount);
+            projectFileDecorator.setProperty("dto.getter_setter_ratio",
                     info.getterCount > 0 ? (double) info.setterCount / info.getterCount : 0);
-            projectFileDecorator.setTag("dto.serializable", info.isSerializable);
+            projectFileDecorator.setProperty("dto.serializable", info.isSerializable);
         }
     }
 

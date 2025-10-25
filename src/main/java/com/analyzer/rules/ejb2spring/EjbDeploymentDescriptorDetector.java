@@ -1,11 +1,9 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
-import com.analyzer.core.graph.ClassNodeRepository;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.detection.SourceFileTagDetector;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -15,8 +13,13 @@ import java.util.Set;
 /**
  * File detector for EJB deployment descriptor XML files.
  * Detects standard J2EE deployment descriptors used in EJB applications.
+ * <p>
+ * This inspector operates on configuration files (XML) and stores
+ * analysis data directly on ProjectFile, not on JavaClassNode, since
+ * configuration
+ * files are not Java classes.
  */
-@InspectorDependencies(need = {SourceFileTagDetector.class}, produces = {
+@InspectorDependencies(produces = {
         EjbDeploymentDescriptorDetector.TAGS.TAG_DESCRIPTOR_TYPE,
         EjbDeploymentDescriptorDetector.TAGS.TAG_FILE_TYPE,
         EjbMigrationTags.EJB_DEPLOYMENT_DESCRIPTOR,
@@ -32,12 +35,11 @@ public class EjbDeploymentDescriptorDetector implements Inspector<ProjectFile> {
     private final String tag;
     private final Set<String> descriptorFiles;
     private final int priority;
-    private final ClassNodeRepository classNodeRepository;
-    public EjbDeploymentDescriptorDetector(ClassNodeRepository classNodeRepository) {
+
+    public EjbDeploymentDescriptorDetector() {
         this.name = "EJB Deployment Descriptor Detector";
         this.tag = "ejb_deployment_descriptor";
         this.priority = 20; // High priority for deployment descriptors
-        this.classNodeRepository = classNodeRepository;
 
         // Standard J2EE deployment descriptors
         this.descriptorFiles = new HashSet<>(Arrays.asList(
@@ -73,30 +75,27 @@ public class EjbDeploymentDescriptorDetector implements Inspector<ProjectFile> {
         return descriptorFiles.contains(fileName);
     }
 
-    public void decorate(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-        classNodeRepository.getOrCreateClassNodeByFqn(projectFile.getFullyQualifiedName()).ifPresent(classNode -> {
-            classNode.setProjectFileId(projectFile.getId());
-            String fileName = projectFile.getFileName().toLowerCase();
+    public void inspect(ProjectFile projectFile, NodeDecorator<ProjectFile> projectFileDecorator) {
+        String fileName = projectFile.getFileName().toLowerCase();
 
-            // Set optimized tags - only useful ones without duplication
-            classNode.setProperty(TAGS.TAG_DESCRIPTOR_TYPE, fileName);
-            classNode.setProperty(TAGS.TAG_FILE_TYPE, "deployment_descriptor");
+        // Configuration files are not Java classes, so all data belongs on ProjectFile
+        // Set optimized tags - honor produces contract
+        projectFileDecorator.setProperty(TAGS.TAG_DESCRIPTOR_TYPE, fileName);
+        projectFileDecorator.setProperty(TAGS.TAG_FILE_TYPE, "deployment_descriptor");
 
-            // Set EJB-specific migration tags from EjbMigrationTags (no redundant priority
-            // tags)
-            if ("ejb-jar.xml".equals(fileName)) {
-                classNode.setProperty(EjbMigrationTags.EJB_DEPLOYMENT_DESCRIPTOR, true);
-                classNode.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
-            } else if ("persistence.xml".equals(fileName) || "orm.xml".equals(fileName)) {
-                classNode.setProperty(EjbMigrationTags.JPA_CONVERSION_CANDIDATE, true);
-                classNode.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-            } else if ("web.xml".equals(fileName) || "application.xml".equals(fileName)) {
-                classNode.setProperty(EjbMigrationTags.VENDOR_DEPLOYMENT_DESCRIPTOR, true);
-                classNode.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-            } else {
-                classNode.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW, true);
-            }
-        });
+        // Set EJB-specific migration tags from EjbMigrationTags
+        if ("ejb-jar.xml".equals(fileName)) {
+            projectFileDecorator.enableTag(EjbMigrationTags.EJB_DEPLOYMENT_DESCRIPTOR);
+            projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
+        } else if ("persistence.xml".equals(fileName) || "orm.xml".equals(fileName)) {
+            projectFileDecorator.enableTag(EjbMigrationTags.JPA_CONVERSION_CANDIDATE);
+            projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+        } else if ("web.xml".equals(fileName) || "application.xml".equals(fileName)) {
+            projectFileDecorator.enableTag(EjbMigrationTags.VENDOR_DEPLOYMENT_DESCRIPTOR);
+            projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+        } else {
+            projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW);
+        }
     }
 
     /**

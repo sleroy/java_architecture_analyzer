@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
@@ -19,19 +19,22 @@ import java.io.IOException;
  * analysis.
  * 
  * <p>
- * This inspector automatically inherits the SOURCE_FILE dependency from AbstractSourceFileInspector
- * and adds Java-specific dependencies to ensure JavaParser-based analysis only runs on files
+ * This inspector automatically inherits the SOURCE_FILE dependency from
+ * AbstractSourceFileInspector
+ * and adds Java-specific dependencies to ensure JavaParser-based analysis only
+ * runs on files
  * that have been:
  * </p>
  * <ul>
- * <li>Identified as source files by SourceFileTagDetector</li>
+ * <li>Identified as source files by SourceFileDetector</li>
  * <li>Detected as Java language files</li>
  * <li>Confirmed to have Java source code available</li>
  * </ul>
  * 
  * <p>
  * This inspector handles the parsing of Java source files using the JavaParser
- * library and provides the resulting AST to subclasses for analysis. It includes
+ * library and provides the resulting AST to subclasses for analysis. It
+ * includes
  * comprehensive error handling for parse failures and malformed source files.
  * </p>
  * 
@@ -39,13 +42,14 @@ import java.io.IOException;
  * Subclasses must implement getName() and analyzeCompilationUnit() methods.
  * </p>
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED}, produces = {})
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED }, produces = {})
 public abstract class AbstractJavaParserInspector extends AbstractSourceFileInspector {
 
     private final JavaParser javaParser;
 
     /**
-     * Creates a AbstractJavaParserInspector with a default JavaParser configuration.
+     * Creates a AbstractJavaParserInspector with a default JavaParser
+     * configuration.
      * 
      * @param resourceResolver the resolver for accessing source file resources
      */
@@ -70,7 +74,8 @@ public abstract class AbstractJavaParserInspector extends AbstractSourceFileInsp
     }
 
     @Override
-    protected final void analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation, ProjectFileDecorator projectFileDecorator)
+    protected final void analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation,
+            NodeDecorator<ProjectFile> decorator)
             throws IOException {
         try {
             String content = readFileContent(sourceLocation);
@@ -79,28 +84,28 @@ public abstract class AbstractJavaParserInspector extends AbstractSourceFileInsp
             // Check for parse errors
             if (!parseResult.isSuccessful()) {
                 String problems = parseResult.getProblems().toString();
-                projectFileDecorator.error( "Parse errors: " + problems);
-                return ;
+                decorator.error("Parse errors: " + problems);
+                return;
             }
 
             // Get the parsed compilation unit
             CompilationUnit cu = parseResult.getResult().orElse(null);
             if (cu == null) {
-                projectFileDecorator.error( "Failed to parse compilation unit");
-                return ;
+                decorator.error("Failed to parse compilation unit");
+                return;
             }
 
-            analyzeCompilationUnit(cu, clazz, projectFileDecorator);
+            analyzeCompilationUnit(cu, clazz, decorator);
 
         } catch (IOException e) {
-            projectFileDecorator.error( "Error reading source file: " + e.getMessage());
+            decorator.error("Error reading source file: " + e.getMessage());
         } catch (Exception e) {
-            projectFileDecorator.error( "JavaParser error: " + e.getMessage());
+            decorator.error("JavaParser error: " + e.getMessage());
         }
     }
 
     /**
-     * Analyzes the parsed compilation unit using the provided ProjectFileDecorator.
+     * Analyzes the parsed compilation unit using the provided NodeDecorator.
      * Subclasses implement specific AST analysis logic here.
      * <p>
      * The CompilationUnit provides access to the complete AST of the parsed Java
@@ -109,15 +114,17 @@ public abstract class AbstractJavaParserInspector extends AbstractSourceFileInsp
      * imports, and all other Java language constructs.
      * </p>
      * <p>
-     * Subclasses should use projectFile.setTag() to store analysis results
-     * and projectFileDecorator.error() to report errors.
+     * Subclasses should use decorator methods to store analysis results
+     * and decorator.error() to report errors.
      * </p>
      *
-     * @param cu              the parsed CompilationUnit representing the source file's AST
-     * @param projectFile     the project file being analyzed
-     * @param projectFileDecorator decorator for handling results and errors
+     * @param cu          the parsed CompilationUnit representing the source file's
+     *                    AST
+     * @param projectFile the project file being analyzed
+     * @param decorator   the decorator for setting properties and tags
      */
-    protected abstract void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile, ProjectFileDecorator projectFileDecorator);
+    protected abstract void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
+            NodeDecorator<ProjectFile> decorator);
 
     /**
      * Gets the JavaParser instance used by this inspector.

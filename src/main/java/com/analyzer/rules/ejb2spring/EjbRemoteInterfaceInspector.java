@@ -1,11 +1,9 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.inspector.InspectorDependencies;
-
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
+import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.detection.JavaSourceFileDetector;
 import com.analyzer.inspectors.core.source.AbstractJavaParserInspector;
 import com.analyzer.resource.ResourceResolver;
 import com.github.javaparser.ast.CompilationUnit;
@@ -24,7 +22,7 @@ import java.util.List;
  * need
  * to be converted to simple Spring service interfaces.
  */
-@InspectorDependencies(need = { JavaSourceFileDetector.class }, produces = {
+@InspectorDependencies(need = {  }, produces = {
         EjbRemoteInterfaceInspector.TAGS.TAG_IS_REMOTE_INTERFACE })
 public class EjbRemoteInterfaceInspector extends AbstractJavaParserInspector {
 
@@ -47,7 +45,7 @@ public class EjbRemoteInterfaceInspector extends AbstractJavaParserInspector {
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-            ProjectFileDecorator projectFileDecorator) {
+                                          NodeDecorator projectFileDecorator) {
         classNodeRepository.getOrCreateClassNode(cu).ifPresent(classNode -> {
             classNode.setProjectFileId(projectFile.getId());
             EjbRemoteInterfaceDetector detector = new EjbRemoteInterfaceDetector();
@@ -55,11 +53,11 @@ public class EjbRemoteInterfaceInspector extends AbstractJavaParserInspector {
 
             if (detector.isEjbRemoteInterface()) {
                 EjbRemoteInterfaceInfo info = detector.getEjbRemoteInterfaceInfo();
-                classNode.setProperty(TAGS.TAG_IS_REMOTE_INTERFACE, info.toJson());
+                projectFileDecorator.setProperty(TAGS.TAG_IS_REMOTE_INTERFACE, info);
                 return;
             }
 
-            classNode.setProperty(TAGS.TAG_IS_REMOTE_INTERFACE, false);
+            projectFileDecorator.setProperty(TAGS.TAG_IS_REMOTE_INTERFACE, false);
         });
     }
 
@@ -182,20 +180,5 @@ public class EjbRemoteInterfaceInspector extends AbstractJavaParserInspector {
         public boolean hasRemoteExceptions;
         public List<BusinessMethodInfo> businessMethods = new ArrayList<>();
 
-        public String toJson() {
-            StringBuilder json = new StringBuilder();
-            json.append("{");
-            json.append("\"interfaceName\":\"").append(interfaceName != null ? interfaceName : "").append("\",");
-            json.append("\"interfaceType\":\"").append(interfaceType != null ? interfaceType : "").append("\",");
-            json.append("\"migrationAction\":\"").append(migrationAction != null ? migrationAction : "").append("\",");
-            json.append("\"migrationComplexity\":\"").append(migrationComplexity != null ? migrationComplexity : "")
-                    .append("\",");
-            json.append("\"hasRemoteExceptions\":").append(hasRemoteExceptions).append(",");
-            json.append("\"businessMethodCount\":").append(businessMethods.size()).append(",");
-            json.append("\"remoteExceptionMethodCount\":").append(
-                    businessMethods.stream().mapToInt(m -> m.throwsRemoteException ? 1 : 0).sum());
-            json.append("}");
-            return json.toString();
-        }
     }
 }

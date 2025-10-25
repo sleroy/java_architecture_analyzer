@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.binary;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
@@ -53,7 +53,7 @@ public abstract class AbstractJavassistInspectorAbstract extends AbstractBinaryC
 
     @Override
     protected final void analyzeClassFile(ProjectFile clazz, ResourceLocation binaryLocation,
-                                          InputStream classInputStream, ProjectFileDecorator projectFileDecorator) throws IOException {
+                                          InputStream classInputStream, NodeDecorator<ProjectFile> projectFileDecorator) throws IOException {
         try {
             // Read class bytes and create CtClass
             byte[] classBytes = classInputStream.readAllBytes();
@@ -89,7 +89,7 @@ public abstract class AbstractJavassistInspectorAbstract extends AbstractBinaryC
      * @param projectFileDecorator
      * @return the result of bytecode analysis
      */
-    protected abstract void analyzeCtClass(CtClass ctClass, ProjectFile clazz, ProjectFileDecorator projectFileDecorator);
+    protected abstract void analyzeCtClass(CtClass ctClass, ProjectFile clazz, NodeDecorator<ProjectFile> projectFileDecorator);
 
     /**
      * Gets the ClassPool used by this inspector.

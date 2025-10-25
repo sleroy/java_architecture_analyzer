@@ -1,13 +1,16 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -20,8 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Phase 2.2: JBoss EJB Configuration Inspector (I-0504)
@@ -40,14 +41,14 @@ import java.util.logging.Logger;
  * <p>
  * Customer Constraints: JBoss-only vendor support (no WebLogic/Generic support)
  */
-@InspectorDependencies(need = { EjbDeploymentDescriptorDetector.class }, produces = {
+@InspectorDependencies(need = {EjbDeploymentDescriptorDetector.class}, produces = {
         EjbMigrationTags.JBOSS_CONFIGURATION,
         EjbMigrationTags.VENDOR_SPECIFIC_CONFIG,
         EjbMigrationTags.SPRING_BOOT_MIGRATION_CANDIDATE
 })
 public class JBossEjbConfigurationInspector extends AbstractSourceFileInspector {
 
-    private static final Logger LOGGER = Logger.getLogger(JBossEjbConfigurationInspector.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(JBossEjbConfigurationInspector.class.getName());
     // JBoss-specific configuration files (JBoss-only vendor support per customer
     // requirements)
     private static final Set<String> JBOSS_CONFIG_FILES = Set.of(
@@ -73,15 +74,17 @@ public class JBossEjbConfigurationInspector extends AbstractSourceFileInspector 
 
     @Override
     protected void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation,
-            ProjectFileDecorator projectFileDecorator) throws IOException {
-        classNodeRepository.getOrCreateClassNodeByFqn(projectFile.getFullyQualifiedName()).ifPresent(classNode -> {
+                                     NodeDecorator<ProjectFile> projectFileDecorator) throws IOException {
+        String fqn = projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
+        if (fqn != null && !fqn.isEmpty()) {
+            JavaClassNode classNode = classNodeRepository.getOrCreateByFqn(fqn);
             classNode.setProjectFileId(projectFile.getId());
             try {
                 LOGGER.info("Analyzing JBoss configuration file: " + projectFile.getFilePath());
 
                 String content = readFileContent(sourceLocation);
                 if (content == null || content.trim().isEmpty()) {
-                    projectFileDecorator.notApplicable();
+                    LOGGER.error("JBoss configuration file content is empty");
                     return;
                 }
 
@@ -106,7 +109,7 @@ public class JBossEjbConfigurationInspector extends AbstractSourceFileInspector 
                 // CRITICAL: Following DeclarativeTransactionJavaSourceInspector pattern
                 // Only set configuration tags when actual JBoss configurations are found
                 if (!config.hasAnyConfiguration()) {
-                    projectFileDecorator.notApplicable();
+                    LOGGER.error("JBoss configuration file content is empty");
                     return;
                 }
 
@@ -115,20 +118,19 @@ public class JBossEjbConfigurationInspector extends AbstractSourceFileInspector 
 
                 // Store detailed analysis data as consolidated POJO on ClassNode
                 JBossConfigAnalysisResult analysisResult = createAnalysisResult(config);
-                classNode.setProperty("jboss_configuration_analysis", analysisResult.toJson());
+                classNode.setProperty("jboss_configuration_analysis", analysisResult);
 
-                projectFileDecorator.setTag("jboss_config.analysis",
+                projectFileDecorator.setProperty("jboss_config.analysis",
                         "Found JBoss configuration with " + config.getTotalConfigCount() + " elements");
 
             } catch (Exception e) {
                 // CRITICAL FIX: Following exact DeclarativeTransactionJavaSourceInspector error
                 // handling
                 // pattern
-                LOGGER.log(Level.SEVERE, "Error analyzing JBoss configuration file: " + projectFile.getRelativePath(),
-                        e);
+                LOGGER.error("Error analyzing JBoss configuration file: {}", projectFile.getRelativePath(), e);
                 projectFileDecorator.error("Failed to parse JBoss configuration: " + e.getMessage());
             }
-        });
+        }
     }
 
     /**
@@ -150,11 +152,11 @@ public class JBossEjbConfigurationInspector extends AbstractSourceFileInspector 
      * Honor produces contract - set tags on ProjectFile as required
      * by @InspectorDependencies
      */
-    private void setProducedTags(ProjectFileDecorator projectFileDecorator, JBossConfiguration config) {
+    private void setProducedTags(NodeDecorator<ProjectFile> projectFileDecorator, JBossConfiguration config) {
         // Set the main produced tags on ProjectFile (dependency chain)
-        projectFileDecorator.setTag(EjbMigrationTags.JBOSS_CONFIGURATION, true);
-        projectFileDecorator.setTag(EjbMigrationTags.VENDOR_SPECIFIC_CONFIG, true);
-        projectFileDecorator.setTag(EjbMigrationTags.SPRING_BOOT_MIGRATION_CANDIDATE, true);
+        projectFileDecorator.setProperty(EjbMigrationTags.JBOSS_CONFIGURATION, true);
+        projectFileDecorator.setProperty(EjbMigrationTags.VENDOR_SPECIFIC_CONFIG, true);
+        projectFileDecorator.setProperty(EjbMigrationTags.SPRING_BOOT_MIGRATION_CANDIDATE, true);
     }
 
     /**
@@ -285,12 +287,7 @@ public class JBossEjbConfigurationInspector extends AbstractSourceFileInspector 
         config.setHasJBossNamespaceOrElements(hasJBossNamespace || hasJBossSpecificElements);
 
         // ADDITIONAL FIX: Log detection results for debugging
-        LOGGER.fine("JBoss detection results: hasJBossNamespace=" + hasJBossNamespace +
-                ", hasJBossSpecificElements=" + hasJBossSpecificElements +
-                ", jndiNames=" + jndiNames.getLength() +
-                ", poolConfigs=" + poolConfigs.getLength() +
-                ", securityRoles=" + securityRoles.getLength() +
-                ", resourceRefs=" + resourceRefNodes.getLength());
+        LOGGER.debug("JBoss detection results: hasJBossNamespace={}, hasJBossSpecificElements={}, jndiNames={}, poolConfigs={}, securityRoles={}, resourceRefs={}", hasJBossNamespace, hasJBossSpecificElements, jndiNames.getLength(), poolConfigs.getLength(), securityRoles.getLength(), resourceRefNodes.getLength());
     }
 
     /**
@@ -829,31 +826,5 @@ public class JBossEjbConfigurationInspector extends AbstractSourceFileInspector 
         public List<String> springRecommendations;
         public String metadata;
 
-        public String toJson() {
-            StringBuilder json = new StringBuilder();
-            json.append("{");
-            json.append("\"totalConfigCount\":").append(totalConfigCount).append(",");
-            json.append("\"dataSourceCount\":").append(dataSourceCount).append(",");
-            json.append("\"securityDomainCount\":").append(securityDomainCount).append(",");
-            json.append("\"resourceRefCount\":").append(resourceRefCount).append(",");
-            json.append("\"sessionBeanCount\":").append(sessionBeanCount).append(",");
-            json.append("\"hasJdbcUsage\":").append(hasJdbcUsage).append(",");
-            json.append("\"hasConnectionPoolConfig\":").append(hasConnectionPoolConfig).append(",");
-            json.append("\"hasSecurityConstraints\":").append(hasSecurityConstraints).append(",");
-            json.append("\"migrationComplexity\":\"").append(migrationComplexity).append("\",");
-            json.append("\"complexityScore\":").append(complexityScore).append(",");
-            json.append("\"springRecommendations\":[");
-            if (springRecommendations != null) {
-                for (int i = 0; i < springRecommendations.size(); i++) {
-                    if (i > 0)
-                        json.append(",");
-                    json.append("\"").append(springRecommendations.get(i).replaceAll("\"", "\\\\\"")).append("\"");
-                }
-            }
-            json.append("],");
-            json.append("\"metadata\":").append(metadata != null ? metadata : "\"\"");
-            json.append("}");
-            return json.toString();
-        }
     }
 }

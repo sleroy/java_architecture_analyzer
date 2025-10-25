@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -32,21 +32,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * - Migration complexity assessment
  * - Spring conversion recommendations
  */
-@InspectorDependencies(
-        requires = {InspectorTags.TAG_JAVA_IS_BINARY},
-        produces = {
-                EjbMigrationTags.EJB_PROGRAMMATIC_TRANSACTION,
-                EjbMigrationTags.EJB_BEAN_MANAGED_TRANSACTION,
-                EjbMigrationTags.TRANSACTION_BOUNDARY,
-                EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY,
-                EjbMigrationTags.SPRING_TRANSACTION_CONVERSION,
-                EjbMigrationTags.MIGRATION_COMPLEXITY_LOW,
-                EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM,
-                EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH,
-                EjbMigrationTags.EJB_MIGRATION_SIMPLE,
-                EjbMigrationTags.EJB_MIGRATION_COMPLEX
-        }
-)
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_IS_BINARY}, produces = {
+        EjbMigrationTags.EJB_PROGRAMMATIC_TRANSACTION,
+        EjbMigrationTags.EJB_BEAN_MANAGED_TRANSACTION,
+        EjbMigrationTags.TRANSACTION_BOUNDARY,
+        EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY,
+        EjbMigrationTags.SPRING_TRANSACTION_CONVERSION,
+        EjbMigrationTags.MIGRATION_COMPLEXITY_LOW,
+        EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM,
+        EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH,
+        EjbMigrationTags.EJB_MIGRATION_SIMPLE,
+        EjbMigrationTags.EJB_MIGRATION_COMPLEX
+})
 public class ProgrammaticTransactionUsageInspector extends AbstractASMInspector {
 
     // Transaction-related class names in internal format (with slashes)
@@ -63,7 +60,8 @@ public class ProgrammaticTransactionUsageInspector extends AbstractASMInspector 
     private final Map<String, TransactionUsageMetadata> transactionUsageCache = new ConcurrentHashMap<>();
 
     @Inject
-    public ProgrammaticTransactionUsageInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
+    public ProgrammaticTransactionUsageInspector(ResourceResolver resourceResolver,
+                                                 ClassNodeRepository classNodeRepository) {
         super(resourceResolver);
         this.classNodeRepository = classNodeRepository;
     }
@@ -71,12 +69,12 @@ public class ProgrammaticTransactionUsageInspector extends AbstractASMInspector 
     // Trust @InspectorDependencies - no manual tag checking needed in supports()
 
     @Override
-    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-        JavaClassNode classNode = classNodeRepository.getOrCreateClassNodeByFqn(projectFile.getFullyQualifiedName()).orElseThrow();
+    protected ASMClassVisitor createClassVisitor(ProjectFile projectFile, NodeDecorator<ProjectFile> projectFileDecorator) {
+        JavaClassNode classNode = classNodeRepository
+                .getOrCreateByFqn((String) projectFile.getProperty("fullyQualifiedName"));
         classNode.setProjectFileId(projectFile.getId());
         return new TransactionUsageClassVisitor(projectFile, projectFileDecorator, classNode);
     }
-
 
     @Override
     public String getName() {
@@ -177,7 +175,6 @@ public class ProgrammaticTransactionUsageInspector extends AbstractASMInspector 
         return operations.get(0).getOperationType() == TransactionOperationType.BEGIN &&
                 operations.get(1).getOperationType() == TransactionOperationType.COMMIT;
     }
-
 
     /**
      * Enumeration of transaction operation types.
@@ -331,14 +328,64 @@ public class ProgrammaticTransactionUsageInspector extends AbstractASMInspector 
     }
 
     /**
+     * Consolidated analysis result for programmatic transaction usage.
+     * This POJO contains all analysis data instead of using multiple separate
+     * properties.
+     */
+    public static class ProgrammaticTransactionAnalysisResult {
+        private final String className;
+        private final int transactionFieldCount;
+        private final int transactionalMethodCount;
+        private final String migrationComplexity;
+        private final String springRecommendation;
+        private final String transactionOperations;
+
+        public ProgrammaticTransactionAnalysisResult(String className, int transactionFieldCount,
+                                                     int transactionalMethodCount, String migrationComplexity,
+                                                     String springRecommendation, String transactionOperations) {
+            this.className = className;
+            this.transactionFieldCount = transactionFieldCount;
+            this.transactionalMethodCount = transactionalMethodCount;
+            this.migrationComplexity = migrationComplexity;
+            this.springRecommendation = springRecommendation;
+            this.transactionOperations = transactionOperations;
+        }
+
+        public String getClassName() {
+            return className;
+        }
+
+        public int getTransactionFieldCount() {
+            return transactionFieldCount;
+        }
+
+        public int getTransactionalMethodCount() {
+            return transactionalMethodCount;
+        }
+
+        public String getMigrationComplexity() {
+            return migrationComplexity;
+        }
+
+        public String getSpringRecommendation() {
+            return springRecommendation;
+        }
+
+        public String getTransactionOperations() {
+            return transactionOperations;
+        }
+    }
+
+    /**
      * ASM ClassVisitor to detect programmatic transaction usage patterns.
      */
     private class TransactionUsageClassVisitor extends ASMClassVisitor {
+        private final JavaClassNode classNode;
         private String currentClassName;
         private TransactionUsageMetadata.Builder metadataBuilder;
-        private final JavaClassNode classNode;
 
-        public TransactionUsageClassVisitor(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator, JavaClassNode classNode) {
+        public TransactionUsageClassVisitor(ProjectFile projectFile, NodeDecorator<ProjectFile> projectFileDecorator,
+                                            JavaClassNode classNode) {
             super(projectFile, projectFileDecorator);
             this.classNode = classNode;
         }
@@ -388,13 +435,13 @@ public class ProgrammaticTransactionUsageInspector extends AbstractASMInspector 
          */
         private void handleTestScenarioTags() {
             // For test compatibility: Set basic transaction tags
-            setTag(EjbMigrationTags.EJB_PROGRAMMATIC_TRANSACTION, true);
-            setTag(EjbMigrationTags.EJB_BEAN_MANAGED_TRANSACTION, true);
-            setTag(EjbMigrationTags.TRANSACTION_BOUNDARY, true);
-            setTag(EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY, true);
-            setTag(EjbMigrationTags.SPRING_TRANSACTION_CONVERSION, true);
-            setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-            
+            enableTag(EjbMigrationTags.EJB_PROGRAMMATIC_TRANSACTION);
+            enableTag(EjbMigrationTags.EJB_BEAN_MANAGED_TRANSACTION);
+            enableTag(EjbMigrationTags.TRANSACTION_BOUNDARY);
+            enableTag(EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY);
+            enableTag(EjbMigrationTags.SPRING_TRANSACTION_CONVERSION);
+            enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+
             // Store basic test analysis data
             ProgrammaticTransactionAnalysisResult testResult = new ProgrammaticTransactionAnalysisResult(
                     currentClassName != null ? currentClassName : "TestClass",
@@ -407,20 +454,19 @@ public class ProgrammaticTransactionUsageInspector extends AbstractASMInspector 
             classNode.setProperty("programmaticTransactionAnalysis", testResult);
         }
 
-
         private boolean isTransactionRelatedField(String descriptor) {
             return descriptor.contains("L" + USER_TRANSACTION_CLASS + ";") ||
                     descriptor.contains("L" + TRANSACTION_MANAGER_CLASS + ";");
         }
 
-
         private void setAnalysisResults(TransactionUsageMetadata metadata) {
-            // Honor produces contract: Set all produced tags on ProjectFile using ProjectFileDecorator
-            setTag(EjbMigrationTags.EJB_PROGRAMMATIC_TRANSACTION, true);
-            setTag(EjbMigrationTags.EJB_BEAN_MANAGED_TRANSACTION, true);
-            setTag(EjbMigrationTags.TRANSACTION_BOUNDARY, true);
-            setTag(EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY, true);
-            setTag(EjbMigrationTags.SPRING_TRANSACTION_CONVERSION, true);
+            // Honor produces contract: Set all produced tags on ProjectFile using
+            // ProjectFileDecorator
+            enableTag(EjbMigrationTags.EJB_PROGRAMMATIC_TRANSACTION);
+            enableTag(EjbMigrationTags.EJB_BEAN_MANAGED_TRANSACTION);
+            enableTag(EjbMigrationTags.TRANSACTION_BOUNDARY);
+            enableTag(EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY);
+            enableTag(EjbMigrationTags.SPRING_TRANSACTION_CONVERSION);
 
             // Assess migration complexity and set appropriate tags
             MigrationComplexity complexity = assessMigrationComplexity(metadata);
@@ -433,9 +479,8 @@ public class ProgrammaticTransactionUsageInspector extends AbstractASMInspector 
                     metadata.getMethodAnalyses().size(),
                     complexity.toString(),
                     generateSpringRecommendation(metadata),
-                    buildTransactionOperationsSummary(metadata)
-            );
-            
+                    buildTransactionOperationsSummary(metadata));
+
             classNode.setProperty("programmaticTransactionAnalysis", analysisResult);
         }
 
@@ -443,7 +488,7 @@ public class ProgrammaticTransactionUsageInspector extends AbstractASMInspector 
             if (metadata.getMethodAnalyses().isEmpty()) {
                 return "";
             }
-            
+
             StringBuilder operationDetails = new StringBuilder();
             for (MethodTransactionAnalysis methodAnalysis : metadata.getMethodAnalyses()) {
                 operationDetails.append(methodAnalysis.getMethodName()).append(":")
@@ -455,15 +500,15 @@ public class ProgrammaticTransactionUsageInspector extends AbstractASMInspector 
         private void addComplexityTags(MigrationComplexity complexity) {
             switch (complexity) {
                 case LOW:
-                    setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW, true);
-                    setTag(EjbMigrationTags.EJB_MIGRATION_SIMPLE, true);
+                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW);
+                    enableTag(EjbMigrationTags.EJB_MIGRATION_SIMPLE);
                     break;
                 case MEDIUM:
-                    setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
                     break;
                 case HIGH:
-                    setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
-                    setTag(EjbMigrationTags.EJB_MIGRATION_COMPLEX, true);
+                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
+                    enableTag(EjbMigrationTags.EJB_MIGRATION_COMPLEX);
                     break;
             }
         }
@@ -547,53 +592,5 @@ public class ProgrammaticTransactionUsageInspector extends AbstractASMInspector 
 
         // getCurrentClassName method no longer needed since we use the outer class
         // field directly
-    }
-
-    /**
-     * Consolidated analysis result for programmatic transaction usage.
-     * This POJO contains all analysis data instead of using multiple separate properties.
-     */
-    public static class ProgrammaticTransactionAnalysisResult {
-        private final String className;
-        private final int transactionFieldCount;
-        private final int transactionalMethodCount;
-        private final String migrationComplexity;
-        private final String springRecommendation;
-        private final String transactionOperations;
-
-        public ProgrammaticTransactionAnalysisResult(String className, int transactionFieldCount,
-                                                   int transactionalMethodCount, String migrationComplexity,
-                                                   String springRecommendation, String transactionOperations) {
-            this.className = className;
-            this.transactionFieldCount = transactionFieldCount;
-            this.transactionalMethodCount = transactionalMethodCount;
-            this.migrationComplexity = migrationComplexity;
-            this.springRecommendation = springRecommendation;
-            this.transactionOperations = transactionOperations;
-        }
-
-        public String getClassName() {
-            return className;
-        }
-
-        public int getTransactionFieldCount() {
-            return transactionFieldCount;
-        }
-
-        public int getTransactionalMethodCount() {
-            return transactionalMethodCount;
-        }
-
-        public String getMigrationComplexity() {
-            return migrationComplexity;
-        }
-
-        public String getSpringRecommendation() {
-            return springRecommendation;
-        }
-
-        public String getTransactionOperations() {
-            return transactionOperations;
-        }
     }
 }

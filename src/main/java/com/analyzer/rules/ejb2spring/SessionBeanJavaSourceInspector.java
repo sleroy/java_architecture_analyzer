@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
@@ -44,7 +44,7 @@ public class SessionBeanJavaSourceInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-            ProjectFileDecorator projectFileDecorator) {
+                                NodeDecorator projectFileDecorator) {
         if (type instanceof ClassOrInterfaceDeclaration) {
             ClassOrInterfaceDeclaration classDecl = (ClassOrInterfaceDeclaration) type;
             SessionBeanDetector detector = new SessionBeanDetector();
@@ -53,7 +53,7 @@ public class SessionBeanJavaSourceInspector extends AbstractJavaClassInspector {
             if (detector.isSessionBean()) {
                 SessionBeanInfo info = detector.getSessionBeanInfo();
                 // Honor produces contract: set tag on ProjectFile for dependency chains
-                projectFileDecorator.setTag(TAGS.TAG_IS_SESSION_BEAN, true);
+                projectFileDecorator.setProperty(TAGS.TAG_IS_SESSION_BEAN, true);
                 // Set analysis data as property on ClassNode for export
                 classNode.setProperty(TAGS.TAG_IS_SESSION_BEAN, info);
             }

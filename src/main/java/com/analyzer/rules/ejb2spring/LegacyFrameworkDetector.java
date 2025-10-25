@@ -1,21 +1,26 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
-import com.analyzer.core.graph.ClassNodeRepository;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.detection.SourceFileTagDetector;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * File detector for legacy framework configuration files commonly found in EJB
  * applications.
  * Detects files from frameworks that may need special consideration during
  * Spring migration.
+ * <p>
+ * This inspector operates on configuration files (XML, properties, etc.) and
+ * stores
+ * analysis data directly on ProjectFile, not on JavaClassNode, since
+ * configuration
+ * files are not Java classes.
  */
-@InspectorDependencies(need = { SourceFileTagDetector.class }, produces = {
+@InspectorDependencies(need = { }, produces = {
         "legacy_framework",
         "migration_priority" })
 public class LegacyFrameworkDetector implements Inspector<ProjectFile> {
@@ -86,10 +91,8 @@ public class LegacyFrameworkDetector implements Inspector<ProjectFile> {
     private static final Set<String> SECURITY_FILES = Set.of(
             "acegi-security.xml", "security.xml");
 
-    private final ClassNodeRepository classNodeRepository;
-
-    public LegacyFrameworkDetector(ClassNodeRepository classNodeRepository) {
-        this.classNodeRepository = classNodeRepository;
+    public LegacyFrameworkDetector() {
+        // No dependencies needed - operates directly on ProjectFile
     }
 
     @Override
@@ -100,26 +103,23 @@ public class LegacyFrameworkDetector implements Inspector<ProjectFile> {
     // Removed supports() method - trust @InspectorDependencies completely
 
     @Override
-    public void decorate(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-        classNodeRepository.getOrCreateClassNodeByFqn(projectFile.getFullyQualifiedName()).ifPresent(classNode -> {
-            classNode.setProjectFileId(projectFile.getId());
-            String fileName = projectFile.getFileName() != null ? projectFile.getFileName().toLowerCase() : "";
+    public void inspect(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator) {
+        String fileName = projectFile.getFileName() != null ? projectFile.getFileName().toLowerCase() : "";
 
-            // Analyze file to create consolidated result
-            LegacyFrameworkAnalysis analysisResult = analyzeLegacyFramework(fileName);
+        // Analyze file to create consolidated result
+        LegacyFrameworkAnalysis analysisResult = analyzeLegacyFramework(fileName);
 
-            if (!analysisResult.hasLegacyFramework) {
-                projectFileDecorator.notApplicable();
-                return;
-            }
+        if (!analysisResult.hasLegacyFramework) {
+            return; // Nothing to do if no legacy framework detected
+        }
 
-            // Honor produces contract - set tags on ProjectFile (dependency chain)
-            setProducedTags(projectFileDecorator, analysisResult);
+        // Honor produces contract - set tags on ProjectFile (dependency chain)
+        setProducedTags(decorator, analysisResult);
 
-            // Store detailed analysis data as consolidated POJO on ClassNode - no toJson()
-            // needed
-            classNode.setProperty("legacy_framework_analysis", analysisResult);
-        });
+        // Store detailed analysis data directly on ProjectFile as consolidated POJO
+        // Configuration files are not Java classes, so data belongs on ProjectFile, not
+        // JavaClassNode
+        decorator.setProperty("legacy_framework_analysis", analysisResult);
     }
 
     /**
@@ -198,11 +198,11 @@ public class LegacyFrameworkDetector implements Inspector<ProjectFile> {
     /**
      * Set tags on ProjectFile to honor the produces contract
      */
-    private void setProducedTags(ProjectFileDecorator decorator, LegacyFrameworkAnalysis analysis) {
+    private void setProducedTags(NodeDecorator<ProjectFile> decorator, LegacyFrameworkAnalysis analysis) {
         // Set simple boolean tag for legacy framework detection
-        decorator.setTag("legacy_framework", true);
+        decorator.enableTag("legacy_framework");
 
-        // Set migration priority as integer tag
-        decorator.setTag("migration_priority", analysis.migrationPriority);
+        // Set migration priority as property
+        decorator.setProperty("migration_priority", analysis.migrationPriority);
     }
 }

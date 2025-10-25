@@ -1,4 +1,5 @@
 package com.analyzer.core.model;
+
 import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.core.graph.GraphEdge;
@@ -142,7 +143,11 @@ public class ProjectDeserializer {
                     JsonNode tagValueNode = tagEntry.getValue();
 
                     Object tagValue = convertJsonNodeToObject(tagValueNode);
-                    projectFile.setTag(tagName, tagValue);
+                    if (tagValue instanceof Boolean && (Boolean) tagValue) {
+                        projectFile.addTag(tagName);
+                    } else {
+                        projectFile.setProperty(tagName, tagValue);
+                    }
                     tagCount++;
                 }
 

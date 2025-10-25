@@ -1,8 +1,7 @@
 package com.analyzer.inspectors.core.detection;
 
-import com.analyzer.core.export.ProjectFileDecorator;
-import com.analyzer.core.inspector.Inspector;
-import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.core.detector.FileDetector;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 
@@ -18,13 +17,8 @@ import java.util.*;
  * As a fundamental detector, this inspector has no dependencies and operates
  * directly on file names and paths.
  * </p>
- */
-@InspectorDependencies(produces = {
-        InspectorTags.TAG_FILE_TYPE,
-        FileExtensionDetector.TAGS.TAG_DETECTOR_PREFIX + "*",
-        FileExtensionDetector.TAGS.TAG_EXTENSION_PREFIX + "*"
-}) // No dependencies - fundamental detector
-public class FileExtensionDetector implements Inspector<ProjectFile> {
+ */// No dependencies - fundamental detector
+public class FileExtensionDetector implements FileDetector {
 
     public static class TAGS {
         public static final String TAG_DETECTOR_PREFIX = "detector.";
@@ -65,6 +59,7 @@ public class FileExtensionDetector implements Inspector<ProjectFile> {
         return name;
     }
 
+    @Override
     public boolean supports(ProjectFile projectFile) {
         if (projectFile == null) {
             return false;
@@ -80,17 +75,15 @@ public class FileExtensionDetector implements Inspector<ProjectFile> {
     }
 
     @Override
-    public void decorate(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-
-
+    public void detect(NodeDecorator<ProjectFile> decorator) {
         // Set the detector tag using own TAGS constants
-        projectFile.setTag(TAGS.TAG_DETECTOR_PREFIX + getTag(), true);
-        projectFile.setTag(InspectorTags.TAG_FILE_TYPE, getTag());
+        decorator.enableTag(TAGS.TAG_DETECTOR_PREFIX + getTag());
+        decorator.setProperty(InspectorTags.TAG_FILE_TYPE, getTag());
 
         // Add extension-specific processing
-        String extension = projectFile.getFileExtension();
+        String extension = decorator.getNode().getFileExtension();
         if (!extension.isEmpty()) {
-            projectFile.setTag(TAGS.TAG_EXTENSION_PREFIX + extension, true);
+            decorator.enableTag(TAGS.TAG_EXTENSION_PREFIX + extension);
         }
     }
 

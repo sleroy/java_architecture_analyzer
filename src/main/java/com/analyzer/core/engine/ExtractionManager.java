@@ -1,5 +1,6 @@
 package com.analyzer.core.engine;
 
+import com.analyzer.core.AnalysisConstants;
 import com.analyzer.core.filter.FileIgnoreFilter;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.JarExtractor;
@@ -25,8 +26,7 @@ public class ExtractionManager {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtractionManager.class);
     private static final String MD5_CACHE_FILE = ".md5_cache";
-    private static final String EXTRACTION_DIR = ".analysis";
-    private static final String BINARIES_DIR = "binaries";
+
 
     private final JarExtractor jarExtractor;
     private final Map<String, String> md5Cache = new HashMap<>();
@@ -175,7 +175,7 @@ public class ExtractionManager {
      * Gets the extraction root directory (.analysis/binaries/).
      */
     private Path getExtractionRoot(Path projectRoot) {
-        return projectRoot.resolve(EXTRACTION_DIR).resolve(BINARIES_DIR);
+        return projectRoot.resolve(AnalysisConstants.ANALYSIS_DIR).resolve(AnalysisConstants.BINARIES_DIR);
     }
 
     /**

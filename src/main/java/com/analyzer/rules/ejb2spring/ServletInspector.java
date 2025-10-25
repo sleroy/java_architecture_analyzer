@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -53,7 +53,7 @@ public class ServletInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-            ProjectFileDecorator projectFileDecorator) {
+                                NodeDecorator projectFileDecorator) {
 
         if (type instanceof ClassOrInterfaceDeclaration) {
             ClassOrInterfaceDeclaration classDecl = (ClassOrInterfaceDeclaration) type;
@@ -64,21 +64,21 @@ public class ServletInspector extends AbstractJavaClassInspector {
                 ServletInfo info = detector.getServletInfo();
 
                 // Set tags according to the produces contract
-                projectFileDecorator.setTag(TAGS.TAG_IS_SERVLET, true);
-                projectFileDecorator.setTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-                projectFileDecorator.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+                projectFileDecorator.setProperty(TAGS.TAG_IS_SERVLET, true);
+                projectFileDecorator.setProperty(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
+                projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
 
                 // Set property on class node for detailed analysis
                 classNode.setProperty("servlet.analysis", info.toString());
 
                 // Set analysis statistics
-                projectFileDecorator.setTag("servlet.http_methods", info.httpMethodCount);
+                projectFileDecorator.setProperty("servlet.http_methods", info.httpMethodCount);
 
                 // Set Spring Boot migration target based on servlet type
                 if (info.isRestServlet) {
-                    projectFileDecorator.setTag("spring.conversion.target", "@RestController");
+                    projectFileDecorator.setProperty("spring.conversion.target", "@RestController");
                 } else {
-                    projectFileDecorator.setTag("spring.conversion.target", "@Controller");
+                    projectFileDecorator.setProperty("spring.conversion.target", "@Controller");
                 }
             }
         }

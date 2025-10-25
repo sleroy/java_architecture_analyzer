@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -59,7 +59,7 @@ public class UtilityHelperInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-            ProjectFileDecorator projectFileDecorator) {
+                                NodeDecorator projectFileDecorator) {
 
         if (!(type instanceof ClassOrInterfaceDeclaration)) {
             return;
@@ -90,25 +90,25 @@ public class UtilityHelperInspector extends AbstractJavaClassInspector {
             info.hasUtilityName = hasUtilityName;
 
             // Set tags according to the produces contract
-            projectFileDecorator.setTag(TAGS.TAG_IS_UTILITY, true);
-            projectFileDecorator.setTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-            projectFileDecorator.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW, true);
+            projectFileDecorator.enableTag(TAGS.TAG_IS_UTILITY);
+            projectFileDecorator.enableTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION);
+            projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW);
 
             // Set property on class node for detailed analysis
             classNode.setProperty("utility.analysis", info.toString());
 
             // Set analysis statistics
-            projectFileDecorator.setTag("utility.static_method_count", info.staticMethodCount);
-            projectFileDecorator.setTag("utility.instance_method_count", info.instanceMethodCount);
-            projectFileDecorator.setTag("utility.static_method_ratio", info.getStaticMethodRatio());
+            projectFileDecorator.setProperty("utility.static_method_count", info.staticMethodCount);
+            projectFileDecorator.setProperty("utility.instance_method_count", info.instanceMethodCount);
+            projectFileDecorator.setProperty("utility.static_method_ratio", info.getStaticMethodRatio());
 
             // Set appropriate Spring Boot migration target
             if (info.hasStateManagement) {
                 // If it has state, convert to a managed component
-                projectFileDecorator.setTag("spring.conversion.target", "@Component");
+                projectFileDecorator.setProperty("spring.conversion.target", "@Component");
             } else {
                 // Otherwise, keep as static utility class
-                projectFileDecorator.setTag("spring.conversion.target", "Static Utility Class");
+                projectFileDecorator.setProperty("spring.conversion.target", "Static Utility Class");
             }
         }
     }

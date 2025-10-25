@@ -78,7 +78,18 @@ public class InMemoryGraphRepository implements GraphRepository {
     }
 
     @Override
-    public Optional<GraphNode> getNode(String nodeId) {
+    public void addNode(GraphNode node) {
+        Objects.requireNonNull(node, "Node cannot be null");
+        Objects.requireNonNull(node.getId(), "Node ID cannot be null");
+        nodes.put(node.getId(), node);
+        if (node instanceof JavaClassNode) {
+            JavaClassNode classNode = (JavaClassNode) node;
+            classFqnIndex.put(classNode.getFullyQualifiedName(), classNode);
+        }
+    }
+
+    @Override
+    public Optional<GraphNode> getNodeById(String nodeId) {
         return Optional.ofNullable(nodes.get(nodeId));
     }
 
@@ -90,7 +101,7 @@ public class InMemoryGraphRepository implements GraphRepository {
     @Override
     public Collection<GraphNode> getNodesByType(Set<String> nodeTypes) {
         if (nodeTypes == null || nodeTypes.isEmpty()) {
-            return getAllNodes();
+            return getNodes();
         }
 
         return nodes.values().stream()
@@ -110,7 +121,7 @@ public class InMemoryGraphRepository implements GraphRepository {
     }
 
     @Override
-    public Collection<GraphNode> getAllNodes() {
+    public Collection<GraphNode> getNodes() {
         return Collections.unmodifiableCollection(nodes.values());
     }
 
@@ -172,6 +183,14 @@ public class InMemoryGraphRepository implements GraphRepository {
     @Override
     public Optional<JavaClassNode> findClassByFqn(String fqn) {
         return Optional.ofNullable(classFqnIndex.get(fqn));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T extends GraphNode> Collection<T> getNodesByClass(Class<T> nodeClass) {
+        return (Collection<T>) nodes.values().stream()
+                .filter(nodeClass::isInstance)
+                .collect(Collectors.toList());
     }
 
     /**

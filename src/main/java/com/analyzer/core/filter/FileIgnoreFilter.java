@@ -1,5 +1,4 @@
 package com.analyzer.core.filter;
-import com.analyzer.core.inspector.InspectorDependencies;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.util.*;
@@ -24,7 +24,6 @@ public class FileIgnoreFilter {
 
     private final List<PathMatcher> ignoreMatchers;
     private final Set<String> ignorePatterns;
-
 
     /**
      * Create a FileIgnoreFilter with specified patterns.
@@ -159,41 +158,119 @@ public class FileIgnoreFilter {
 
     /**
      * Check if a file should be ignored based on the configured patterns.
+     * 
+     * <p>
+     * This method implements context-aware hidden directory filtering:
+     * <ul>
+     * <li>Skips files in hidden directories (e.g., .git/, .idea/)</li>
+     * <li>Skips symbolic links (including those to hidden directories)</li>
+     * <li>Makes exception for .analysis/binaries/ to allow exploded JAR
+     * analysis</li>
+     * <li>Respects configured ignore patterns</li>
+     * </ul>
      *
      * @param filePath    the absolute file path
      * @param projectRoot the project root path (for relative path calculation)
      * @return true if the file should be ignored
      */
     public boolean shouldIgnore(Path filePath, Path projectRoot) {
+        // Quick validation checks
         if (filePath == null || projectRoot == null) {
-            return false;
+            return true;
         }
 
+        try {
+            // Skip symbolic links (including those to hidden directories)
+            if (Files.isSymbolicLink(filePath)) {
+                logger.debug("Skipping symbolic link: {}", filePath);
+                return true;
+            }
+
+            // SPECIAL CASE: Allow files under .analysis/binaries/ (exploded JARs)
+            // even though .analysis is technically a hidden directory
+            Path analysisBinaries = projectRoot.resolve(".analysis").resolve("binaries");
+            if (filePath.startsWith(analysisBinaries)) {
+                // Still check ignore patterns, but don't skip for being in hidden directory
+                logger.debug("Allowing .analysis/binaries/ file (exploded JAR): {}", filePath);
+                return matchesIgnorePattern(filePath, projectRoot);
+            }
+
+            // Check if file itself OR any parent directory is hidden
+            if (Files.isHidden(filePath)) {
+                logger.debug("Skipping hidden file: {}", filePath);
+                return true;
+            }
+
+            if (isInHiddenDirectory(filePath, projectRoot)) {
+                logger.debug("Skipping file in hidden directory: {}", filePath);
+                return true;
+            }
+
+            // Check against configured ignore patterns
+            return matchesIgnorePattern(filePath, projectRoot);
+
+        } catch (IOException e) {
+            logger.debug("Error checking ignore status for {}: {}", filePath, e.getMessage());
+            return true; // Skip on error to be safe
+        }
+    }
+
+    /**
+     * Checks if a file is located within a hidden directory.
+     * Walks up the directory tree from the file to the project root,
+     * checking if any parent directory is hidden.
+     *
+     * @param filePath    the file path to check
+     * @param projectRoot the project root path
+     * @return true if any parent directory in the path is hidden
+     * @throws IOException if unable to check hidden status
+     */
+    private boolean isInHiddenDirectory(Path filePath, Path projectRoot) throws IOException {
+        Path current = filePath.getParent();
+
+        while (current != null && current.startsWith(projectRoot) && !current.equals(projectRoot)) {
+            if (Files.isHidden(current)) {
+                return true;
+            }
+            current = current.getParent();
+        }
+
+        return false;
+    }
+
+    /**
+     * Checks if a file matches any of the configured ignore patterns.
+     * Tests both relative and absolute paths against all matchers.
+     *
+     * @param filePath    the absolute file path
+     * @param projectRoot the project root path
+     * @return true if the file matches any ignore pattern
+     */
+    private boolean matchesIgnorePattern(Path filePath, Path projectRoot) {
         try {
             // Get relative path from project root
             Path relativePath = projectRoot.relativize(filePath);
             String relativePathString = relativePath.toString().replace('\\', '/');
 
-            // Check against all matchers
+            // Check against all matchers using relative path
             for (PathMatcher matcher : ignoreMatchers) {
                 if (matcher.matches(relativePath)) {
-                    logger.debug("File ignored by pattern: {}", relativePathString);
+                    logger.debug("File ignored by pattern (relative): {}", relativePathString);
                     return true;
                 }
             }
 
-            // Also check against the absolute path string for patterns that might need it
-            String absolutePathString = filePath.toString().replace('\\', '/');
+            // Also check against the absolute path for patterns that might need it
             for (PathMatcher matcher : ignoreMatchers) {
                 if (matcher.matches(filePath)) {
-                    logger.debug("File ignored by absolute pattern: {}", absolutePathString);
+                    logger.debug("File ignored by pattern (absolute): {}", filePath);
                     return true;
                 }
             }
 
             return false;
         } catch (Exception e) {
-            logger.debug("Error checking ignore status for {}: {}", filePath, e.getMessage());
+            logger.debug("Error checking patterns for {}: {}", filePath, e.getMessage());
             return false; // Don't ignore on error
         }
     }

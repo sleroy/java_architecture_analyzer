@@ -1,10 +1,9 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.detection.JavaSourceFileDetector;
 import com.analyzer.inspectors.core.source.AbstractJavaParserInspector;
 import com.analyzer.resource.ResourceResolver;
 import com.github.javaparser.ast.CompilationUnit;
@@ -15,7 +14,7 @@ import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
 import java.util.Set;
 
-@InspectorDependencies(need = {JavaSourceFileDetector.class}, produces = {IdentifyServletSourceInspector.TAGS.TAG_IS_SERVLET})
+@InspectorDependencies(need = {}, produces = {IdentifyServletSourceInspector.TAGS.TAG_IS_SERVLET})
 public class IdentifyServletSourceInspector extends AbstractJavaParserInspector {
 
     public static class TAGS {
@@ -42,14 +41,14 @@ public class IdentifyServletSourceInspector extends AbstractJavaParserInspector 
     }
 
     @Override
-    protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
+    protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile, NodeDecorator projectFileDecorator) {
         ServletDetector detector = new ServletDetector();
         cu.accept(detector, null);
         
         boolean isServlet = detector.isServlet();
         
         // Honor produces contract - always set tag on ProjectFile
-        projectFileDecorator.setTag(TAGS.TAG_IS_SERVLET, isServlet);
+        projectFileDecorator.setProperty(TAGS.TAG_IS_SERVLET, isServlet);
         
         // Also set property on ClassNode for analysis data if available
         classNodeRepository.getOrCreateClassNode(cu).ifPresent(classNode -> {

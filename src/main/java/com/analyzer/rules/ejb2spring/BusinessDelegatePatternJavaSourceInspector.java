@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
@@ -33,54 +33,47 @@ import java.util.Set;
  * <p>
  * Phase 1 - Core EJB Migration Analysis
  */
-@InspectorDependencies(
-        requires = { "JAVA", InspectorTags.TAG_JAVA_IS_SOURCE },
-        need = { EntityBeanJavaSourceInspector.class },
-        produces = {
+@InspectorDependencies(requires = { "JAVA", InspectorTags.TAG_JAVA_IS_SOURCE }, need = {
+        EntityBeanJavaSourceInspector.class }, produces = {
                 EjbMigrationTags.EJB_BUSINESS_DELEGATE,
                 EjbMigrationTags.EJB_SERVICE_LOCATOR,
                 EjbMigrationTags.EJB_CLIENT_CODE,
                 EjbMigrationTags.EJB_JNDI_LOOKUP,
                 EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY
         })
-public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaParserInspector  {
+public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaParserInspector {
 
     private static final String INSPECTOR_ID = "I-0709";
     private static final String INSPECTOR_NAME = "Business Delegate Pattern Inspector";
 
     private static final Set<String> BUSINESS_DELEGATE_INDICATORS = Set.of(
-            "BusinessDelegate", "Delegate", "ServiceDelegate", "EJBDelegate", "RemoteDelegate"
-    );
+            "BusinessDelegate", "Delegate", "ServiceDelegate", "EJBDelegate", "RemoteDelegate");
 
     private static final Set<String> SERVICE_LOCATOR_INDICATORS = Set.of(
-            "ServiceLocator", "ServiceFinder", "EJBServiceLocator", "Locator", "Finder"
-    );
+            "ServiceLocator", "ServiceFinder", "EJBServiceLocator", "Locator", "Finder");
 
     private static final Set<String> JNDI_LOOKUP_METHODS = Set.of(
-            "lookup", "lookupLink", "rebind", "bind"
-    );
+            "lookup", "lookupLink", "rebind", "bind");
 
     private final ClassNodeRepository classNodeRepository;
 
     @Inject
-    public BusinessDelegatePatternJavaSourceInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
+    public BusinessDelegatePatternJavaSourceInspector(ResourceResolver resourceResolver,
+            ClassNodeRepository classNodeRepository) {
         super(resourceResolver);
         this.classNodeRepository = classNodeRepository;
     }
 
-
-
-    
-
     @Override
     public boolean supports(ProjectFile projectFile) {
-        // Trust @InspectorDependencies to handle ALL filtering - never check tags manually
+        // Trust @InspectorDependencies to handle ALL filtering - never check tags
+        // manually
         return super.supports(projectFile);
     }
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-                                          ProjectFileDecorator projectFileDecorator) {
+                                          NodeDecorator projectFileDecorator) {
 
         BusinessDelegateDetector detector = new BusinessDelegateDetector();
         cu.accept(detector, null);
@@ -94,13 +87,13 @@ public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaPars
         boolean usesServiceLocator = metadata.usesServiceLocator();
         boolean hasJndiLookup = metadata.hasJndiLookup();
 
-        projectFile.setTag(EjbMigrationTags.EJB_BUSINESS_DELEGATE, isBusinessDelegate);
-        projectFile.setTag(EjbMigrationTags.EJB_SERVICE_LOCATOR, isServiceLocator || usesServiceLocator);
-        projectFile.setTag(EjbMigrationTags.EJB_CLIENT_CODE, usesBusinessDelegate);
-        projectFile.setTag(EjbMigrationTags.EJB_JNDI_LOOKUP, hasJndiLookup);
+        projectFile.setProperty(EjbMigrationTags.EJB_BUSINESS_DELEGATE, isBusinessDelegate);
+        projectFile.setProperty(EjbMigrationTags.EJB_SERVICE_LOCATOR, isServiceLocator || usesServiceLocator);
+        projectFile.setProperty(EjbMigrationTags.EJB_CLIENT_CODE, usesBusinessDelegate);
+        projectFile.setProperty(EjbMigrationTags.EJB_JNDI_LOOKUP, hasJndiLookup);
 
         if (isBusinessDelegate || isServiceLocator || usesBusinessDelegate || hasJndiLookup) {
-            projectFile.setTag(EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY, true);
+            projectFile.setProperty(EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY, true);
         }
 
         // Store detailed analysis metadata on JavaClassNode
@@ -127,8 +120,7 @@ public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaPars
                         complexity,
                         metadata.getDelegateMethodCount(),
                         metadata.getJndiLookupCount(),
-                        recommendations
-                );
+                        recommendations);
                 classNode.setProperty("business_delegate_analysis", analysis);
             }
         });
@@ -435,9 +427,9 @@ public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaPars
         private final int jndiLookupCount;
         private final List<String> recommendations;
 
-        public BusinessDelegateAnalysis(String patternType, String complexity, 
-                                      int delegateMethodCount, int jndiLookupCount, 
-                                      List<String> recommendations) {
+        public BusinessDelegateAnalysis(String patternType, String complexity,
+                int delegateMethodCount, int jndiLookupCount,
+                List<String> recommendations) {
             this.patternType = patternType;
             this.complexity = complexity;
             this.delegateMethodCount = delegateMethodCount;

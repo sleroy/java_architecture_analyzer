@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Interface representing a node in the analysis graph.
@@ -13,8 +14,9 @@ import java.util.Map;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = ProjectFile.class, name = "ProjectFile"),
-    @JsonSubTypes.Type(value = JavaClassNode.class, name = "JavaClassNode")
+        @JsonSubTypes.Type(value = ProjectFile.class, name = "ProjectFile"),
+        @JsonSubTypes.Type(value = JavaClassNode.class, name = "JavaClassNode"),
+        @JsonSubTypes.Type(value = com.analyzer.core.model.Package.class, name = "Package")
 })
 public interface GraphNode {
 
@@ -47,4 +49,33 @@ public interface GraphNode {
      * @return the display label
      */
     String getDisplayLabel();
+
+    /**
+     * Adds a tag to this node.
+     *
+     * @param tag the tag to add
+     */
+    void addTag(String tag);
+
+    /**
+     * Checks if this node has a specific tag.
+     *
+     * @param tag the tag to check for
+     * @return true if the node has the tag, false otherwise
+     */
+    boolean hasTag(String tag);
+
+    /**
+     * Gets all tags associated with this node.
+     *
+     * @return a set of tags
+     */
+    Set<String> getTags();
+
+    /**
+     * Removes a tag from this node.
+     *
+     * @param tag the tag to remove
+     */
+    void removeTag(String tag);
 }

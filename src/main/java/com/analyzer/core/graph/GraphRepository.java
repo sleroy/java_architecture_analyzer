@@ -39,12 +39,20 @@ public interface GraphRepository {
     GraphEdge getOrCreateEdge(GraphNode source, GraphNode target, String edgeType);
 
     /**
+     * Adds a node to the repository. If a node with the same ID already exists,
+     * it will be overwritten.
+     *
+     * @param node the node to add
+     */
+    void addNode(GraphNode node);
+
+    /**
      * Gets a node by its ID.
      * 
      * @param nodeId the node ID
      * @return the node if found, empty otherwise
      */
-    Optional<GraphNode> getNode(String nodeId);
+    Optional<GraphNode> getNodeById(String nodeId);
 
     /**
      * Gets an edge by its ID.
@@ -75,7 +83,7 @@ public interface GraphRepository {
      * 
      * @return all nodes
      */
-    Collection<GraphNode> getAllNodes();
+    Collection<GraphNode> getNodes();
 
     /**
      * Gets all edges in the repository.
@@ -119,4 +127,14 @@ public interface GraphRepository {
      * @return the JavaClassNode if found, empty otherwise
      */
     Optional<JavaClassNode> findClassByFqn(String fqn);
+
+    /**
+     * Gets all nodes of a specific class type.
+     * This provides efficient type-safe filtering of nodes.
+     * 
+     * @param <T>       The type of GraphNode to retrieve
+     * @param nodeClass The class of nodes to retrieve
+     * @return Collection of nodes of the specified type
+     */
+    <T extends GraphNode> Collection<T> getNodesByClass(Class<T> nodeClass);
 }

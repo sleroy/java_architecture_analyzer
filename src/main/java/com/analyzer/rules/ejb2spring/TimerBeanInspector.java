@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.ClassNodeRepository;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorDependencies;
@@ -11,7 +11,6 @@ import com.analyzer.resource.ResourceResolver;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
-import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
@@ -65,7 +64,7 @@ public class TimerBeanInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-            ProjectFileDecorator projectFileDecorator) {
+                                NodeDecorator projectFileDecorator) {
 
         if (!(type instanceof ClassOrInterfaceDeclaration)) {
             return;
@@ -95,25 +94,25 @@ public class TimerBeanInspector extends AbstractJavaClassInspector {
             info.hasTimerName = hasTimerName;
 
             // Set tags according to the produces contract
-            projectFileDecorator.setTag(TAGS.TAG_IS_TIMER_BEAN, true);
-            projectFileDecorator.setTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-            projectFileDecorator.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+            projectFileDecorator.setProperty(TAGS.TAG_IS_TIMER_BEAN, true);
+            projectFileDecorator.setProperty(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
+            projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
 
             // Set property on class node for detailed analysis
             classNode.setProperty("timer.analysis", info.toString());
 
             // Set analysis statistics
-            projectFileDecorator.setTag("timer.timer_service_references", info.timerServiceReferences);
-            projectFileDecorator.setTag("timer.create_timer_calls", info.createTimerCalls.size());
+            projectFileDecorator.setProperty("timer.timer_service_references", info.timerServiceReferences);
+            projectFileDecorator.setProperty("timer.create_timer_calls", info.createTimerCalls.size());
 
             // Set Spring Boot migration target
-            projectFileDecorator.setTag("spring.conversion.target", "@Component+@Scheduled");
+            projectFileDecorator.setProperty("spring.conversion.target", "@Component+@Scheduled");
 
             // If calendar-based timers are used, migration is more complex
             if (info.usesCalendarBasedTimer) {
-                projectFileDecorator.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
+                projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
                 // Override medium complexity
-                projectFileDecorator.setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, false);
+                projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, false);
             }
         }
     }

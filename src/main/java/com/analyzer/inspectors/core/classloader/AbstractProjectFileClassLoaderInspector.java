@@ -1,13 +1,12 @@
 package com.analyzer.inspectors.core.classloader;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.JARClassLoaderService;
 import com.analyzer.inspectors.core.AbstractProjectFileInspector;
 import com.analyzer.resource.ResourceResolver;
-import com.analyzer.inspectors.core.detection.SourceFileTagDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +33,7 @@ import java.net.URLClassLoader;
  * Class<?> object to perform runtime analysis that would not be possible
  * with static analysis alone.
  */
-@InspectorDependencies(need = {SourceFileTagDetector.class}, requires = {InspectorTags.TAG_JAVA_DETECTED}, produces = {})
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_DETECTED}, produces = {})
 public abstract class AbstractProjectFileClassLoaderInspector extends AbstractProjectFileInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractProjectFileClassLoaderInspector.class);
@@ -53,26 +52,17 @@ public abstract class AbstractProjectFileClassLoaderInspector extends AbstractPr
         this.resourceResolver = resourceResolver;
         this.classLoaderService = classLoaderService;
 
-        // Initialize the shared ClassLoader on first use
-        if (!classLoaderService.isInitialized()) {
-            classLoaderService.initializeFromResourceResolver(resourceResolver);
-        }
     }
 
     @Override
-    protected final void analyzeProjectFile(ProjectFile projectFile, ProjectFileDecorator projectFileDecorator) {
-        // First, check if this ProjectFile represents a Java class
-        if (!isJavaClass(projectFile)) {
-            projectFileDecorator.notApplicable();
-            return;
-        }
+    protected final void analyzeProjectFile(ProjectFile projectFile, NodeDecorator<ProjectFile> projectFileDecorator) {
 
         // Get the fully qualified class name
         String fullyQualifiedName = getClassName(projectFile);
         if (fullyQualifiedName == null || fullyQualifiedName.isEmpty()) {
-            logger.debug("ProjectFile {} does not have a fully qualified class name",
+            logger.warn("ProjectFile {} does not have a fully qualified class name",
                     projectFile.getRelativePath());
-            projectFileDecorator.notApplicable();
+            projectFileDecorator.error("ProjectFile " + projectFile.getRelativePath() + " does not have a fully qualified class name");
             return;
         }
 
@@ -91,30 +81,29 @@ public abstract class AbstractProjectFileClassLoaderInspector extends AbstractPr
 
         } catch (ClassNotFoundException e) {
             // Class not found - this is expected for many classes
-            logger.debug("Class not found in ClassLoader: {} ({})",
+            logger.error("Class not found in ClassLoader: {} ({})",
                     fullyQualifiedName, e.getMessage());
-            projectFileDecorator.notApplicable();
+            projectFileDecorator.error("Class not found in ClassLoader: " + e.getMessage());
 
         } catch (NoClassDefFoundError e) {
-            // Missing dependencies - also expected
-            logger.debug("Missing dependencies for class: {} ({})",
+            // Missing dependencies - also expected 
+            logger.error("Missing dependencies for class: {} ({})",
                     fullyQualifiedName, e.getMessage());
-            projectFileDecorator.notApplicable();
+            projectFileDecorator.error("Missing dependencies for class: " + e.getMessage());
 
         } catch (LinkageError e) {
             // Linkage issues - treat as not applicable
-            logger.debug("Linkage error loading class: {} ({})",
+            logger.error("Linkage error loading class: {} ({})",
                     fullyQualifiedName, e.getMessage());
-            projectFileDecorator.notApplicable();
+            projectFileDecorator.error("Linkage error loading class: " + e.getMessage());
 
         } catch (SecurityException e) {
             // Security restrictions - treat as not applicable
-            logger.debug("Security restriction loading class: {} ({})",
+            logger.error("Security restriction loading class: {} ({})",
                     fullyQualifiedName, e.getMessage());
-            projectFileDecorator.notApplicable();
+            projectFileDecorator.error("Security restriction loading class: " + e.getMessage());
 
-        } catch (Exception e) {
-            // Unexpected errors - return as error
+        } catch (Exception e) {            // Unexpected errors - return as error
             logger.warn("Unexpected error loading class: {} ({})",
                     fullyQualifiedName, e.getMessage());
             projectFileDecorator.error(
@@ -143,12 +132,13 @@ public abstract class AbstractProjectFileClassLoaderInspector extends AbstractPr
      * - Checking interface implementations
      * - Accessing field types and modifiers
      *
-     * @param loadedClass     the successfully loaded Class<?> object
-     * @param projectFile     the ProjectFile metadata object containing file locations
-     *                        and tags
+     * @param loadedClass          the successfully loaded Class<?> object
+     * @param projectFile          the ProjectFile metadata object containing file locations
+     *                             and tags
      * @param projectFileDecorator
      */
-    protected abstract void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile, ProjectFileDecorator projectFileDecorator);
+    protected abstract void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile,
+                                               NodeDecorator<ProjectFile> projectFileDecorator);
 
     /**
      * Gets the shared ClassLoader service used by this inspector.

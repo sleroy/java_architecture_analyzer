@@ -1,10 +1,11 @@
 package com.analyzer.core.resource;
-import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.PostConstruct;
+import javax.inject.Inject;
 import java.io.File;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -28,6 +29,13 @@ public class JARClassLoaderService {
 
     private static URLClassLoader sharedClassLoader;
     private static boolean initialized = false;
+    private ResourceResolver resourceResolver;
+
+    @Inject
+    public JARClassLoaderService(ResourceResolver resourceResolver) {
+        this.resourceResolver = resourceResolver;
+        initializeFromResourceResolver();
+    }
 
     /**
      * Initializes the shared ClassLoader by scanning the ResourceResolver
@@ -36,7 +44,8 @@ public class JARClassLoaderService {
      * 
      * @param resourceResolver the resolver to scan for JAR files
      */
-    public synchronized void initializeFromResourceResolver(ResourceResolver resourceResolver) {
+    @PostConstruct
+    public synchronized void initializeFromResourceResolver() {
         if (initialized) {
             return;
         }

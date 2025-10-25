@@ -1,6 +1,6 @@
 package com.analyzer.core.model;
-import com.analyzer.core.inspector.InspectorDependencies;
 
+import com.analyzer.core.graph.BaseGraphNode;
 import com.analyzer.resource.ResourceLocation;
 
 import java.util.*;
@@ -8,14 +8,16 @@ import java.util.*;
 /**
  * Represents a Java package discovered during analysis.
  * Contains all classes within this package and inspector results.
+ * Extends BaseGraphNode to participate in the graph analysis system.
  */
-public class Package {
+public class Package extends BaseGraphNode {
     private final String packageName;
     private final ResourceLocation sourceLocation;
     private final List<ProjectFile> classes;
     private final Map<String, Object> inspectorResults;
 
     public Package(String packageName, ResourceLocation sourceLocation) {
+        super(packageName, "package");
         this.packageName = Objects.requireNonNull(packageName, "Package name cannot be null");
         this.sourceLocation = sourceLocation;
         this.classes = new ArrayList<>();
@@ -54,6 +56,11 @@ public class Package {
 
     public boolean isEmpty() {
         return classes.isEmpty();
+    }
+
+    @Override
+    public String getDisplayLabel() {
+        return packageName.isEmpty() ? "<default package>" : packageName;
     }
 
     public Map<String, Object> getInspectorResults() {

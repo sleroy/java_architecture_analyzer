@@ -1,6 +1,6 @@
 package com.analyzer.inspectors.core.bedrock;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.inspectors.core.source.AbstractTextFileInspector;
 import com.analyzer.resource.ResourceResolver;
@@ -16,7 +16,8 @@ import org.slf4j.LoggerFactory;
  * Subclasses must implement:
  * - getName() from Inspector interface
  * - buildPrompt() to create model-specific prompts
- * - parseResponse() to process AI responses and set tags via ProjectFileDecorator
+ * - parseResponse() to process AI responses and set tags via
+ * ProjectFileDecorator
  */
 public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileInspector {
 
@@ -27,7 +28,8 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
     private boolean initializedSuccessfully = false;
 
     /**
-     * Creates a AbstractBedrockInspectorAbstract with the specified ResourceResolver and default
+     * Creates a AbstractBedrockInspectorAbstract with the specified
+     * ResourceResolver and default
      * configuration.
      *
      * @param resourceResolver the resolver for accessing source file resources
@@ -37,7 +39,8 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
     }
 
     /**
-     * Creates a AbstractBedrockInspectorAbstract with the specified ResourceResolver and
+     * Creates a AbstractBedrockInspectorAbstract with the specified
+     * ResourceResolver and
      * configuration.
      *
      * @param resourceResolver the resolver for accessing source file resources
@@ -59,22 +62,21 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
             this.initializedSuccessfully = true;
 
         } catch (BedrockConfigurationException e) {
-            logger.warn("Invalid Bedrock configuration for inspector {}: {}. The inspector will be disabled.", getName(), e.getMessage());
+            logger.warn("Invalid Bedrock configuration for inspector {}: {}. The inspector will be disabled.",
+                    getName(), e.getMessage());
             this.initializedSuccessfully = false;
         }
     }
 
     @Override
-    protected final void processContent(String content, ProjectFile clazz, ProjectFileDecorator projectFileDecorator) {
+    protected final void processContent(String content, ProjectFile clazz, NodeDecorator<ProjectFile> projectFileDecorator) {
         if (!initializedSuccessfully) {
             logger.debug("Bedrock inspector {} is not initialized due to configuration issues.", getName());
-            projectFileDecorator.notApplicable();
             return;
         }
         // Check if Bedrock integration is enabled
         if (!config.isEnabled()) {
             logger.debug("Bedrock integration disabled for inspector: {}", getName());
-            projectFileDecorator.notApplicable();
             return;
         }
 
@@ -85,8 +87,7 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
         }
 
         if (content.length() < 10) {
-            logger.debug("Content too short for meaningful AI analysis: {} characters", content.length());
-            projectFileDecorator.notApplicable();
+            logger.error("Content too short for meaningful AI analysis: {} characters", content.length());
             return;
         }
 
@@ -99,7 +100,7 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
             }
 
             logger.debug("Invoking Bedrock model for class: {} with prompt length: {}",
-                    clazz.getFullyQualifiedName(), prompt.length());
+                    clazz.getProperty("fullyQualifiedName"), prompt.length());
 
             // Call Bedrock API
             BedrockResponse response = apiClient.invokeModel(prompt);
@@ -112,18 +113,18 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
             }
 
             logger.debug("Received Bedrock response for class: {} with {} characters",
-                    clazz.getFullyQualifiedName(), response.getText().length());
+                    clazz.getProperty("fullyQualifiedName"), response.getText().length());
 
             // Parse and return result
             parseResponse(response.getText(), clazz, projectFileDecorator);
 
         } catch (BedrockApiException e) {
             logger.warn("Bedrock API call failed for class {}: {}",
-                    clazz.getFullyQualifiedName(), e.getMessage());
+                    clazz.getProperty("fullyQualifiedName"), e.getMessage());
             projectFileDecorator.error("Bedrock API error: " + e.getMessage());
         } catch (Exception e) {
             logger.error("Unexpected error during Bedrock analysis for class {}: {}",
-                    clazz.getFullyQualifiedName(), e.getMessage(), e);
+                    clazz.getProperty("fullyQualifiedName"), e.getMessage(), e);
             projectFileDecorator.error("Unexpected error: " + e.getMessage());
         }
     }
@@ -147,12 +148,12 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
      * This method should interpret the AI's response and set appropriate
      * tags on the ProjectFile via projectFile.setTag() calls.
      *
-     * @param response        the text response from the AI model
-     * @param clazz           the class being analyzed
+     * @param response             the text response from the AI model
+     * @param clazz                the class being analyzed
      * @param projectFileDecorator decorator for handling errors and success states
      */
-    protected abstract void parseResponse(String response, ProjectFile clazz, ProjectFileDecorator projectFileDecorator);
-
+    protected abstract void parseResponse(String response, ProjectFile clazz,
+                                          NodeDecorator<ProjectFile> projectFileDecorator);
 
     /**
      * Get the Bedrock configuration used by this inspector.
@@ -190,9 +191,9 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
 
                 // Add class context
                 "Class Information:\n" +
-                "- Class Name: " + clazz.getClassName() + "\n" +
-                "- Package: " + clazz.getPackageName() + "\n" +
-                "- Fully Qualified Name: " + clazz.getFullyQualifiedName() + "\n" +
+                "- Class Name: " + clazz.getProperty("className") + "\n" +
+                "- Package: " + clazz.getProperty("packageName") + "\n" +
+                "- Fully Qualified Name: " + clazz.getProperty("fullyQualifiedName") + "\n" +
 
                 // Add source code
                 "\nSource Code:\n" +
@@ -232,25 +233,6 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
             return ModelFamily.TITAN;
         } else {
             return ModelFamily.GENERIC;
-        }
-    }
-
-    /**
-     * Enum representing different model families with their capabilities.
-     */
-    public enum ModelFamily {
-        CLAUDE("Anthropic Claude models with strong reasoning and code analysis capabilities"),
-        TITAN("Amazon Titan models optimized for general text generation"),
-        GENERIC("Generic models with basic text generation capabilities");
-
-        private final String description;
-
-        ModelFamily(String description) {
-            this.description = description;
-        }
-
-        public String getDescription() {
-            return description;
         }
     }
 
@@ -317,6 +299,25 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
     public void close() {
         if (apiClient != null) {
             apiClient.close();
+        }
+    }
+
+    /**
+     * Enum representing different model families with their capabilities.
+     */
+    public enum ModelFamily {
+        CLAUDE("Anthropic Claude models with strong reasoning and code analysis capabilities"),
+        TITAN("Amazon Titan models optimized for general text generation"),
+        GENERIC("Generic models with basic text generation capabilities");
+
+        private final String description;
+
+        ModelFamily(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
         }
     }
 }

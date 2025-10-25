@@ -1,5 +1,6 @@
 package com.analyzer.rules.metrics;
-import com.analyzer.core.export.ProjectFileDecorator;
+
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.core.model.ProjectFile;
@@ -7,7 +8,8 @@ import com.analyzer.inspectors.core.bedrock.AbstractBedrockInspectorAbstract;
 import com.analyzer.resource.ResourceResolver;
 
 /**
- * Concrete implementation of AbstractBedrockInspectorAbstract that uses AI to assess code
+ * Concrete implementation of AbstractBedrockInspectorAbstract that uses AI to
+ * assess code
  * quality.
  * This inspector demonstrates how to use AWS Bedrock models for code analysis
  * by asking the AI to evaluate code quality on a scale from 1-10.
@@ -19,16 +21,15 @@ import com.analyzer.resource.ResourceResolver;
  * - Code organization and structure
  * - Appropriate use of design patterns
  */
-@InspectorDependencies(
-        produces = {CodeQualityInspectorAbstractAbstract.TAG_CODE_QUALITY_AI}
-)
+@InspectorDependencies(produces = { CodeQualityInspectorAbstractAbstract.TAG_CODE_QUALITY_AI })
 public class CodeQualityInspectorAbstractAbstract extends AbstractBedrockInspectorAbstract {
 
     public static final String NAME = "Code Quality (AI)";
     public static final String TAG_CODE_QUALITY_AI = "code_quality_ai";
 
     /**
-     * Creates a CodeQualityInspectorAbstractAbstract with the specified ResourceResolver.
+     * Creates a CodeQualityInspectorAbstractAbstract with the specified
+     * ResourceResolver.
      *
      * @param resourceResolver the resolver for accessing source file resources
      */
@@ -41,11 +42,9 @@ public class CodeQualityInspectorAbstractAbstract extends AbstractBedrockInspect
         return NAME;
     }
 
-
     public String getColumnName() {
         return TAG_CODE_QUALITY_AI;
     }
-
 
     @Override
     protected String buildPrompt(String content, ProjectFile clazz) {
@@ -68,7 +67,7 @@ public class CodeQualityInspectorAbstractAbstract extends AbstractBedrockInspect
     }
 
     @Override
-    protected void parseResponse(String response, ProjectFile clazz, ProjectFileDecorator projectFileDecorator) {
+    protected void parseResponse(String response, ProjectFile clazz, NodeDecorator<ProjectFile> projectFileDecorator) {
         if (response == null || response.trim().isEmpty()) {
             projectFileDecorator.error("Empty response from AI model");
             return;
@@ -80,7 +79,7 @@ public class CodeQualityInspectorAbstractAbstract extends AbstractBedrockInspect
         // Validate score range
         if (score < 1.0 || score > 10.0) {
             logger.warn("AI model returned out-of-range score {} for class {}, clamping to valid range",
-                    score, clazz.getFullyQualifiedName());
+                    score, clazz.getProperty("fullyQualifiedName"));
             score = Math.max(1.0, Math.min(10.0, score));
         }
 
@@ -88,9 +87,9 @@ public class CodeQualityInspectorAbstractAbstract extends AbstractBedrockInspect
         double roundedScore = Math.round(score * 10.0) / 10.0;
 
         logger.debug("Code quality assessment for {}: {}/10",
-                clazz.getFullyQualifiedName(), roundedScore);
+                clazz.getProperty("fullyQualifiedName"), roundedScore);
 
-        projectFileDecorator.setTag(getColumnName(), roundedScore);
+        projectFileDecorator.setProperty(getColumnName(), roundedScore);
     }
 
     @Override

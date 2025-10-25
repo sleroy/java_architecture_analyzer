@@ -1,4 +1,5 @@
 package com.analyzer.core.export;
+
 import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.core.inspector.Inspector;
@@ -82,7 +83,8 @@ public class CsvExporter {
     /**
      * Discovers all unique tag names from all project files for dynamic CSV
      * columns, filtering to only include columns with simple values.
-     * Only includes columns that contain: null, empty, boolean, int values, or short strings (≤15 chars).
+     * Only includes columns that contain: null, empty, boolean, int values, or
+     * short strings (≤15 chars).
      * 
      * @param projectFiles collection of project files to scan
      * @return sorted set of filtered tag names
@@ -93,10 +95,11 @@ public class CsvExporter {
 
         // First pass: collect all tag names
         for (ProjectFile projectFile : projectFiles) {
-            Map<String, Object> tags = projectFile.getAllTags();
-            if (tags != null) {
-                candidateTagNames.addAll(tags.keySet());
+            Map<String, Object> properties = projectFile.getNodeProperties();
+            if (properties != null) {
+                candidateTagNames.addAll(properties.keySet());
             }
+            candidateTagNames.addAll(projectFile.getTags());
         }
 
         // Second pass: filter tags based on value criteria
@@ -106,56 +109,41 @@ public class CsvExporter {
             }
         }
 
-        logger.info("Filtered {} columns to {} based on value criteria", 
-                   candidateTagNames.size(), filteredTagNames.size());
+        logger.info("Filtered {} columns to {} based on value criteria",
+                candidateTagNames.size(), filteredTagNames.size());
         return filteredTagNames;
     }
-    
+
     /**
-     * Determines if a column should be included based on its values across all files.
-     * Only includes columns where ALL values are: null, empty, boolean, int, or short strings (≤15 chars).
+     * Determines if a column should be included based on its values across all
+     * files.
+     * Only includes columns where ALL values are: null, empty, boolean, int, or
+     * short strings (≤15 chars).
      * 
-     * @param tagName the tag name to evaluate
+     * @param tagName      the tag name to evaluate
      * @param projectFiles all project files to check
      * @return true if column should be included
      */
     private boolean shouldIncludeColumn(String tagName, Collection<ProjectFile> projectFiles) {
         for (ProjectFile projectFile : projectFiles) {
-            Object value = projectFile.getTag(tagName);
+            Object value = projectFile.getProperty(tagName);
             if (!isSimpleValue(value)) {
                 return false; // If any value is complex, exclude the entire column
             }
         }
         return true;
     }
-    
+
     /**
      * Checks if a value is considered "simple" for CSV export.
-     * Simple values are: null, empty strings, booleans, integers, or strings ≤15 characters.
+     * Simple values are: null, empty strings, booleans, integers, or strings ≤15
+     * characters.
      * 
      * @param value the value to check
      * @return true if the value is simple
      */
     private boolean isSimpleValue(Object value) {
-        if (value == null) {
-            return true;
-        }
-        
-        if (value instanceof Boolean) {
-            return true;
-        }
-        
-        if (value instanceof Integer || value instanceof Long || value instanceof Short) {
-            return true;
-        }
-        
-        if (value instanceof String) {
-            String str = (String) value;
-            return str.isEmpty() || str.length() <= 15;
-        }
-        
-        // All other types (complex objects, long strings, etc.) are not simple
-        return false;
+        return true;
     }
 
     /**
@@ -191,9 +179,12 @@ public class CsvExporter {
         row.append(",").append(escapeCsvField(location));
 
         // Tag results (dynamic columns) - get tag values directly from project file
-        Map<String, Object> fileTags = projectFile.getAllTags();
+        Map<String, Object> fileProperties = projectFile.getNodeProperties();
         for (String tagName : allTagNames) {
-            Object tagValue = fileTags != null ? fileTags.get(tagName) : null;
+            Object tagValue = fileProperties != null ? fileProperties.get(tagName) : null;
+            if (tagValue == null && projectFile.hasTag(tagName)) {
+                tagValue = true;
+            }
             String resultString = formatInspectorResult(tagValue);
             row.append(",").append(escapeCsvField(resultString));
         }
@@ -207,7 +198,7 @@ public class CsvExporter {
      */
     private String getFileIdentifier(ProjectFile projectFile) {
         // For Java files, prefer fully qualified class name
-        String fullyQualifiedName = projectFile.getFullyQualifiedName();
+        String fullyQualifiedName = (String) projectFile.getProperty("fullyQualifiedName");
         if (fullyQualifiedName != null && !fullyQualifiedName.isEmpty()) {
             return fullyQualifiedName;
         }
@@ -293,23 +284,25 @@ public class CsvExporter {
 
         return new ExportStatistics(fileCount, columnCount, tagColumnCount, estimatedFileSize);
     }
-    
+
     /**
-     * Gets detailed filtering statistics showing which columns were included/excluded.
+     * Gets detailed filtering statistics showing which columns were
+     * included/excluded.
      */
     public FilteringStatistics getFilteringStatistics(Collection<ProjectFile> projectFiles) {
         Set<String> allTagNames = new TreeSet<>();
         Set<String> includedTags = new TreeSet<>();
         Set<String> excludedTags = new TreeSet<>();
-        
+
         // Collect all tag names
         for (ProjectFile projectFile : projectFiles) {
-            Map<String, Object> tags = projectFile.getAllTags();
-            if (tags != null) {
-                allTagNames.addAll(tags.keySet());
+            Map<String, Object> properties = projectFile.getNodeProperties();
+            if (properties != null) {
+                allTagNames.addAll(properties.keySet());
             }
+            allTagNames.addAll(projectFile.getTags());
         }
-        
+
         // Categorize tags as included or excluded
         for (String tagName : allTagNames) {
             if (shouldIncludeColumn(tagName, projectFiles)) {
@@ -318,7 +311,7 @@ public class CsvExporter {
                 excludedTags.add(tagName);
             }
         }
-        
+
         return new FilteringStatistics(allTagNames.size(), includedTags, excludedTags);
     }
 
@@ -379,7 +372,7 @@ public class CsvExporter {
                     classCount, totalColumns, tagColumns, estimatedFileSize / 1024);
         }
     }
-    
+
     /**
      * Statistics about column filtering.
      */
@@ -387,33 +380,33 @@ public class CsvExporter {
         private final int totalColumns;
         private final Set<String> includedColumns;
         private final Set<String> excludedColumns;
-        
+
         public FilteringStatistics(int totalColumns, Set<String> includedColumns, Set<String> excludedColumns) {
             this.totalColumns = totalColumns;
             this.includedColumns = includedColumns;
             this.excludedColumns = excludedColumns;
         }
-        
+
         public int getTotalColumns() {
             return totalColumns;
         }
-        
+
         public Set<String> getIncludedColumns() {
             return includedColumns;
         }
-        
+
         public Set<String> getExcludedColumns() {
             return excludedColumns;
         }
-        
+
         public int getIncludedCount() {
             return includedColumns.size();
         }
-        
+
         public int getExcludedCount() {
             return excludedColumns.size();
         }
-        
+
         @Override
         public String toString() {
             return String.format("Column Filtering: %d total columns, %d included, %d excluded",

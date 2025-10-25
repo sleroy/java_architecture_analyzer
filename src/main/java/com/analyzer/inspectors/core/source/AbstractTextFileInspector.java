@@ -1,6 +1,7 @@
 package com.analyzer.inspectors.core.source;
 
-import com.analyzer.core.export.ProjectFileDecorator;
+import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
@@ -8,11 +9,14 @@ import com.analyzer.resource.ResourceResolver;
 import java.io.IOException;
 
 /**
- * Abstract base class for source file inspectors that need access to the full text content.
+ * Abstract base class for source file inspectors that need access to the full
+ * text content.
  * Returns the result of processing the complete file content as a string.
  * <p>
- * Subclasses must implement getName(), getColumnName(), and processContent() methods.
- * The processContent method receives the full file content and the class being analyzed.
+ * Subclasses must implement getName(), getColumnName(), and processContent()
+ * methods.
+ * The processContent method receives the full file content and the class being
+ * analyzed.
  */
 public abstract class AbstractTextFileInspector extends AbstractSourceFileInspector {
 
@@ -26,15 +30,16 @@ public abstract class AbstractTextFileInspector extends AbstractSourceFileInspec
     }
 
     @Override
-    protected final void analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation, ProjectFileDecorator projectFileDecorator)
+    protected final void analyzeSourceFile(ProjectFile clazz, ResourceLocation sourceLocation,
+            NodeDecorator<ProjectFile> decorator)
             throws IOException {
         try {
             String content = readFileContent(sourceLocation);
-            processContent(content, clazz, projectFileDecorator);
+            processContent(content, clazz, decorator);
         } catch (IOException e) {
-            projectFileDecorator.error("Error reading source file: " + e.getMessage());
+            decorator.error("Error reading source file: " + e.getMessage());
         } catch (Exception e) {
-            projectFileDecorator.error("Error processing file content: " + e.getMessage());
+            decorator.error("Error processing file content: " + e.getMessage());
         }
     }
 
@@ -46,9 +51,9 @@ public abstract class AbstractTextFileInspector extends AbstractSourceFileInspec
      * class being analyzed. Implementations can perform any kind of text analysis,
      * parsing, or extraction and return appropriate results.
      *
-     * @param content         the complete content of the source file
-     * @param clazz           the class being analyzed
-     * @param projectFileDecorator
+     * @param content   the complete content of the source file
+     * @param clazz     the class being analyzed
+     * @param decorator the decorator for setting properties and tags
      */
-    protected abstract void processContent(String content, ProjectFile clazz, ProjectFileDecorator projectFileDecorator);
+    protected abstract void processContent(String content, ProjectFile clazz, NodeDecorator<ProjectFile> decorator);
 }
