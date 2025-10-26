@@ -1,6 +1,7 @@
 package com.analyzer.inspectors.core.detection;
 
 import com.analyzer.core.inspector.BeanFactory;
+import com.analyzer.rules.std.JavaSourceFileInspector;
 import org.picocontainer.MutablePicoContainer;
 
 public class FileDetectionBeanFactory implements BeanFactory {
@@ -19,7 +20,6 @@ public class FileDetectionBeanFactory implements BeanFactory {
         container.addComponent("filename-detector", FilenameDetector.createDockerInspector());
 
         // Binary class detector
-        container.addComponent(JavaSourceFileDetector.class);
         container.addComponent(SourceFileDetector.class);
         container.addComponent(BinaryClassFileDetector.class);
     }

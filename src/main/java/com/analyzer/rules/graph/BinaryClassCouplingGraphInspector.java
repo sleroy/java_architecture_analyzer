@@ -8,7 +8,6 @@ import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +42,7 @@ import java.util.Set;
  * @author Java Architecture Analyzer
  * @since Class-Centric Architecture - Graph Phase
  */
-@InspectorDependencies(requires = { BinaryJavaClassNodeInspector.TAGS.TAG_JAVA_CLASS_NODE_BINARY }, produces = {
+@InspectorDependencies(requires = {  }, produces = {
         BinaryClassCouplingGraphInspector.TAGS.TAG_CLASS_COUPLING_EDGES_CREATED })
 public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector {
 

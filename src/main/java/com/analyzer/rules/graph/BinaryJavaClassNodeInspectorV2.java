@@ -36,10 +36,17 @@ import javax.inject.Inject;
  * @since Phase 3 - Systematic Inspector Migration
  */
 @InspectorDependencies(produces = {
-        BinaryJavaClassNodeInspector.TAGS.TAG_JAVA_CLASS_NODE_BINARY })
+        BinaryJavaClassNodeInspectorV2.TAGS.TAG_JAVA_CLASS_NODE_BINARY })
 public class BinaryJavaClassNodeInspectorV2 extends AbstractASMClassInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(BinaryJavaClassNodeInspectorV2.class);
+
+    /**
+     * Tag definitions for binary class nodes.
+     */
+    public static class TAGS {
+        public static final String TAG_JAVA_CLASS_NODE_BINARY = "java.class_node.binary";
+    }
 
     @Inject
     public BinaryJavaClassNodeInspectorV2(ProjectFileRepository projectFileRepository,
@@ -92,7 +99,7 @@ public class BinaryJavaClassNodeInspectorV2 extends AbstractASMClassInspector {
                 setProperty(JavaClassNode.PROP_CLASS_TYPE, classType);
 
                 // Enable tag to indicate this class node was validated from binary
-                enableTag(BinaryJavaClassNodeInspector.TAGS.TAG_JAVA_CLASS_NODE_BINARY);
+                enableTag(TAGS.TAG_JAVA_CLASS_NODE_BINARY);
 
                 // Could add additional derived properties here if needed
                 // For example: abstract/final flags, visibility modifiers, etc.

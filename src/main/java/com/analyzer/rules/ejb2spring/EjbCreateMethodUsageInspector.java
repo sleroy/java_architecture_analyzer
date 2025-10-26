@@ -4,7 +4,6 @@ import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.graph.ProjectFileRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
-import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.Opcodes;
@@ -13,7 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**

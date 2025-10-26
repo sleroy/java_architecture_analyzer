@@ -2,14 +2,11 @@ package com.analyzer.core.model;
 
 import com.analyzer.core.graph.BaseGraphNode;
 import com.analyzer.core.inspector.InspectorTags;
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -38,37 +35,6 @@ public class ProjectFile extends BaseGraphNode {
 
     public ProjectFile(Path filePath, Path projectRoot, String sourceJarPath, String jarEntryPath) {
         this(filePath, projectRoot, sourceJarPath, jarEntryPath, new Date());
-    }
-
-    @JsonCreator
-    public ProjectFile(@JsonProperty("filePath") String filePathStr,
-            @JsonProperty("relativePath") String relativePath,
-            @JsonProperty("sourceJarPath") String sourceJarPath,
-            @JsonProperty("jarEntryPath") String jarEntryPath,
-            @JsonProperty("discoveredAt") Date discoveredAt,
-            @JsonProperty("properties") Map<String, Object> properties,
-            @JsonProperty("tags") Set<String> tags) {
-        super(filePathStr, "file");
-        this.filePath = Paths.get(filePathStr);
-        this.relativePath = relativePath;
-        this.fileName = this.filePath.getFileName().toString();
-
-        String name = fileName;
-        int lastDot = name.lastIndexOf('.');
-        this.fileExtension = lastDot != -1 ? name.substring(lastDot + 1).toLowerCase() : "";
-
-        this.sourceJarPath = sourceJarPath;
-        this.jarEntryPath = jarEntryPath;
-        this.isVirtual = (sourceJarPath != null);
-        this.discoveredAt = discoveredAt != null ? discoveredAt : new Date();
-
-        // Load properties and tags into BaseGraphNode
-        if (properties != null) {
-            properties.forEach(this::setProperty);
-        }
-        if (tags != null) {
-            tags.forEach(this::addTag);
-        }
     }
 
     private ProjectFile(Path filePath, Path projectRoot, String sourceJarPath, String jarEntryPath, Date discoveredAt) {
@@ -102,14 +68,8 @@ public class ProjectFile extends BaseGraphNode {
         }
     }
 
-    @JsonIgnore
     public Path getFilePath() {
         return filePath;
-    }
-
-    @JsonProperty("filePath")
-    public String getFilePathString() {
-        return filePath.toString();
     }
 
     public String getRelativePath() {
@@ -270,7 +230,6 @@ public class ProjectFile extends BaseGraphNode {
         return true;
     }
 
-    @JsonProperty("properties")
     public Map<String, Object> getAllProperties() {
         return getNodeProperties();
     }
@@ -356,16 +315,11 @@ public class ProjectFile extends BaseGraphNode {
 
     @Override
     public String getDisplayLabel() {
-        String fqn = getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
+        String fqn = getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
         if (fqn != null) {
             return fqn;
         }
         return relativePath.length() < 50 ? relativePath : fileName;
-    }
-
-    @JsonProperty("tags")
-    public Set<String> getJsonTags() {
-        return getTags();
     }
 
     // ==================== Object Methods ====================
@@ -383,9 +337,9 @@ public class ProjectFile extends BaseGraphNode {
     public void setFullQualifiedName(String packageName, String className) {
 
         if (packageName.isEmpty()) {
-            setProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME, className);
+            setProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME, className);
         } else {
-            setProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME, packageName + "." + className);
+            setProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME, packageName + "." + className);
         }
 
     }

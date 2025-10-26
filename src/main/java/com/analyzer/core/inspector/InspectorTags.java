@@ -42,7 +42,7 @@ public final class InspectorTags {
     /**
      * Tag for Java fully qualified name
      */
-    public static final String TAG_JAVA_FULLY_QUALIFIED_NAME = "java.fullyQualifiedName";
+    public static final String PROP_JAVA_FULLY_QUALIFIED_NAME = "java.fullyQualifiedName";
     /**
      * Tag indicating if this is a Java source file
      */

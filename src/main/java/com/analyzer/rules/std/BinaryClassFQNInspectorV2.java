@@ -4,13 +4,14 @@ import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.graph.ProjectFileRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
-import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+
+import static com.analyzer.core.inspector.InspectorTags.*;
 
 /**
  * Class-centric FQN inspector that extracts identification information from
@@ -34,10 +35,9 @@ import javax.inject.Inject;
  * @author Phase 3 - Class-Centric Architecture Migration
  * @since Phase 3 - Systematic Inspector Migration
  */
-@InspectorDependencies(requires = {  }, produces = {
-        InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME,
-        InspectorTags.TAG_JAVA_PACKAGE_NAME,
-        InspectorTags.TAG_JAVA_CLASS_NAME })
+@InspectorDependencies(produces = {
+        TAG_JAVA_PACKAGE_NAME,
+        TAG_JAVA_CLASS_NAME })
 public class BinaryClassFQNInspectorV2 extends AbstractASMClassInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(BinaryClassFQNInspectorV2.class);
@@ -60,7 +60,10 @@ public class BinaryClassFQNInspectorV2 extends AbstractASMClassInspector {
     @Override
     protected ASMClassNodeVisitor createClassVisitor(JavaClassNode classNode,
             NodeDecorator<JavaClassNode> decorator) {
-        return new FQNExtractorVisitor(classNode, decorator);
+        // Find the ProjectFile associated with this class node to also update its FQN
+        return findProjectFile(classNode)
+                .map(projectFile -> new FQNExtractorVisitor(classNode, decorator, projectFile))
+                .orElseGet(() -> new FQNExtractorVisitor(classNode, decorator, null));
     }
 
     /**
@@ -68,8 +71,12 @@ public class BinaryClassFQNInspectorV2 extends AbstractASMClassInspector {
      */
     private static class FQNExtractorVisitor extends ASMClassNodeVisitor {
 
-        protected FQNExtractorVisitor(JavaClassNode classNode, NodeDecorator<JavaClassNode> decorator) {
+        private final com.analyzer.core.model.ProjectFile projectFile;
+
+        protected FQNExtractorVisitor(JavaClassNode classNode, NodeDecorator<JavaClassNode> decorator,
+                com.analyzer.core.model.ProjectFile projectFile) {
             super(classNode, decorator);
+            this.projectFile = projectFile;
         }
 
         @Override
@@ -94,11 +101,18 @@ public class BinaryClassFQNInspectorV2 extends AbstractASMClassInspector {
                 // Note: FQN is already the node ID, but we store components for convenience
                 setProperty(PROP_PACKAGE_NAME, packageName);
                 setProperty(PROP_SIMPLE_CLASS_NAME, className);
+                setProperty(PROP_JAVA_FULLY_QUALIFIED_NAME, fullyQualifiedName);
 
                 // Also enable tags for backward compatibility with dependency system
-                enableTag(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
-                enableTag(InspectorTags.TAG_JAVA_PACKAGE_NAME);
-                enableTag(InspectorTags.TAG_JAVA_CLASS_NAME);
+                enableTag(TAG_JAVA_PACKAGE_NAME);
+                enableTag(TAG_JAVA_CLASS_NAME);
+
+                // Also update the associated ProjectFile with the FQN
+                if (projectFile != null) {
+                    projectFile.setFullQualifiedName(packageName, className);
+                    logger.debug("Set FQN on ProjectFile: {} (package: {}, class: {})",
+                            fullyQualifiedName, packageName, className);
+                }
 
                 logger.debug("Extracted FQN from binary class: {} (package: {}, class: {})",
                         fullyQualifiedName, packageName, className);

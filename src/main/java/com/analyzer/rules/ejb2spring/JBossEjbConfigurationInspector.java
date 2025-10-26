@@ -75,12 +75,12 @@ public class JBossEjbConfigurationInspector extends AbstractSourceFileInspector 
     @Override
     protected void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation,
                                      NodeDecorator<ProjectFile> projectFileDecorator) throws IOException {
-        String fqn = projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
+        String fqn = projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
         if (fqn != null && !fqn.isEmpty()) {
             JavaClassNode classNode = classNodeRepository.getOrCreateByFqn(fqn);
             classNode.setProjectFileId(projectFile.getId());
             try {
-                LOGGER.info("Analyzing JBoss configuration file: " + projectFile.getFilePath());
+                LOGGER.info("Analyzing JBoss configuration file: {}", projectFile.getFilePath());
 
                 String content = readFileContent(sourceLocation);
                 if (content == null || content.trim().isEmpty()) {

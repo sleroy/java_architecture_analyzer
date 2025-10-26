@@ -1,5 +1,7 @@
 package com.analyzer.core.model;
 
+import com.analyzer.core.graph.ProjectFileRepository;
+
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,23 +21,24 @@ public class Project {
     private final Map<String, Object> projectData;
     private final Date createdAt;
     private Date lastAnalyzed;
+    private final ProjectFileRepository projectFileRepository;
 
     public Project(Path projectPath) {
-        this.projectPath = Objects.requireNonNull(projectPath, "Project path cannot be null");
-        this.projectName = projectPath.getFileName().toString();
-        this.projectFiles = new ConcurrentHashMap<>();
-        this.projectData = new ConcurrentHashMap<>();
-        this.createdAt = new Date();
-        this.lastAnalyzed = null;
+        this(projectPath, projectPath.getFileName().toString(), null);
     }
 
     public Project(Path projectPath, String projectName) {
+        this(projectPath, projectName, null);
+    }
+
+    public Project(Path projectPath, String projectName, ProjectFileRepository projectFileRepository) {
         this.projectPath = Objects.requireNonNull(projectPath, "Project path cannot be null");
         this.projectName = Objects.requireNonNull(projectName, "Project name cannot be null");
         this.projectFiles = new ConcurrentHashMap<>();
         this.projectData = new ConcurrentHashMap<>();
         this.createdAt = new Date();
         this.lastAnalyzed = null;
+        this.projectFileRepository = projectFileRepository;
     }
 
     /**
@@ -88,9 +91,33 @@ public class Project {
      * If the file doesn't exist, creates a new ProjectFile and adds it to the
      * project.
      * Uses absolute path as key to ensure uniqueness across the project.
+     * 
+     * If a ProjectFileRepository is configured, the file will be registered in the
+     * graph store.
      */
     public ProjectFile getOrCreateProjectFile(String relativePath, Path absolutePath) {
         String id = absolutePath.toString(); // Use absolute path as key
+
+        // First check local cache
+        ProjectFile projectFile = projectFiles.get(id);
+        if (projectFile != null) {
+            return projectFile;
+        }
+
+        // If repository is available, try to find or create through it
+        if (projectFileRepository != null) {
+            projectFile = projectFileRepository.findByPath(absolutePath).orElse(null);
+            if (projectFile == null) {
+                // Create new ProjectFile and save to repository
+                projectFile = new ProjectFile(absolutePath, this.projectPath);
+                projectFileRepository.save(projectFile);
+            }
+            // Add to local cache
+            projectFiles.put(id, projectFile);
+            return projectFile;
+        }
+
+        // Fallback: no repository available, use local cache only
         return projectFiles.computeIfAbsent(id, key -> new ProjectFile(absolutePath, this.projectPath));
     }
 

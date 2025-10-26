@@ -90,8 +90,8 @@ public abstract class AbstractProjectFileInspector implements Inspector<ProjectF
      * @return true if this appears to be a Java class file
      */
     protected boolean isJavaClass(ProjectFile projectFile) {
-        return projectFile.getBooleanProperty(InspectorTags.TAG_JAVA_IS_SOURCE, false) ||
-                projectFile.getBooleanProperty(InspectorTags.TAG_JAVA_IS_BINARY, false);
+        return projectFile.hasTag(InspectorTags.TAG_JAVA_IS_SOURCE) ||
+                projectFile.hasTag(InspectorTags.TAG_JAVA_IS_BINARY);
     }
 
     /**
@@ -102,6 +102,6 @@ public abstract class AbstractProjectFileInspector implements Inspector<ProjectF
      * @return the fully qualified class name, or null if not available
      */
     protected String getClassName(ProjectFile projectFile) {
-        return projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
+        return projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
     }
 }

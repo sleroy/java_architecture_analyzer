@@ -19,7 +19,7 @@ import java.lang.annotation.*;
  * <pre>
  * {
  *     &#64;code
- *     &#64;InspectorDependencies(need = { FileExtensionDetector.class, JavaSourceFileDetector.class }, produces = {
+ *     &#64;InspectorDependencies(need = { FileExtensionDetector.class, JavaSourceFileInspector.class }, produces = {
  *             InspectorTags.JAVA_DETECTED, InspectorTags.JAVA_IS_SOURCE })
  *     public class JavaParserInspector extends AbstractSourceFileInspector {
  *         // Depends on specific inspector classes and declares what tags it produces

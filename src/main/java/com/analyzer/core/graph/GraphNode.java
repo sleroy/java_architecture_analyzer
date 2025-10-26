@@ -1,5 +1,6 @@
 package com.analyzer.core.graph;
 
+import com.analyzer.core.metrics.Metrics;
 import com.analyzer.core.model.ProjectFile;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -80,4 +81,12 @@ public interface GraphNode {
     void removeTag(String tag);
 
     boolean hasAllTags(String[] tagArray);
+
+    /**
+     * Returns the list of metrics associate to the node.
+     * 
+     * @return the metrics
+     */
+    Metrics getMetrics();
+
 }

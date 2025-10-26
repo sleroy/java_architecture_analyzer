@@ -47,6 +47,26 @@ import java.util.Set;
  * </ul>
  * 
  * <p>
+ * <strong>Two-Level Metrics System:</strong>
+ * </p>
+ * <ul>
+ * <li><strong>Class-Level Metrics</strong> (JavaClassNode): Detailed type usage
+ * metrics for each class</li>
+ * <li><strong>File-Level Aggregates</strong> (ProjectFile): MAX aggregation
+ * strategy - identifies the class with the most complex type usage in each
+ * file</li>
+ * </ul>
+ * 
+ * <p>
+ * Aggregated file-level properties:
+ * </p>
+ * <ul>
+ * <li>types.total_unique.max - Maximum unique types across all classes</li>
+ * <li>types.complexity_score.max - Highest complexity score</li>
+ * <li>types.total_unique.classes_analyzed - Number of classes analyzed</li>
+ * </ul>
+ * 
+ * <p>
  * Type complexity is calculated based on usage patterns, generic complexity,
  * and framework integration.
  * All metrics are attached to the corresponding JavaClassNode for architectural
@@ -381,7 +401,16 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
     }
 
     /**
-     * Attaches comprehensive type usage metrics to the corresponding JavaClassNode.
+     * Attaches comprehensive type usage metrics to the corresponding JavaClassNode
+     * AND aggregates file-level metrics on ProjectFile using MAX strategy.
+     * 
+     * <p>
+     * Aggregation Strategy: MAX - identifies the class with the most complex type
+     * usage
+     * </p>
+     * 
+     * @param projectFile the project file representing this class
+     * @param metrics     the calculated type usage metrics
      */
     private void attachTypeMetricsToGraphNode(ProjectFile projectFile, TypeUsageMetrics metrics) {
         if (graphRepository == null) {
@@ -389,13 +418,14 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
             return;
         }
 
-        String fullyQualifiedName = (String) projectFile.getProperty("fullyQualifiedName");
+        String fullyQualifiedName = projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
         if (fullyQualifiedName == null) {
             logger.warn("Could not find fullyQualifiedName for project file: {}",
-                    (Object) projectFile.getProperty("filePath"));
+                    projectFile.getRelativePath());
             return;
         }
 
+        // LEVEL 1: Store detailed metrics on JavaClassNode (class-level)
         graphRepository.getNodeById(fullyQualifiedName).ifPresent(node -> {
             if (node instanceof JavaClassNode) {
                 JavaClassNode classNode = (JavaClassNode) node;
@@ -425,6 +455,22 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
                 logger.debug("Node found for {} is not a JavaClassNode", fullyQualifiedName);
             }
         });
+
+        // LEVEL 2: Aggregate metrics on ProjectFile (file-level summary)
+        // Use MAX strategy - identify the class with most complex type usage in this
+        // file
+        aggregateMaxMetric(projectFile, "types.total_unique", metrics.getTotalUniqueTypes());
+        aggregateMaxMetric(projectFile, "types.complexity_score", metrics.getComplexityScore());
+        aggregateMaxMetric(projectFile, "types.field_count", metrics.getFieldTypeCount());
+        aggregateMaxMetric(projectFile, "types.parameter_count", metrics.getParameterTypeCount());
+        aggregateMaxMetric(projectFile, "types.generic_count", metrics.getGenericTypeCount());
+
+        logger.debug(
+                "Aggregated type usage metrics on ProjectFile: {} (max_total={}, max_complexity={}, classes_analyzed={})",
+                projectFile.getRelativePath(),
+                projectFile.getDoubleProperty("types.total_unique.max"),
+                projectFile.getDoubleProperty("types.complexity_score.max"),
+                projectFile.getIntegerProperty("types.total_unique.classes_analyzed"));
     }
 
     /**

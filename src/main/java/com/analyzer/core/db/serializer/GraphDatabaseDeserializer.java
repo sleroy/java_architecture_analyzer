@@ -138,41 +138,41 @@ public class GraphDatabaseDeserializer {
      * Deserialize a single node into a ProjectFile.
      */
     private ProjectFile deserializeNode(GraphNodeEntity nodeEntity, Path projectRoot,
-                                        TagMapper tagMapper) {
+            TagMapper tagMapper) {
         try {
             String nodeId = nodeEntity.getId();
 
             // Reconstruct file path from node ID
             Path filePath = Paths.get(nodeId);
 
-            // Load properties from JSON
-            Map<String, Object> properties = new HashMap<>();
+            // Create ProjectFile using standard constructor
+            ProjectFile file = new ProjectFile(filePath, projectRoot);
+
+            // Load and set properties from JSON
             if (nodeEntity.getProperties() != null && !nodeEntity.getProperties().isEmpty()) {
                 try {
-                    properties = jsonMapper.readValue(
+                    Map<String, Object> properties = jsonMapper.readValue(
                             nodeEntity.getProperties(),
-                            new TypeReference<Map<String, Object>>() {}
-                    );
+                            new TypeReference<Map<String, Object>>() {
+                            });
+
+                    // Set each property
+                    for (Map.Entry<String, Object> entry : properties.entrySet()) {
+                        file.setProperty(entry.getKey(), entry.getValue());
+                    }
                 } catch (Exception e) {
                     logger.warn("Failed to deserialize properties for node {}: {}", nodeId, e.getMessage());
                 }
             }
 
-            // Load tags
+            // Load and add tags
             Set<String> tags = tagMapper.findByNodeId(nodeId).stream()
                     .map(NodeTagEntity::getTag)
                     .collect(Collectors.toSet());
 
-            // Create ProjectFile using JSON constructor
-            ProjectFile file = new ProjectFile(
-                    filePath.toString(),
-                    projectRoot.relativize(filePath).toString(),
-                    null, // sourceJarPath
-                    null, // jarEntryPath
-                    new Date(),
-                    properties,
-                    tags
-            );
+            for (String tag : tags) {
+                file.addTag(tag);
+            }
 
             return file;
 

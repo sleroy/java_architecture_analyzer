@@ -6,7 +6,6 @@ import org.picocontainer.MutablePicoContainer;
 public class GraphInspectorBeanFactory implements BeanFactory {
     @Override
     public void registerBeans(MutablePicoContainer container) {
-        container.addComponent(BinaryJavaClassNodeInspector.class);
         container.addComponent(BinaryJavaClassNodeInspectorV2.class);
         container.addComponent(BinaryClassCouplingGraphInspector.class);
         container.addComponent(JavaImportGraphInspector.class);

@@ -49,7 +49,6 @@ class ThreadLocalUsageInspectorTest {
         testClassLoader = new URLClassLoader(new URL[] { testClassesUrl }, getClass().getClassLoader());
 
         // Mock the classLoaderService to return our test ClassLoader (lenient for tests that don't use it)
-        lenient().when(classLoaderService.isInitialized()).thenReturn(true);
         lenient().when(classLoaderService.getSharedClassLoader()).thenReturn(testClassLoader);
 
         inspector = new ThreadLocalUsageInspector(resourceResolver, classLoaderService, graphRepository);

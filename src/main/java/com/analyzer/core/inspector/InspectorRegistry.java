@@ -4,6 +4,7 @@ import com.analyzer.core.collector.ClassNodeCollector;
 import com.analyzer.core.collector.Collector;
 import com.analyzer.core.detector.FileDetector;
 import com.analyzer.core.engine.AnalysisEngine;
+import com.analyzer.core.resource.JARClassLoaderService;
 import com.analyzer.inspectors.core.AbstractJavaClassInspector;
 import com.analyzer.inspectors.core.binary.AbstractBinaryClassInspector;
 import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
@@ -302,5 +303,9 @@ public class InspectorRegistry {
 
     public List<FileDetector> getFileDetectors() {
         return analysisContainer.getComponents(FileDetector.class);
+    }
+
+    public JARClassLoaderService getJarClassLoaderService() {
+        return analysisContainer.getComponent(JARClassLoaderService.class);
     }
 }

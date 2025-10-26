@@ -175,9 +175,8 @@ public class InheritanceDepthInspector extends AbstractClassLoaderBasedInspector
     }
 
     /**
-     * Attaches inheritance metrics to the corresponding JavaClassNode in the graph.
-     * For now, stores metrics as NodeDecorator<ProjectFile> tags since setProperty is
-     * protected.
+     * Attaches inheritance metrics to the corresponding JavaClassNode in the graph
+     * AND aggregates file-level metrics on ProjectFile using MAX strategy.
      *
      * @param projectFile          the project file representing this class
      * @param metrics              the calculated inheritance metrics
@@ -185,25 +184,41 @@ public class InheritanceDepthInspector extends AbstractClassLoaderBasedInspector
      */
     private void attachMetricsToGraphNode(ProjectFile projectFile, InheritanceMetrics metrics,
             NodeDecorator<ProjectFile> projectFileDecorator) {
-        if (graphRepository == null) {
-            logger.warn("GraphRepository not available - metrics will be stored as tags only");
-        } else {
-            String fullyQualifiedName = projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
-            if (fullyQualifiedName != null) {
-                // Verify JavaClassNode exists in graph
-                JavaClassNode classNode = (JavaClassNode) graphRepository.getNodeById(fullyQualifiedName).orElse(null);
-                if (classNode != null) {
-                    logger.debug("JavaClassNode found in graph for inheritance analysis: {}", fullyQualifiedName);
-                    // Note: In future versions, we can extend JavaClassNode with public methods
-                    // for setting inheritance-specific properties
-                } else {
-                    logger.debug("JavaClassNode not found in graph for: {} - metrics stored as tags only",
-                            fullyQualifiedName);
-                }
-            }
+        String fullyQualifiedName = projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
+        if (fullyQualifiedName == null) {
+            logger.warn("Could not find fullyQualifiedName for project file: {}", projectFile.getRelativePath());
+            return;
         }
 
-        // Store inheritance metrics as detailed tags
+        // LEVEL 1: Store detailed metrics on JavaClassNode (class-level)
+        if (graphRepository != null) {
+            graphRepository.getNodeById(fullyQualifiedName).ifPresent(node -> {
+                if (node instanceof JavaClassNode) {
+                    JavaClassNode classNode = (JavaClassNode) node;
+                    logger.debug("Attaching inheritance metrics to JavaClassNode: {}", fullyQualifiedName);
+
+                    classNode.setProperty(PROP_INHERITANCE_DEPTH, metrics.depth);
+                    classNode.setProperty(PROP_INHERITANCE_IS_DEEP, metrics.isDeep);
+
+                    if (metrics.immediateSuperclasFqn != null) {
+                        classNode.setProperty(PROP_INHERITANCE_SUPERCLASS_FQN, metrics.immediateSuperclasFqn);
+                    }
+
+                    if (metrics.rootClass != null) {
+                        classNode.setProperty(PROP_INHERITANCE_ROOT_CLASS, metrics.rootClass);
+                    }
+
+                    logger.debug("Stored inheritance metrics on JavaClassNode: {} (depth={})",
+                            fullyQualifiedName, metrics.depth);
+                } else {
+                    logger.debug("Node found for {} is not a JavaClassNode", fullyQualifiedName);
+                }
+            });
+        } else {
+            logger.warn("GraphRepository not available - metrics will be stored on ProjectFile only");
+        }
+
+        // Store legacy tags on ProjectFile decorator for backward compatibility
         projectFileDecorator.setProperty(PROP_INHERITANCE_DEPTH, metrics.depth);
         projectFileDecorator.setProperty(PROP_INHERITANCE_IS_DEEP, metrics.isDeep);
 
@@ -215,8 +230,14 @@ public class InheritanceDepthInspector extends AbstractClassLoaderBasedInspector
             projectFileDecorator.setProperty(PROP_INHERITANCE_ROOT_CLASS, metrics.rootClass);
         }
 
-        logger.debug("Stored inheritance metrics as tags: {} (depth={})",
-                projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME), metrics.depth);
+        // LEVEL 2: Aggregate metrics on ProjectFile (file-level summary)
+        // Use MAX strategy - identify the deepest inheritance in this file
+        aggregateMaxMetric(projectFile, "inheritance.depth", metrics.depth);
+
+        logger.debug("Aggregated inheritance metrics on ProjectFile: {} (max_depth={}, classes_analyzed={})",
+                projectFile.getRelativePath(),
+                projectFile.getDoubleProperty("inheritance.depth.max"),
+                projectFile.getIntegerProperty("inheritance.depth.classes_analyzed"));
     }
 
     /**

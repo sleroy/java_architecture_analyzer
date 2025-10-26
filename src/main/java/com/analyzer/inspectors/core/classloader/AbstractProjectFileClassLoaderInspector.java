@@ -200,9 +200,6 @@ public abstract class AbstractProjectFileClassLoaderInspector extends AbstractPr
      * @return a string describing the ClassLoader status
      */
     protected String getClassLoaderInfo() {
-        if (!classLoaderService.isInitialized()) {
-            return "ClassLoader not initialized";
-        }
 
         int jarCount = classLoaderService.getJarCount();
         return String.format("ClassLoader initialized with %d JAR(s)", jarCount);

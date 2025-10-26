@@ -9,7 +9,6 @@ import com.analyzer.resource.ResourceResolver;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Optional;
 
 public abstract class AbstractBinaryClassNodeInspector extends AbstractBinaryClassInspector {
 
@@ -25,7 +24,7 @@ public abstract class AbstractBinaryClassNodeInspector extends AbstractBinaryCla
     protected void analyzeClassFile(ProjectFile projectFile, ResourceLocation binaryLocation,
             InputStream classInputStream, NodeDecorator<ProjectFile> projectFileDecorator) throws IOException {
         String fqn = projectFile
-                .getStringProperty(com.analyzer.core.inspector.InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
+                .getStringProperty(com.analyzer.core.inspector.InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
         if (fqn != null) {
             JavaClassNode classNode = classNodeRepository.getOrCreateByFqn(fqn);
             analyzeClassNode(projectFile, classNode, binaryLocation, classInputStream, projectFileDecorator);

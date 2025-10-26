@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS nodes (
     node_type VARCHAR(50) NOT NULL,            -- java, xml, class, package
     display_label VARCHAR(512),                -- Human-readable label
     properties CLOB,                           -- JSON document stored as CLOB for H2 compatibility
+    metrics CLOB,                              -- Metrics stored as JSON (key-value pairs of metric_name: double_value)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

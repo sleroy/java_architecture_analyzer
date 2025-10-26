@@ -3,6 +3,9 @@ package com.analyzer.core.graph;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.analyzer.core.metrics.Metrics;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Abstract base class for graph nodes that provides common property management
  * functionality. This class extracts shared behavior from ProjectFile and
@@ -20,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public abstract class BaseGraphNode implements GraphNode {
 
+    private final Map<String, Double> metrics = new HashMap<>();
     private final Map<String, Object> properties;
     private final Set<String> tags;
     private final String nodeId;
@@ -194,5 +198,57 @@ public abstract class BaseGraphNode implements GraphNode {
         if (tags == null || tags.length == 0)
             return true;
         return Arrays.stream(tags).allMatch(this::hasTag);
+    }
+
+    /**
+     * Get the metrics interface for this node.
+     * Metrics are stored in a separate map from properties.
+     * 
+     * @return Metrics interface for reading/writing metrics
+     */
+    public Metrics getMetrics() {
+        return new Metrics() {
+            @Override
+            public Number getMetric(String metricName) {
+                return metrics.get(metricName);
+            }
+
+            @Override
+            public void setMetric(String metricName, Number value) {
+                if (value == null) {
+                    metrics.remove(metricName);
+                } else {
+                    metrics.put(metricName, value.doubleValue());
+                }
+            }
+
+            @Override
+            public Map<String, Double> getAllMetrics() {
+                return Collections.unmodifiableMap(metrics);
+            }
+        };
+    }
+
+    /**
+     * Get metrics map for JSON serialization.
+     * 
+     * @return metrics map
+     */
+    @JsonProperty("metrics")
+    public Map<String, Double> getMetricsMap() {
+        return new HashMap<>(metrics);
+    }
+
+    /**
+     * Set metrics map for JSON deserialization.
+     * 
+     * @param metricsMap metrics to set
+     */
+    @JsonProperty("metrics")
+    public void setMetricsMap(Map<String, Double> metricsMap) {
+        this.metrics.clear();
+        if (metricsMap != null) {
+            this.metrics.putAll(metricsMap);
+        }
     }
 }

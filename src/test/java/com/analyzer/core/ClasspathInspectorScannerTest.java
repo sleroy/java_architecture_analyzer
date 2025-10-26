@@ -75,14 +75,14 @@ public class ClasspathInspectorScannerTest {
             if (inspector instanceof AbstractBinaryClassInspector) {
                 hasBinaryInspectors = true;
             }
-            if ("JavaVersionInspector".equals(inspector.getName())) {
+            if ("JavaSourceVersionInspector".equals(inspector.getName())) {
                 hasJavaVersionInspector = true;
             }
         }
 
         assertTrue(hasSourceInspectors, "Should discover at least one source file inspector");
         assertTrue(hasBinaryInspectors, "Should discover at least one binary class inspector");
-        assertTrue(hasJavaVersionInspector, "Should discover JavaVersionInspector");
+        assertTrue(hasJavaVersionInspector, "Should discover JavaSourceVersionInspector");
     }
 
     @Test
@@ -100,7 +100,7 @@ public class ClasspathInspectorScannerTest {
         assertTrue(inspectorNames.contains("Number of lines of code"), "Should discover ClocInspector");
         // Check for core inspectors that should always be present
         assertTrue(inspectorNames.contains("Number of lines of code"), "Should discover ClocInspector");
-        assertTrue(inspectorNames.contains("JavaVersionInspector"), "Should discover JavaVersionInspector");
+        assertTrue(inspectorNames.contains("JavaSourceVersionInspector"), "Should discover JavaSourceVersionInspector");
         assertTrue(inspectorNames.contains("Java Binary class detector"), "Should discover JavaBinaryClassDetector");
         assertTrue(inspectorNames.contains("Java Source File Inspector"), "Should discover JavaSourceFileInspector");
 

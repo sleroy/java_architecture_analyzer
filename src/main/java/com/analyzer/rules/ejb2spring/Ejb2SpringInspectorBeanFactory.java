@@ -33,7 +33,6 @@ public class Ejb2SpringInspectorBeanFactory implements BeanFactory {
         container.addComponent(LegacyFrameworkDetector.class);
         container.addComponent(MessageDrivenBeanInspector.class);
         container.addComponent(MutableServiceInspector.class);
-        container.addComponent(ProgrammaticTransactionUsageInspector.class);
         container.addComponent(SecurityFacadeInspector.class);
         container.addComponent(ServiceLocatorInspector.class);
         container.addComponent(ServletInspector.class);

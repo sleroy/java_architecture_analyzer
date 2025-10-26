@@ -24,16 +24,16 @@ import java.util.Map;
  * Sets standardized tags for Java version information.
  */
 @InspectorDependencies(requires = {InspectorTags.TAG_JAVA_DETECTED}, produces = {
-        JavaVersionInspector.TAGS.TAG_JAVA_VERSION,
-        JavaVersionInspector.TAGS.TAG_JAVA_MAJOR_VERSION,
-        JavaVersionInspector.TAGS.TAG_JAVA_VERSION_SOURCE})
-public class JavaVersionInspector implements Inspector<ProjectFile> {
+        JavaSourceVersionInspector.TAGS.TAG_JAVA_VERSION,
+        JavaSourceVersionInspector.TAGS.TAG_JAVA_MAJOR_VERSION,
+        JavaSourceVersionInspector.TAGS.TAG_JAVA_VERSION_SOURCE})
+public class JavaSourceVersionInspector implements Inspector<ProjectFile> {
 
     // Version source values
     public static final String VERSION_SOURCE_BYTECODE = "bytecode";
     public static final String VERSION_SOURCE_PARSER = "parser";
     public static final String VERSION_SOURCE_UNKNOWN = "unknown";
-    private static final Logger logger = LoggerFactory.getLogger(JavaVersionInspector.class);
+    private static final Logger logger = LoggerFactory.getLogger(JavaSourceVersionInspector.class);
     // Major version to Java version mapping
     private static final Map<Integer, String> MAJOR_VERSION_MAP = new HashMap<>();
 
@@ -66,18 +66,18 @@ public class JavaVersionInspector implements Inspector<ProjectFile> {
     private final GraphRepository graphRepository;
 
     @Inject
-    public JavaVersionInspector(GraphRepository graphRepository) {
+    public JavaSourceVersionInspector(GraphRepository graphRepository) {
         this.graphRepository = graphRepository;
     }
 
     // Default constructor for backward compatibility
-    public JavaVersionInspector() {
+    public JavaSourceVersionInspector() {
         this.graphRepository = null;
     }
 
     @Override
     public String getName() {
-        return "JavaVersionInspector";
+        return "JavaSourceVersionInspector";
     }
 
     @Override
@@ -210,7 +210,7 @@ public class JavaVersionInspector implements Inspector<ProjectFile> {
 
     /**
      * Tag constants owned by this inspector.
-     * Other inspectors can reference these using JavaVersionInspector.TAGS.TAG_*
+     * Other inspectors can reference these using JavaSourceVersionInspector.TAGS.TAG_*
      */
     public static class TAGS {
         public static final String TAG_JAVA_VERSION = "java.version";

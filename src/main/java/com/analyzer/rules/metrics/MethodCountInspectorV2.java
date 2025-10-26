@@ -4,7 +4,6 @@ import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.graph.ProjectFileRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
-import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.MethodVisitor;
@@ -37,8 +36,7 @@ import javax.inject.Inject;
  * @author Phase 3 - Class-Centric Architecture Migration
  * @since Phase 3 - Systematic Inspector Migration
  */
-@InspectorDependencies(requires = {  }, produces = {} // Produces properties on
-                                                                                      // JavaClassNode, not tags
+@InspectorDependencies(requires = {  }, produces = {} // Produces properties on// JavaClassNode, not tags
 )
 public class MethodCountInspectorV2 extends AbstractASMClassInspector {
 

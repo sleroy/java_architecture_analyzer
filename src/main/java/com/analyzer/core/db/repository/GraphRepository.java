@@ -8,8 +8,7 @@ import com.analyzer.core.db.mapper.EdgeMapper;
 import com.analyzer.core.db.mapper.NodeMapper;
 import com.analyzer.core.db.mapper.TagMapper;
 import com.analyzer.core.db.validation.PropertiesValidator;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.analyzer.core.serialization.JsonSerializationService;
 import org.apache.ibatis.session.SqlSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,19 +20,23 @@ import java.util.stream.Collectors;
 
 /**
  * High-level repository for graph database operations.
- * Provides convenient methods for working with nodes, edges, properties, and tags.
+ * Provides convenient methods for working with nodes, edges, properties, and
+ * tags.
  */
 public class GraphRepository {
 
     private static final Logger logger = LoggerFactory.getLogger(GraphRepository.class);
 
     private final GraphDatabaseConfig config;
-    private final ObjectMapper jsonMapper;
+    private final JsonSerializationService jsonSerializer;
 
     public GraphRepository(GraphDatabaseConfig config) {
+        this(config, new JsonSerializationService());
+    }
+
+    public GraphRepository(GraphDatabaseConfig config, JsonSerializationService jsonSerializer) {
         this.config = config;
-        this.jsonMapper = new ObjectMapper();
-        this.jsonMapper.findAndRegisterModules();
+        this.jsonSerializer = jsonSerializer;
     }
 
     // ==================== NODE OPERATIONS ====================
@@ -41,23 +44,23 @@ public class GraphRepository {
     /**
      * Save a node with all its properties and tags.
      *
-     * @param nodeId Node ID (file path or FQN)
-     * @param nodeType Node type (java, xml, class, etc.)
+     * @param nodeId       Node ID (file path or FQN)
+     * @param nodeType     Node type (java, xml, class, etc.)
      * @param displayLabel Human-readable label
-     * @param properties Map of properties
-     * @param tags Set of tags
+     * @param properties   Map of properties
+     * @param tags         Set of tags
      */
     public void saveNode(String nodeId, String nodeType, String displayLabel,
-                         Map<String, Object> properties, Set<String> tags) {
+            Map<String, Object> properties, Set<String> tags) {
         try (SqlSession session = config.openSession()) {
             // Validate properties
             PropertiesValidator.validate(properties);
-            
+
             NodeMapper nodeMapper = session.getMapper(NodeMapper.class);
             TagMapper tagMapper = session.getMapper(TagMapper.class);
 
             // Create node with JSON-serialized properties
-            String propertiesJson = serializePropertiesToJson(properties);
+            String propertiesJson = jsonSerializer.serializeProperties(properties);
             GraphNodeEntity node = new GraphNodeEntity(nodeId, nodeType, displayLabel, propertiesJson);
             nodeMapper.insertNode(node);
 
@@ -263,14 +266,8 @@ public class GraphRepository {
             if (node == null || node.getProperties() == null) {
                 return Map.of();
             }
-            
-            try {
-                return jsonMapper.readValue(node.getProperties(), 
-                    new TypeReference<Map<String, Object>>() {});
-            } catch (Exception e) {
-                logger.error("Failed to parse properties JSON for node: {}", nodeId, e);
-                return Map.of();
-            }
+
+            return jsonSerializer.deserializeProperties(node.getProperties());
         }
     }
 
@@ -278,7 +275,7 @@ public class GraphRepository {
      * Find nodes with a specific property value using JSON path query.
      *
      * @param jsonPath JSON path (e.g., '$.java.fullyQualifiedName')
-     * @param value Property value to match
+     * @param value    Property value to match
      * @return List of matching nodes
      */
     public List<GraphNodeEntity> findNodesByPropertyValue(String jsonPath, String value) {
@@ -304,8 +301,7 @@ public class GraphRepository {
             return new GraphStatistics(
                     nodeMapper.countNodes(),
                     edgeMapper.countEdges(),
-                    tagMapper.countTags()
-            );
+                    tagMapper.countTags());
         }
     }
 
@@ -326,35 +322,6 @@ public class GraphRepository {
             session.commit();
             logger.info("Cleared all graph data");
         }
-    }
-
-    // ==================== HELPER METHODS ====================
-
-    private String serializePropertiesToJson(Map<String, Object> properties) {
-        if (properties == null || properties.isEmpty()) {
-            return "{}";
-        }
-        try {
-            // Use Jackson to serialize
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            return mapper.writeValueAsString(properties);
-        } catch (Exception e) {
-            logger.error("Failed to serialize properties to JSON", e);
-            return "{}";
-        }
-    }
-
-    private String determineValueType(Object value) {
-        if (value == null) return "null";
-        if (value instanceof Number) return "number";
-        if (value instanceof Boolean) return "boolean";
-        if (value instanceof String) {
-            String str = (String) value;
-            if (str.trim().startsWith("{") || str.trim().startsWith("[")) {
-                return "json";
-            }
-        }
-        return "string";
     }
 
     /**
