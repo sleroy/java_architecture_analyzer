@@ -1,0 +1,48 @@
+package com.analyzer.api.graph;
+
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.TypeDeclaration;
+
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Repository for creating and retrieving JavaClassNode instances.
+ * This provides a specialized interface for inspectors that work with Java
+ * classes.
+ */
+public interface ClassNodeRepository extends NodeRepository<JavaClassNode> {
+
+    /**
+     * Gets or creates a JavaClassNode based on a TypeDeclaration.
+     *
+     * @param typeDeclaration the TypeDeclaration from the parsed source file.
+     * @return the existing or newly created JavaClassNode.
+     */
+    Optional<JavaClassNode> getOrCreateClassNode(TypeDeclaration<?> typeDeclaration);
+
+    /**
+     * Gets or creates a JavaClassNode based on a CompilationUnit's primary type.
+     *
+     * @param compilationUnit the CompilationUnit from the parsed source file.
+     * @return the existing or newly created JavaClassNode if a primary type is
+     *         present.
+     */
+    Optional<JavaClassNode> getOrCreateClassNode(CompilationUnit compilationUnit);
+
+    /**
+     * Gets or creates a JavaClassNode based on a fully qualified name.
+     *
+     * @param fqn the fully qualified name of the class.
+     * @return the existing or newly created JavaClassNode.
+     */
+    JavaClassNode getOrCreateByFqn(String fqn);
+
+    /**
+     * Finds all JavaClassNode instances in a specific package.
+     *
+     * @param packageName the name of the package to search for.
+     * @return a list of JavaClassNode instances in the specified package.
+     */
+    List<JavaClassNode> findByPackage(String packageName);
+}

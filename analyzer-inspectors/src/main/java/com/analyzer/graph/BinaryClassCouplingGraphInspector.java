@@ -1,12 +1,12 @@
 package com.analyzer.rules.graph;
 
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.graph.GraphRepository;
-import com.analyzer.core.graph.JavaClassNode;
-import com.analyzer.core.graph.ProjectFileRepository;
-import com.analyzer.core.inspector.InspectorDependencies;
-import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.api.graph.GraphRepository;
+import com.analyzer.api.graph.JavaClassNode;
+import com.analyzer.api.graph.ProjectFileRepository;
+import com.analyzer.api.inspector.InspectorDependencies;
+import com.analyzer.dev.inspectors.binary.AbstractASMClassInspector;
+import com.analyzer.api.resource.ResourceResolver;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.slf4j.Logger;

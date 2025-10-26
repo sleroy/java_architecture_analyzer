@@ -1,9 +1,9 @@
 package com.analyzer.core;
 
 import com.analyzer.core.export.ProjectSerializer;
-import com.analyzer.core.graph.GraphEdge;
-import com.analyzer.core.graph.GraphNode;
-import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.api.graph.GraphEdge;
+import com.analyzer.api.graph.GraphNode;
+import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectFile;
 import com.fasterxml.jackson.databind.JsonNode;

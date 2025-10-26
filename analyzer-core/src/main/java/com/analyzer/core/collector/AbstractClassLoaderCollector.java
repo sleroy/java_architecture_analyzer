@@ -1,9 +1,10 @@
 package com.analyzer.core.collector;
 
-import com.analyzer.core.graph.JavaClassNode;
+import com.analyzer.api.collector.ClassNodeCollector;
+import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.JARClassLoaderService;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.api.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

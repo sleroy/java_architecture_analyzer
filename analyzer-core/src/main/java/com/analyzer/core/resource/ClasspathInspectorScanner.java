@@ -1,10 +1,7 @@
 package com.analyzer.core.resource;
-import com.analyzer.core.inspector.InspectorDependencies;
 
-import com.analyzer.core.inspector.Inspector;
-import com.analyzer.inspectors.core.binary.AbstractBinaryClassInspector;
-import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.api.inspector.Inspector;
+import com.analyzer.api.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -238,16 +235,14 @@ public class ClasspathInspectorScanner {
      */
     private boolean isInspectorClass(Class<?> clazz) {
         boolean implementsInspector = Inspector.class.isAssignableFrom(clazz);
-        boolean extendsSourceFile = AbstractSourceFileInspector.class.isAssignableFrom(clazz);
-        boolean extendsBinary = AbstractBinaryClassInspector.class.isAssignableFrom(clazz);
         boolean isDirectImplementation = isDirectInspectorImplementation(clazz);
 
         if (discoveryLogging) {
             logger.debug("Checking inspector class {}: implements={}, extendsSource={}, extendsBinary={}, isDirect={}",
-                    clazz.getName(), implementsInspector, extendsSourceFile, extendsBinary, isDirectImplementation);
+                    clazz.getName(), implementsInspector, isDirectImplementation);
         }
 
-        return implementsInspector && (extendsSourceFile || extendsBinary || isDirectImplementation);
+        return implementsInspector && ( isDirectImplementation);
     }
 
     /**
@@ -259,20 +254,18 @@ public class ClasspathInspectorScanner {
     private boolean isDirectInspectorImplementation(Class<?> clazz) {
         // Check if it directly implements Inspector but doesn't extend the base classes
         boolean implementsInspector = Inspector.class.isAssignableFrom(clazz);
-        boolean notSourceFile = !AbstractSourceFileInspector.class.isAssignableFrom(clazz);
-        boolean notBinary = !AbstractBinaryClassInspector.class.isAssignableFrom(clazz);
         boolean hasPackage = clazz.getPackage() != null;
         boolean correctPackage = hasPackage &&
                 (clazz.getPackage().getName().startsWith("com.analyzer.inspectors") ||
                         clazz.getPackage().getName().startsWith("com.analyzer.rules") ||
                         clazz.getPackage().getName().startsWith("com.rules"));
 
-        boolean result = implementsInspector && notSourceFile && notBinary && correctPackage;
+        boolean result = implementsInspector  && correctPackage;
 
         if (discoveryLogging && implementsInspector) {
             logger.debug(
-                    "Direct implementation check for {}: impl={}, notSrc={}, notBin={}, pkg={}, correctPkg={}, result={}",
-                    clazz.getName(), implementsInspector, notSourceFile, notBinary,
+                    "Direct implementation check for {}: impl={},  pkg={}, correctPkg={}, result={}",
+                    clazz.getName(), implementsInspector,
                     hasPackage ? clazz.getPackage().getName() : "null", correctPackage, result);
         }
 

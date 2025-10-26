@@ -1,6 +1,6 @@
 package com.analyzer.core.serialization;
 
-import com.analyzer.core.graph.GraphNode;
+import com.analyzer.api.graph.GraphNode;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;

@@ -1,6 +1,6 @@
-package com.analyzer.resource;
-import com.analyzer.core.inspector.InspectorDependencies;
+package com.analyzer.core.resource;
 
+import com.analyzer.api.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,7 +1,5 @@
 package com.analyzer.core.graph;
 
-import com.analyzer.core.inspector.InspectorDependencies;
-
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;

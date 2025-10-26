@@ -1,5 +1,4 @@
 package com.analyzer.core.resource;
-import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.core.filter.FileIgnoreFilter;
 import com.analyzer.core.model.ProjectFile;

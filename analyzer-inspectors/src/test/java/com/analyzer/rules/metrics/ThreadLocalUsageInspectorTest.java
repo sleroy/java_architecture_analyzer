@@ -1,11 +1,11 @@
 package com.analyzer.rules.metrics;
 
 import com.analyzer.core.export.ProjectFileDecorator;
-import com.analyzer.core.graph.GraphRepository;
-import com.analyzer.core.graph.JavaClassNode;
+import com.analyzer.api.graph.GraphRepository;
+import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.JARClassLoaderService;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.api.resource.ResourceResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

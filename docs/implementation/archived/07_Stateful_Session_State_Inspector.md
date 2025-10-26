@@ -77,7 +77,7 @@ public class ShoppingCartService {
 ```java
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.inspectors.core.binary.AbstractASMInspector;
 
 @RequiredTags({"STATEFUL_SESSION_BEAN", "EJB_BEAN"})

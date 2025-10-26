@@ -1,14 +1,13 @@
 package com.analyzer.core.inspector;
 
-import com.analyzer.core.collector.ClassNodeCollector;
-import com.analyzer.core.collector.Collector;
-import com.analyzer.core.detector.FileDetector;
+import com.analyzer.api.collector.ClassNodeCollector;
+import com.analyzer.api.collector.Collector;
+import com.analyzer.api.detector.FileDetector;
+import com.analyzer.api.inspector.BeanFactory;
+import com.analyzer.api.inspector.Inspector;
+import com.analyzer.api.resource.ResourceResolver;
 import com.analyzer.core.engine.AnalysisEngine;
 import com.analyzer.core.resource.JARClassLoaderService;
-import com.analyzer.inspectors.core.AbstractJavaClassInspector;
-import com.analyzer.inspectors.core.binary.AbstractBinaryClassInspector;
-import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
-import com.analyzer.resource.ResourceResolver;
 import org.picocontainer.MutablePicoContainer;
 import org.picocontainer.PicoContainer;
 import org.slf4j.Logger;
@@ -107,31 +106,6 @@ public class InspectorRegistry {
         return analysisContainer.getComponents(Inspector.class);
     }
 
-    /**
-     * Gets all source file inspectors.
-     */
-    public List<Inspector> getSourceInspectors() {
-        List<Inspector> sourceInspectors = new ArrayList<>();
-        for (Inspector inspector : getAllInspectors()) {
-            if (inspector instanceof AbstractSourceFileInspector) {
-                sourceInspectors.add(inspector);
-            }
-        }
-        return sourceInspectors;
-    }
-
-    /**
-     * Gets all binary class inspectors.
-     */
-    public List<Inspector> getBinaryInspectors() {
-        List<Inspector> binaryInspectors = new ArrayList<>();
-        for (Inspector inspector : getAllInspectors()) {
-            if (inspector instanceof AbstractBinaryClassInspector) {
-                binaryInspectors.add(inspector);
-            }
-        }
-        return binaryInspectors;
-    }
 
     /**
      * Gets all JavaClassNode inspectors (NEW - for Phase 4 analysis).
@@ -143,7 +117,7 @@ public class InspectorRegistry {
     public List<Inspector> getClassNodeInspectors() {
         List<Inspector> classNodeInspectors = new ArrayList<>();
         for (Inspector inspector : getAllInspectors()) {
-            if (inspector instanceof AbstractJavaClassInspector) {
+            if (inspector.getTargetType() == InspectorTargetType.JAVA_CLASS_NODE) {
                 classNodeInspectors.add(inspector);
             }
         }
@@ -232,19 +206,6 @@ public class InspectorRegistry {
         return getAllInspectors().size();
     }
 
-    /**
-     * Gets the number of source file inspectors.
-     */
-    public int getSourceInspectorCount() {
-        return getSourceInspectors().size();
-    }
-
-    /**
-     * Gets the number of binary class inspectors.
-     */
-    public int getBinaryInspectorCount() {
-        return getBinaryInspectors().size();
-    }
 
     /**
      * Gets all inspector names.
@@ -273,9 +234,9 @@ public class InspectorRegistry {
      * Gets registry statistics for debugging/logging.
      */
     public String getStatistics() {
-        return String.format("InspectorRegistry: %d inspectors (%d source, %d binary, %d classnode), " +
+        return String.format("InspectorRegistry: %d inspectors ( %d classnode), " +
                 "%d collectors (%d classnode) [Application Container: %d components]",
-                getInspectorCount(), getSourceInspectorCount(), getBinaryInspectorCount(),
+                getInspectorCount(),
                 getClassNodeInspectors().size(),
                 getCollectorCount(), getClassNodeCollectorCount(),
                 getCollectorCount(), getClassNodeCollectorCount(),

@@ -1,6 +1,6 @@
 package com.analyzer.core.model;
 
-import com.analyzer.core.graph.ProjectFileRepository;
+import com.analyzer.api.graph.ProjectFileRepository;
 
 import java.nio.file.Path;
 import java.util.*;

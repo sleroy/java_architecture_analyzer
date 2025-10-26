@@ -1,5 +1,8 @@
 package com.analyzer.core.graph;
 
+import com.analyzer.api.graph.ClassNodeRepository;
+import com.analyzer.api.graph.GraphRepository;
+import com.analyzer.api.graph.JavaClassNode;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.TypeDeclaration;
 

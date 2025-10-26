@@ -1,14 +1,14 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.ProjectFileDecorator;
-import com.analyzer.core.graph.ClassNodeRepository;
+import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.core.graph.DelegatingClassNodeRepository;
 import com.analyzer.core.graph.InMemoryGraphRepository;
-import com.analyzer.core.graph.JavaClassNode;
+import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.resource.FileResourceResolver;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.core.resource.FileResourceResolver;
+import com.analyzer.api.resource.ResourceResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;

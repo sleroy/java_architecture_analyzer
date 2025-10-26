@@ -1,11 +1,11 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.graph.ClassNodeRepository;
-import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.api.graph.ClassNodeRepository;
+import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.source.AbstractJavaParserInspector;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.dev.inspectors.source.AbstractJavaParserInspector;
+import com.analyzer.api.resource.ResourceResolver;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;

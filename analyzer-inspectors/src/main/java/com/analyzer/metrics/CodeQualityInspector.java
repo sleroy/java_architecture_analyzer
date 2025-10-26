@@ -1,11 +1,11 @@
 package com.analyzer.rules.metrics;
 
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.api.inspector.InspectorDependencies;
 
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.bedrock.AbstractBedrockInspectorAbstract;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.dev.inspectors.bedrock.AbstractBedrockInspectorAbstract;
+import com.analyzer.api.resource.ResourceResolver;
 
 /**
  * Concrete implementation of AbstractBedrockInspectorAbstract that uses AI to

@@ -3,6 +3,8 @@ package com.analyzer.core.inspector;
 import com.analyzer.core.graph.GraphAnalysisResult;
 import com.analyzer.core.graph.InspectorNode;
 import com.analyzer.core.graph.TagDependencyEdge;
+import com.analyzer.api.inspector.Inspector;
+import com.analyzer.api.inspector.InspectorDependencies;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.slf4j.Logger;

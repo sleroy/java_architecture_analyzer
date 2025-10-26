@@ -2,11 +2,12 @@ package com.analyzer.rules.ejb2spring;
 
 import ch.qos.logback.classic.Logger;
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.graph.ClassNodeRepository;
-import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.api.graph.ClassNodeRepository;
+import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.dev.inspectors.source.AbstractSourceFileInspector;
+import com.analyzer.api.resource.ResourceResolver;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.expr.MethodCallExpr;
@@ -41,7 +42,7 @@ public class JndiLookupInspector extends AbstractSourceFileInspector {
     // Removed supports() method - trust @InspectorDependencies completely
 
     @Override
-    protected void analyzeSourceFile(ProjectFile projectFile, com.analyzer.resource.ResourceLocation sourceLocation,
+    protected void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation,
                                      NodeDecorator<ProjectFile> projectFileDecorator) throws java.io.IOException {
         String content = readFileContent(sourceLocation);
         if (content == null || content.trim().isEmpty()) {

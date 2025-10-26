@@ -1,8 +1,8 @@
 package com.analyzer.test.stubs;
 
-import com.analyzer.resource.ResourceLocation;
-import com.analyzer.resource.ResourceMetadata;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.core.resource.ResourceMetadata;
+import com.analyzer.api.resource.ResourceResolver;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

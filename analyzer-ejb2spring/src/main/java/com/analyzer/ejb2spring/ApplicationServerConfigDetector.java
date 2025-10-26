@@ -1,8 +1,8 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.inspector.Inspector;
-import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.api.inspector.Inspector;
+import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 

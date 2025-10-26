@@ -1,5 +1,4 @@
 package com.analyzer.core.export;
-import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.core.model.Package;
 

@@ -1,9 +1,9 @@
 package com.analyzer.rules.std;
 
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.graph.GraphRepository;
-import com.analyzer.core.inspector.Inspector;
-import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.api.graph.GraphRepository;
+import com.analyzer.api.inspector.Inspector;
+import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import org.slf4j.Logger;

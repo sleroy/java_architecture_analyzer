@@ -1,5 +1,7 @@
 package com.analyzer.core.graph;
 
+import com.analyzer.api.graph.GraphNode;
+import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.core.model.ProjectFile;
 
 import java.util.HashMap;

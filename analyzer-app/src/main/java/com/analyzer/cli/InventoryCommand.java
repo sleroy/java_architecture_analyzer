@@ -1,19 +1,19 @@
 package com.analyzer.cli;
 
-import com.analyzer.analysis.Analysis;
+import com.analyzer.api.analysis.Analysis;
 import com.analyzer.core.AnalysisConstants;
-import com.analyzer.core.collector.CollectorBeanFactory;
+import com.analyzer.dev.collectors.CollectorBeanFactory;
 import com.analyzer.core.db.GraphDatabaseConfig;
 import com.analyzer.core.db.repository.GraphRepository;
 import com.analyzer.core.db.serializer.GraphDatabaseSerializer;
 import com.analyzer.core.engine.AnalysisEngine;
 import com.analyzer.core.export.CsvExporter;
 import com.analyzer.core.export.ProjectSerializer;
-import com.analyzer.core.inspector.Inspector;
+import com.analyzer.api.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorRegistry;
 import com.analyzer.core.model.Project;
-import com.analyzer.inspectors.core.detection.FileDetectionBeanFactory;
-import com.analyzer.resource.CompositeResourceResolver;
+import com.analyzer.dev.detection.FileDetectionBeanFactory;
+import com.analyzer.core.resource.CompositeResourceResolver;
 import com.analyzer.rules.ejb2spring.Ejb2SpringInspectorBeanFactory;
 import com.analyzer.rules.graph.GraphInspectorBeanFactory;
 import com.analyzer.rules.metrics.MetricsInspectorBeanFactory;
@@ -25,7 +25,6 @@ import picocli.CommandLine.Option;
 
 import java.io.File;
 import java.nio.charset.Charset;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;

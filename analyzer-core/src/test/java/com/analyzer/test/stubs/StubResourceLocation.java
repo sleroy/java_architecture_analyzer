@@ -1,6 +1,6 @@
 package com.analyzer.test.stubs;
 
-import com.analyzer.resource.ResourceLocation;
+import com.analyzer.core.resource.ResourceLocation;
 
 import java.net.URI;
 

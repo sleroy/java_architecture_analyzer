@@ -1,5 +1,4 @@
 package com.analyzer.core.graph;
-import com.analyzer.core.inspector.InspectorDependencies;
 
 import java.util.HashSet;
 import java.util.Objects;

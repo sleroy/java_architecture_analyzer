@@ -3,10 +3,10 @@ package com.analyzer.cli;
 import com.analyzer.core.graph.GraphAnalysisResult;
 import com.analyzer.core.inspector.InspectorDependencyGraphBuilder;
 import com.analyzer.core.inspector.InspectorRegistry;
-import com.analyzer.resource.CompositeResourceResolver;
-import com.analyzer.resource.FileResourceResolver;
-import com.analyzer.resource.JarResourceResolver;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.core.resource.CompositeResourceResolver;
+import com.analyzer.core.resource.FileResourceResolver;
+import com.analyzer.core.resource.JarResourceResolver;
+import com.analyzer.api.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -75,8 +75,6 @@ public class InspectorDependencyGraphCommand implements Callable<Integer> {
 
             if (verbose) {
                 logger.info("Loaded {} inspectors", inspectorRegistry.getInspectorCount());
-                logger.info("  - Source inspectors: {}", inspectorRegistry.getSourceInspectorCount());
-                logger.info("  - Binary inspectors: {}", inspectorRegistry.getBinaryInspectorCount());
             }
 
             // Create graph builder

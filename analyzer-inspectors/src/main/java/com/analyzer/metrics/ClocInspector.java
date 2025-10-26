@@ -1,12 +1,12 @@
 package com.analyzer.rules.metrics;
 
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
-import com.analyzer.resource.ResourceLocation;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.dev.inspectors.source.AbstractSourceFileInspector;
+import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.api.resource.ResourceResolver;
 
 import java.io.IOException;
 

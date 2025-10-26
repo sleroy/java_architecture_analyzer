@@ -1,5 +1,4 @@
-package com.analyzer.resource;
-import com.analyzer.core.inspector.InspectorDependencies;
+package com.analyzer.core.resource;
 
 import java.time.Instant;
 import java.util.Objects;

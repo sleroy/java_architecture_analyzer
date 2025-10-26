@@ -1,13 +1,14 @@
 package com.analyzer.rules.graph;
 
+import com.analyzer.api.graph.BaseGraphNode;
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.graph.GraphNode;
-import com.analyzer.core.graph.GraphRepository;
-import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.api.graph.GraphNode;
+import com.analyzer.api.graph.GraphRepository;
+import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.AbstractProjectFileInspector;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.dev.inspectors.core.AbstractProjectFileInspector;
+import com.analyzer.api.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -172,7 +173,7 @@ public class JavaImportGraphInspector extends AbstractProjectFileInspector {
     /**
      * Concrete GraphNode implementation for Java file nodes in the import graph.
      */
-    private static class JavaFileGraphNode extends com.analyzer.core.graph.BaseGraphNode {
+    private static class JavaFileGraphNode extends BaseGraphNode {
         private final ProjectFile sourceFile;
 
         public JavaFileGraphNode(String nodeId, ProjectFile sourceFile) {
@@ -208,7 +209,7 @@ public class JavaImportGraphInspector extends AbstractProjectFileInspector {
      * Concrete GraphNode implementation for imported class nodes in the import
      * graph.
      */
-    private static class ImportedClassGraphNode extends com.analyzer.core.graph.BaseGraphNode {
+    private static class ImportedClassGraphNode extends BaseGraphNode {
         private final String fullyQualifiedClassName;
 
         public ImportedClassGraphNode(String fullyQualifiedClassName) {

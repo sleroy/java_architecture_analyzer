@@ -1,7 +1,9 @@
 package com.analyzer.core.graph;
 
-import com.analyzer.core.inspector.InspectorDependencies;
-
+import com.analyzer.api.graph.GraphEdge;
+import com.analyzer.api.graph.GraphNode;
+import com.analyzer.api.graph.GraphRepository;
+import com.analyzer.api.graph.JavaClassNode;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DirectedMultigraph;
 import org.slf4j.Logger;

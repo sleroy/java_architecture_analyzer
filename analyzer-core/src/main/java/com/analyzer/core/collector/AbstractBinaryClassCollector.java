@@ -1,9 +1,11 @@
 package com.analyzer.core.collector;
 
-import com.analyzer.core.graph.JavaClassNode;
+import com.analyzer.api.collector.ClassNodeCollector;
+import com.analyzer.api.collector.Collector;
+import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.resource.ResourceLocation;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.api.resource.ResourceResolver;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Opcodes;

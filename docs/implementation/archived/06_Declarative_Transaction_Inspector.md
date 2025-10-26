@@ -65,7 +65,7 @@ Analyze declarative transaction attributes defined in EJB deployment descriptors
 ```java
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.inspectors.core.source.AbstractJavaParserInspector;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

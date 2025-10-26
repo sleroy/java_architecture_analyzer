@@ -1,8 +1,6 @@
 package com.analyzer.core.export;
 
-import com.analyzer.core.inspector.InspectorDependencies;
-
-import com.analyzer.core.inspector.Inspector;
+import com.analyzer.api.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorResult;
 import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectFile;

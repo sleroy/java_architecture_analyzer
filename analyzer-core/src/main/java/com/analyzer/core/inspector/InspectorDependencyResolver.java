@@ -1,11 +1,11 @@
 package com.analyzer.core.inspector;
 
-import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.api.inspector.Inspector;
+import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 /**
  * Framework class that resolves inspector dependencies using the

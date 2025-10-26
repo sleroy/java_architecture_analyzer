@@ -1,6 +1,6 @@
 package com.analyzer.core.serialization;
 
-import com.analyzer.core.graph.GraphNode;
+import com.analyzer.api.graph.GraphNode;
 import com.analyzer.core.model.ProjectFile;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

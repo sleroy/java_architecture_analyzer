@@ -1,6 +1,6 @@
 package com.analyzer.rules.graph;
 
-import com.analyzer.core.inspector.BeanFactory;
+import com.analyzer.api.inspector.BeanFactory;
 import org.picocontainer.MutablePicoContainer;
 
 public class GraphInspectorBeanFactory implements BeanFactory {

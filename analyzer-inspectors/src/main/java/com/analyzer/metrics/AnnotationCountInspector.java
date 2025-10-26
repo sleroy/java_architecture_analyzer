@@ -1,13 +1,13 @@
 package com.analyzer.rules.metrics;
 
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.graph.GraphRepository;
-import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.api.graph.GraphRepository;
+import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.JARClassLoaderService;
-import com.analyzer.inspectors.core.classloader.AbstractClassLoaderBasedInspector;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.dev.inspectors.classloader.AbstractClassLoaderBasedInspector;
+import com.analyzer.api.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

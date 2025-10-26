@@ -1,7 +1,7 @@
 package com.analyzer.core.resource;
 
 import com.analyzer.core.model.Project;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.api.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,7 +1,7 @@
 package com.analyzer.core.model;
 
-import com.analyzer.core.graph.BaseGraphNode;
-import com.analyzer.resource.ResourceLocation;
+import com.analyzer.api.graph.BaseGraphNode;
+import com.analyzer.core.resource.ResourceLocation;
 
 import java.util.*;
 
