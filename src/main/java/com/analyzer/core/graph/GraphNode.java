@@ -78,4 +78,6 @@ public interface GraphNode {
      * @param tag the tag to remove
      */
     void removeTag(String tag);
+
+    boolean hasAllTags(String[] tagArray);
 }

@@ -41,7 +41,7 @@ import java.util.Set;
  * @since Phase 3 - Systematic Inspector Migration
  * @see JdbcDataAccessPatternInspector Original file-centric version
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = {
+@InspectorDependencies(requires = {  }, produces = {
         EjbMigrationTags.DATA_ACCESS_LAYER,
         EjbMigrationTags.MIGRATION_COMPLEXITY_LOW,
         EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM,

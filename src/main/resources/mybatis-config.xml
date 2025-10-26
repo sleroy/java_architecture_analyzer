@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+  PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <settings>
+        <!-- Enable camelCase mapping -->
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+        <!-- Enable lazy loading -->
+        <setting name="lazyLoadingEnabled" value="true"/>
+        <!-- Enable aggressive lazy loading -->
+        <setting name="aggressiveLazyLoading" value="false"/>
+        <!-- Enable caching -->
+        <setting name="cacheEnabled" value="true"/>
+        <!-- Use actual parameter names -->
+        <setting name="useActualParamName" value="true"/>
+        <!-- Log implementation -->
+        <setting name="logImpl" value="SLF4J"/>
+    </settings>
+
+    <typeAliases>
+        <typeAlias type="com.analyzer.core.db.entity.GraphNodeEntity" alias="GraphNode"/>
+        <typeAlias type="com.analyzer.core.db.entity.GraphEdgeEntity" alias="GraphEdge"/>
+        <typeAlias type="com.analyzer.core.db.entity.NodePropertyEntity" alias="NodeProperty"/>
+        <typeAlias type="com.analyzer.core.db.entity.NodeTagEntity" alias="NodeTag"/>
+        <typeAlias type="com.analyzer.core.db.entity.ProjectEntity" alias="Project"/>
+    </typeAliases>
+
+    <mappers>
+        <mapper resource="mybatis/mappers/NodeMapper.xml"/>
+        <mapper resource="mybatis/mappers/EdgeMapper.xml"/>
+        <mapper resource="mybatis/mappers/PropertyMapper.xml"/>
+        <mapper resource="mybatis/mappers/TagMapper.xml"/>
+        <mapper resource="mybatis/mappers/ProjectMapper.xml"/>
+    </mappers>
+</configuration>

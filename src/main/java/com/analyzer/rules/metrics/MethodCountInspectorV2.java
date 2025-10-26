@@ -37,7 +37,7 @@ import javax.inject.Inject;
  * @author Phase 3 - Class-Centric Architecture Migration
  * @since Phase 3 - Systematic Inspector Migration
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = {} // Produces properties on
+@InspectorDependencies(requires = {  }, produces = {} // Produces properties on
                                                                                       // JavaClassNode, not tags
 )
 public class MethodCountInspectorV2 extends AbstractASMClassInspector {

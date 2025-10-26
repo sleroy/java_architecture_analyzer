@@ -316,7 +316,8 @@ public class InterfaceNumberInspector extends AbstractClassLoaderBasedInspector 
 
         String fullyQualifiedName = (String) projectFile.getProperty("fullyQualifiedName");
         if (fullyQualifiedName == null) {
-            logger.warn("Could not find fullyQualifiedName for project file: {}", projectFile.getProperty("filePath"));
+            logger.warn("Could not find fullyQualifiedName for project file: {}",
+                    (Object) projectFile.getProperty("filePath"));
             return;
         }
 

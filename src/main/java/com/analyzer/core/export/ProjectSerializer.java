@@ -1,5 +1,8 @@
 package com.analyzer.core.export;
 
+import com.analyzer.core.graph.GraphEdge;
+import com.analyzer.core.graph.GraphNode;
+import com.analyzer.core.graph.GraphRepository;
 import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectFile;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,30 +15,76 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 
 public class ProjectSerializer {
-    
+
     private final ObjectMapper mapper;
     private final File outputDir;
-    
-    public ProjectSerializer(File outputDir) {
+    private final GraphRepository graphRepository;
+
+    public ProjectSerializer(File outputDir, GraphRepository graphRepository) {
         this.outputDir = outputDir;
+        this.graphRepository = Objects.requireNonNull(graphRepository, "GraphRepository cannot be null");
         this.mapper = new ObjectMapper();
         this.mapper.enable(SerializationFeature.INDENT_OUTPUT);
     }
-    
+
     public void serialize(Project project) throws IOException {
         clearOutputDirectory();
         createDirectories();
-        
-        // Serialize nodes
-        for (ProjectFile file : project.getProjectFiles().values()) {
-            serializeNode(file);
-        }
-        
+
+        // Serialize all nodes from GraphRepository (includes both ProjectFiles and
+        // ClassNodes)
+        serializeNodes();
+
+        // Serialize edges
+        serializeEdges();
+
         // Serialize project metadata
         serializeProject(project);
+    }
+
+    private void serializeNodes() throws IOException {
+        var nodes = graphRepository.getNodes();
+        if (nodes == null || nodes.isEmpty()) {
+            return;
+        }
+
+        for (GraphNode node : nodes) {
+            serializeNode(node);
+        }
+    }
+
+    private void serializeEdges() throws IOException {
+        var edges = graphRepository.getAllEdges();
+        if (edges == null || edges.isEmpty()) {
+            return;
+        }
+
+        for (GraphEdge edge : edges) {
+            serializeEdge(edge);
+        }
+    }
+
+    private void serializeEdge(GraphEdge edge) throws IOException {
+        String edgeType = edge.getEdgeType();
+        String id = edge.getId();
+
+        Map<String, Object> edgeData = new HashMap<>();
+        edgeData.put("id", id);
+        edgeData.put("sourceId", edge.getSource().getId());
+        edgeData.put("targetId", edge.getTarget().getId());
+        edgeData.put("edgeType", edgeType);
+        edgeData.put("properties", edge.getProperties());
+
+        // Create subdirectory for edge type
+        Path edgeTypeDir = outputDir.toPath().resolve("edges").resolve(edgeType);
+        Files.createDirectories(edgeTypeDir);
+
+        File edgeFile = edgeTypeDir.resolve("edge-" + id + ".json").toFile();
+        mapper.writeValue(edgeFile, edgeData);
     }
 
     private void clearOutputDirectory() throws IOException {
@@ -43,33 +92,33 @@ public class ProjectSerializer {
             // Recursively delete contents
             try (var paths = Files.walk(outputDir.toPath())) {
                 paths.sorted(Comparator.reverseOrder())
-                    .map(Path::toFile)
-                    .forEach(File::delete);
+                        .map(Path::toFile)
+                        .forEach(File::delete);
             }
         }
     }
-    
+
     private void createDirectories() throws IOException {
         Files.createDirectories(outputDir.toPath().resolve("nodes"));
         Files.createDirectories(outputDir.toPath().resolve("edges"));
     }
-    
-    private void serializeNode(ProjectFile file) throws IOException {
-        String type = determineNodeType(file);
-        String id = generateNodeId(file);
-        
+
+    private void serializeNode(GraphNode node) throws IOException {
+        String nodeType = node.getNodeType();
+        String id = node.getId();
+
         Map<String, Object> nodeData = new HashMap<>();
         nodeData.put("id", id);
-        nodeData.put("type", type);
-        nodeData.put("fileName", file.getFileName());
-        nodeData.put("relativePath", file.getRelativePath());
-        nodeData.put("fullyQualifiedName", file.getProperty("fullyQualifiedName"));
-        
+        nodeData.put("nodeType", nodeType);
+
+        // Add display label
+        nodeData.put("displayLabel", node.getDisplayLabel());
+
         // Add tags
-        nodeData.put("tags", file.getTags());
-        
+        nodeData.put("tags", node.getTags());
+
         // Add properties - transform dotted keys into nested structures
-        Map<String, Object> properties = file.getNodeProperties();
+        Map<String, Object> properties = node.getNodeProperties();
         if (properties != null && !properties.isEmpty()) {
             Map<String, Object> processedProperties = new HashMap<>();
             for (Map.Entry<String, Object> entry : properties.entrySet()) {
@@ -96,33 +145,24 @@ public class ProjectSerializer {
             Map<String, Object> nestedProperties = PropertyNestingTransformer.nestProperties(processedProperties);
             nodeData.put("properties", nestedProperties);
         }
-        
-        Path nodeDir = outputDir.toPath().resolve("nodes").resolve(type);
+
+        // Organize nodes by their type (project_file, class_node, etc.)
+        Path nodeDir = outputDir.toPath().resolve("nodes").resolve(nodeType);
         Files.createDirectories(nodeDir);
-        
-        File nodeFile = nodeDir.resolve("node-" + id + ".json").toFile();
+
+        // Generate safe file name from id
+        String safeId = id.replaceAll("[^a-zA-Z0-9._-]", "_");
+        File nodeFile = nodeDir.resolve("node-" + safeId + ".json").toFile();
         mapper.writeValue(nodeFile, nodeData);
     }
-    
+
     private void serializeProject(Project project) throws IOException {
         Map<String, Object> projectData = new HashMap<>();
         projectData.put("name", project.getProjectName());
         projectData.put("rootPath", project.getProjectPath().toString());
         projectData.put("fileCount", project.getProjectFiles().size());
-        
+
         File projectFile = outputDir.toPath().resolve("project.json").toFile();
         mapper.writeValue(projectFile, projectData);
-    }
-    
-    private String determineNodeType(ProjectFile file) {
-        String fileName = file.getFileName().toLowerCase();
-        if (fileName.endsWith(".java")) return "java";
-        if (fileName.endsWith(".xml")) return "xml";
-        if (fileName.endsWith(".properties")) return "properties";
-        return "file";
-    }
-    
-    private String generateNodeId(ProjectFile file) {
-        return String.valueOf(Math.abs(file.getFilePath().toString().hashCode()));
     }
 }

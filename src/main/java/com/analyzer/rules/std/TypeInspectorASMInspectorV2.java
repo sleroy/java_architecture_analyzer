@@ -36,7 +36,7 @@ import javax.inject.Inject;
  * @author Phase 3 - Class-Centric Architecture Migration
  * @since Phase 3 - Systematic Inspector Migration
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = {})
+@InspectorDependencies(requires = {  }, produces = {})
 public class TypeInspectorASMInspectorV2 extends AbstractASMClassInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(TypeInspectorASMInspectorV2.class);

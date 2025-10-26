@@ -40,7 +40,7 @@ import java.util.Set;
  * @since Phase 2 - Class-Centric Architecture Refactoring
  */
 @InspectorDependencies(
-        requires = {InspectorTags.TAG_JAVA_IS_BINARY},  // Will be populated based on dependencies
+        requires = {},  // Will be populated based on dependencies
         produces = {}   // Produces properties on JavaClassNode, not tags
 )
 public class ClassMetricsInspectorV2 extends AbstractASMClassInspector {

@@ -1,7 +1,6 @@
 package com.analyzer.core.model;
 
-import com.analyzer.core.graph.GraphNode;
-import com.analyzer.core.graph.NodeTypeRegistry;
+import com.analyzer.core.graph.BaseGraphNode;
 import com.analyzer.core.inspector.InspectorTags;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -16,13 +15,11 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ProjectFile implements GraphNode {
+public class ProjectFile extends BaseGraphNode {
     private final Path filePath;
     private final String relativePath;
     private final String fileName;
     private final String fileExtension;
-    private final Map<String, Object> properties; // Renamed from tags
-    private final Set<String> tags; // New field for simple string tags
     private final Date discoveredAt;
 
     // JAR content support
@@ -45,12 +42,13 @@ public class ProjectFile implements GraphNode {
 
     @JsonCreator
     public ProjectFile(@JsonProperty("filePath") String filePathStr,
-                       @JsonProperty("relativePath") String relativePath,
-                       @JsonProperty("sourceJarPath") String sourceJarPath,
-                       @JsonProperty("jarEntryPath") String jarEntryPath,
-                       @JsonProperty("discoveredAt") Date discoveredAt,
-                       @JsonProperty("properties") Map<String, Object> properties,
-                       @JsonProperty("tags") Set<String> tags) {
+            @JsonProperty("relativePath") String relativePath,
+            @JsonProperty("sourceJarPath") String sourceJarPath,
+            @JsonProperty("jarEntryPath") String jarEntryPath,
+            @JsonProperty("discoveredAt") Date discoveredAt,
+            @JsonProperty("properties") Map<String, Object> properties,
+            @JsonProperty("tags") Set<String> tags) {
+        super(filePathStr, "file");
         this.filePath = Paths.get(filePathStr);
         this.relativePath = relativePath;
         this.fileName = this.filePath.getFileName().toString();
@@ -63,17 +61,21 @@ public class ProjectFile implements GraphNode {
         this.jarEntryPath = jarEntryPath;
         this.isVirtual = (sourceJarPath != null);
         this.discoveredAt = discoveredAt != null ? discoveredAt : new Date();
-        this.properties = properties != null ? new ConcurrentHashMap<>(properties) : new ConcurrentHashMap<>();
-        this.tags = tags != null ? ConcurrentHashMap.newKeySet() : ConcurrentHashMap.newKeySet();
+
+        // Load properties and tags into BaseGraphNode
+        if (properties != null) {
+            properties.forEach(this::setProperty);
+        }
         if (tags != null) {
-            this.tags.addAll(tags);
+            tags.forEach(this::addTag);
         }
     }
 
     private ProjectFile(Path filePath, Path projectRoot, String sourceJarPath, String jarEntryPath, Date discoveredAt) {
-        this.filePath = Objects.requireNonNull(filePath, "File path cannot be null");
+        super(Objects.requireNonNull(filePath, "File path cannot be null").toString(), "file");
         Objects.requireNonNull(projectRoot, "Project root cannot be null");
 
+        this.filePath = filePath;
         this.sourceJarPath = sourceJarPath;
         this.jarEntryPath = jarEntryPath;
         this.isVirtual = (sourceJarPath != null);
@@ -85,8 +87,6 @@ public class ProjectFile implements GraphNode {
         int lastDot = name.lastIndexOf('.');
         this.fileExtension = lastDot != -1 ? name.substring(lastDot + 1).toLowerCase() : "";
 
-        this.properties = new ConcurrentHashMap<>();
-        this.tags = ConcurrentHashMap.newKeySet();
         this.discoveredAt = discoveredAt;
 
         // Set basic file metadata as properties
@@ -152,37 +152,24 @@ public class ProjectFile implements GraphNode {
     }
 
     // ==================== Property Methods ====================
-
-    public void setProperty(String propertyName, Object value) {
-        if (value == null) {
-            properties.remove(propertyName);
-        } else {
-            properties.put(propertyName, value);
-        }
-    }
-
-    public Object getProperty(String propertyName) {
-        return properties.get(propertyName);
-    }
-
-    public Object getProperty(String propertyName, Object defaultValue) {
-        return properties.getOrDefault(propertyName, defaultValue);
-    }
+    // Note: setProperty() and basic getProperty() inherited from BaseGraphNode
 
     public String getStringProperty(String propertyName) {
-        Object value = getProperty(propertyName);
-        return value != null ? value.toString() : null;
-    }
-
-    public String getStringProperty(String propertyName, String defaultValue) {
-        Object value = getProperty(propertyName);
-        return value != null ? value.toString() : defaultValue;
+        return getStringProperty(propertyName, null);
     }
 
     public Integer getIntegerProperty(String propertyName) {
+        return getIntProperty(propertyName, null);
+    }
+
+    public Integer getIntegerProperty(String propertyName, Integer defaultValue) {
+        return getIntProperty(propertyName, defaultValue);
+    }
+
+    private Integer getIntProperty(String propertyName, Integer defaultValue) {
         Object value = getProperty(propertyName);
         if (value == null)
-            return null;
+            return defaultValue;
         if (value instanceof Integer)
             return (Integer) value;
         if (value instanceof Number)
@@ -190,13 +177,8 @@ public class ProjectFile implements GraphNode {
         try {
             return Integer.parseInt(value.toString());
         } catch (NumberFormatException e) {
-            return null;
+            return defaultValue;
         }
-    }
-
-    public Integer getIntegerProperty(String propertyName, Integer defaultValue) {
-        Integer value = getIntegerProperty(propertyName);
-        return value != null ? value : defaultValue;
     }
 
     public Long getLongProperty(String propertyName) {
@@ -275,9 +257,7 @@ public class ProjectFile implements GraphNode {
         return value != null ? value : defaultValue;
     }
 
-    public boolean hasProperty(String propertyName) {
-        return properties.containsKey(propertyName);
-    }
+    // hasProperty() inherited from BaseGraphNode
 
     public boolean hasAllProperties(String... propertyNames) {
         if (propertyNames == null || propertyNames.length == 0)
@@ -292,11 +272,11 @@ public class ProjectFile implements GraphNode {
 
     @JsonProperty("properties")
     public Map<String, Object> getAllProperties() {
-        return Collections.unmodifiableMap(properties);
+        return getNodeProperties();
     }
 
     public void removeProperty(String propertyName) {
-        properties.remove(propertyName);
+        setProperty(propertyName, null);
     }
 
     // ==================== METRIC GETTERS (File-level only) ====================
@@ -370,21 +350,9 @@ public class ProjectFile implements GraphNode {
     }
 
     // ==================== GRAPH NODE INTERFACE IMPLEMENTATION ====================
-
-    @Override
-    public String getId() {
-        return filePath.toString();
-    }
-
-    @Override
-    public String getNodeType() {
-        return NodeTypeRegistry.getTypeId(this);
-    }
-
-    @Override
-    public Map<String, Object> getNodeProperties() {
-        return getAllProperties();
-    }
+    // getId(), getNodeType(), getNodeProperties(), addTag(), hasTag(), getTags(),
+    // removeTag()
+    // inherited from BaseGraphNode
 
     @Override
     public String getDisplayLabel() {
@@ -395,50 +363,20 @@ public class ProjectFile implements GraphNode {
         return relativePath.length() < 50 ? relativePath : fileName;
     }
 
-    @Override
-    public void addTag(String tag) {
-        this.tags.add(tag);
-    }
-
-    @Override
-    public boolean hasTag(String tag) {
-        return this.tags.contains(tag);
-    }
-
-    @Override
     @JsonProperty("tags")
-    public Set<String> getTags() {
-        return Collections.unmodifiableSet(tags);
-    }
-
-    @Override
-    public void removeTag(String tag) {
-        this.tags.remove(tag);
+    public Set<String> getJsonTags() {
+        return getTags();
     }
 
     // ==================== Object Methods ====================
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (o == null || getClass() != o.getClass())
-            return false;
-        ProjectFile that = (ProjectFile) o;
-        return Objects.equals(filePath, that.filePath);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(filePath);
-    }
+    // equals(), hashCode() inherited from BaseGraphNode (based on ID)
 
     @Override
     public String toString() {
         return "ProjectFile{" +
                 "relativePath='" + relativePath + '\'' +
-                ", properties=" + properties.size() +
-                ", tags=" + tags.size() +
+                ", properties=" + getNodeProperties().size() +
+                ", tags=" + getTags().size() +
                 '}';
     }
 
@@ -452,9 +390,4 @@ public class ProjectFile implements GraphNode {
 
     }
 
-    public boolean hasAllTags(String[] tags) {
-        if (tags == null || tags.length == 0)
-            return true;
-        return Arrays.stream(tags).allMatch(this::hasTag);
-    }
 }

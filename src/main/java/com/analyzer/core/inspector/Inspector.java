@@ -2,7 +2,6 @@ package com.analyzer.core.inspector;
 
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.GraphNode;
-import com.analyzer.core.model.ProjectFile;
 
 /**
  * Generic interface for all inspectors.
@@ -42,9 +41,9 @@ public interface Inspector<T extends GraphNode> {
      *
      * @return RequiredTags containing all dependencies (own + inherited)
      * @InspectorDependencies annotations. The resolver handles inheritance,
-     *                        overrides,
-     *                        and caching automatically.
-     *                        </p>
+     * overrides,
+     * and caching automatically.
+     * </p>
      */
     default RequiredTags getDependencies() {
         return InspectorDependencyResolver.getDependencies(this);
@@ -63,22 +62,16 @@ public interface Inspector<T extends GraphNode> {
      *
      * @param objectToAnalyze the object to check
      * @return true if all dependencies are satisfied AND the inspector supports the
-     *         object type
+     * object type
      */
     default boolean canProcess(T objectToAnalyze) {
         if (objectToAnalyze == null) {
             return false;
         }
 
-        // For ProjectFile objects, check tag dependencies using new annotation system
-        if (objectToAnalyze instanceof ProjectFile) {
-            ProjectFile projectFile = (ProjectFile) objectToAnalyze;
-            RequiredTags requiredTags = getDependencies(); // Uses annotation system!
-            boolean allTags = projectFile.hasAllTags(requiredTags.toArray());
-            return allTags && supports(objectToAnalyze);
-
-        }
-        return supports(objectToAnalyze);
+        RequiredTags requiredTags = getDependencies(); // Uses annotation system!
+        boolean allTags = objectToAnalyze.hasAllTags(requiredTags.toArray());
+        return allTags && supports(objectToAnalyze);
     }
 
     default boolean supports(T objectToAnalyze) {
@@ -88,12 +81,12 @@ public interface Inspector<T extends GraphNode> {
     /**
      * Gets the target type that this inspector processes.
      * This enables type-safe filtering of inspectors without instanceof checks.
-     * 
+     *
      * <p>
      * Default implementation determines type from the inspector's class hierarchy.
      * Base classes should override this to return the specific target type.
      * </p>
-     * 
+     *
      * @return the target type this inspector processes
      * @since Phase 7 - Type-Safe Inspector Filtering
      */
