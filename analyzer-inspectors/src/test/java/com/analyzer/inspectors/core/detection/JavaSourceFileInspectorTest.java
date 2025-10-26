@@ -3,7 +3,7 @@ package com.analyzer.inspectors.core.detection;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.resource.FileResourceResolver;
+import com.analyzer.core.resource.FileResourceResolver;
 import com.analyzer.rules.std.JavaSourceFileInspector;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

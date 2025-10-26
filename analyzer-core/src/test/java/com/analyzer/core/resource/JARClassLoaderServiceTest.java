@@ -1,7 +1,7 @@
 package com.analyzer.core.resource;
 
 import com.analyzer.core.model.Project;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.api.resource.ResourceResolver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,14 +10,12 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.io.File;
-import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
 
 /**
  * Test class for JARClassLoaderService parent-child classloader hierarchy.

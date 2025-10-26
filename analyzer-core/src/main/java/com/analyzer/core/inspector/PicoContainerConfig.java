@@ -1,11 +1,13 @@
 package com.analyzer.core.inspector;
 
-import com.analyzer.core.graph.ClassNodeRepository;
+import com.analyzer.api.graph.GraphRepository;
+import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.core.graph.DelegatingClassNodeRepository;
 import com.analyzer.core.graph.InMemoryProjectFileRepository;
-import com.analyzer.core.graph.ProjectFileRepository;
+import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.core.resource.JARClassLoaderService;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.api.resource.ResourceResolver;
+import com.analyzer.api.inspector.Inspector;
 import org.picocontainer.DefaultPicoContainer;
 import org.picocontainer.MutablePicoContainer;
 import org.picocontainer.PicoContainer;
@@ -111,7 +113,7 @@ public class PicoContainerConfig {
         MutablePicoContainer container = new DefaultPicoContainer(new Caching(), lifecycleStrategy, parent);
 
         // Register per-analysis repositories (fresh instances)
-        container.addComponent(com.analyzer.core.graph.GraphRepository.class,
+        container.addComponent(GraphRepository.class,
                 com.analyzer.core.graph.InMemoryGraphRepository.class);
         container.addComponent(ClassNodeRepository.class, DelegatingClassNodeRepository.class);
         container.addComponent(ProjectFileRepository.class, InMemoryProjectFileRepository.class);

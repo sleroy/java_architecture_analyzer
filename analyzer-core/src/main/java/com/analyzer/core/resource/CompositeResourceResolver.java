@@ -1,5 +1,6 @@
-package com.analyzer.resource;
-import com.analyzer.core.inspector.InspectorDependencies;
+package com.analyzer.core.resource;
+
+import com.analyzer.api.resource.ResourceResolver;
 
 import java.io.IOException;
 import java.io.InputStream;

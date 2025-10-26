@@ -1,14 +1,14 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.graph.ClassNodeRepository;
-import com.analyzer.core.graph.JavaClassNode;
-import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.api.graph.ClassNodeRepository;
+import com.analyzer.api.graph.JavaClassNode;
+import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.JARClassLoaderService;
-import com.analyzer.inspectors.core.classloader.AbstractClassLoaderBasedInspector;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.dev.inspectors.classloader.AbstractClassLoaderBasedInspector;
+import com.analyzer.api.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

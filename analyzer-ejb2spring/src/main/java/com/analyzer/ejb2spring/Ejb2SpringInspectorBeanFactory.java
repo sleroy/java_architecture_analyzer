@@ -1,6 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.inspector.BeanFactory;
+import com.analyzer.api.inspector.BeanFactory;
 import org.picocontainer.MutablePicoContainer;
 
 public class Ejb2SpringInspectorBeanFactory implements BeanFactory {

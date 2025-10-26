@@ -1,10 +1,9 @@
 package com.analyzer.core.export;
 
-import com.analyzer.core.graph.GraphEdge;
-import com.analyzer.core.graph.GraphNode;
-import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.api.graph.GraphEdge;
+import com.analyzer.api.graph.GraphNode;
+import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.core.model.Project;
-import com.analyzer.core.model.ProjectFile;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
@@ -16,7 +15,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 
 public class ProjectSerializer {
 

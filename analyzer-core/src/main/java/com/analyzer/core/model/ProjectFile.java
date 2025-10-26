@@ -1,6 +1,6 @@
 package com.analyzer.core.model;
 
-import com.analyzer.core.graph.BaseGraphNode;
+import com.analyzer.api.graph.BaseGraphNode;
 import com.analyzer.core.inspector.InspectorTags;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 

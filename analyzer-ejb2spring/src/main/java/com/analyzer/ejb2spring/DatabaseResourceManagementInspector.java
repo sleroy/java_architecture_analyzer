@@ -1,14 +1,14 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.graph.ClassNodeRepository;
-import com.analyzer.core.graph.JavaClassNode;
-import com.analyzer.core.inspector.InspectorDependencies;
+import com.analyzer.api.graph.ClassNodeRepository;
+import com.analyzer.api.graph.JavaClassNode;
+import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.inspectors.core.source.AbstractSourceFileInspector;
-import com.analyzer.resource.ResourceLocation;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.dev.inspectors.source.AbstractSourceFileInspector;
+import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.api.resource.ResourceResolver;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;

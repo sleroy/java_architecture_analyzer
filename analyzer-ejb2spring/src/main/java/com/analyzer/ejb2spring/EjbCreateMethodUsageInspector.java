@@ -1,11 +1,11 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.graph.JavaClassNode;
-import com.analyzer.core.graph.ProjectFileRepository;
-import com.analyzer.core.inspector.InspectorDependencies;
-import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.api.graph.JavaClassNode;
+import com.analyzer.api.graph.ProjectFileRepository;
+import com.analyzer.api.inspector.InspectorDependencies;
+import com.analyzer.dev.inspectors.binary.AbstractASMClassInspector;
+import com.analyzer.api.resource.ResourceResolver;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.*;
 import org.slf4j.Logger;

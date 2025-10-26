@@ -1,6 +1,7 @@
 package com.analyzer.core.export;
 
-import com.analyzer.core.graph.GraphNode;
+import com.analyzer.api.graph.BaseGraphNode;
+import com.analyzer.api.graph.GraphNode;
 
 import java.util.Arrays;
 import java.util.List;
@@ -54,8 +55,8 @@ public class NodeDecorator<T extends GraphNode> {
      * @param value        the property value
      */
     public void setProperty(String propertyName, Object value) {
-        if (node instanceof com.analyzer.core.graph.BaseGraphNode) {
-            ((com.analyzer.core.graph.BaseGraphNode) node).setProperty(propertyName, value);
+        if (node instanceof BaseGraphNode) {
+            ((BaseGraphNode) node).setProperty(propertyName, value);
         } else if (node instanceof com.analyzer.core.model.ProjectFile) {
             ((com.analyzer.core.model.ProjectFile) node).setProperty(propertyName, value);
         } else {
@@ -189,8 +190,8 @@ public class NodeDecorator<T extends GraphNode> {
     // ========== HELPER METHODS ==========
 
     private String getStringProperty(String propertyName, String defaultValue) {
-        if (node instanceof com.analyzer.core.graph.BaseGraphNode) {
-            return ((com.analyzer.core.graph.BaseGraphNode) node)
+        if (node instanceof BaseGraphNode) {
+            return ((BaseGraphNode) node)
                     .getProperty(propertyName, String.class, defaultValue);
         } else if (node instanceof com.analyzer.core.model.ProjectFile) {
             return ((com.analyzer.core.model.ProjectFile) node)
@@ -200,8 +201,8 @@ public class NodeDecorator<T extends GraphNode> {
     }
 
     private Integer getIntProperty(String propertyName, Integer defaultValue) {
-        if (node instanceof com.analyzer.core.graph.BaseGraphNode) {
-            return ((com.analyzer.core.graph.BaseGraphNode) node)
+        if (node instanceof BaseGraphNode) {
+            return ((BaseGraphNode) node)
                     .getProperty(propertyName, Integer.class, defaultValue);
         } else if (node instanceof com.analyzer.core.model.ProjectFile) {
             return ((com.analyzer.core.model.ProjectFile) node)
@@ -211,8 +212,8 @@ public class NodeDecorator<T extends GraphNode> {
     }
 
     private Double getDoubleProperty(String propertyName, Double defaultValue) {
-        if (node instanceof com.analyzer.core.graph.BaseGraphNode) {
-            return ((com.analyzer.core.graph.BaseGraphNode) node)
+        if (node instanceof BaseGraphNode) {
+            return ((BaseGraphNode) node)
                     .getProperty(propertyName, Double.class, defaultValue);
         } else if (node instanceof com.analyzer.core.model.ProjectFile) {
             return ((com.analyzer.core.model.ProjectFile) node)
@@ -222,8 +223,8 @@ public class NodeDecorator<T extends GraphNode> {
     }
 
     private Boolean getBooleanProperty(String propertyName, Boolean defaultValue) {
-        if (node instanceof com.analyzer.core.graph.BaseGraphNode) {
-            return ((com.analyzer.core.graph.BaseGraphNode) node)
+        if (node instanceof BaseGraphNode) {
+            return ((BaseGraphNode) node)
                     .getProperty(propertyName, Boolean.class, defaultValue);
         } else if (node instanceof com.analyzer.core.model.ProjectFile) {
             return ((com.analyzer.core.model.ProjectFile) node)

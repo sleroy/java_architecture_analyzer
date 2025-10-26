@@ -1,18 +1,19 @@
 package com.analyzer.core.engine;
 
-import com.analyzer.analysis.Analysis;
-import com.analyzer.analysis.AnalysisResult;
-import com.analyzer.core.collector.ClassNodeCollector;
+import com.analyzer.api.analysis.Analysis;
+import com.analyzer.api.analysis.AnalysisResult;
+import com.analyzer.api.collector.ClassNodeCollector;
+import com.analyzer.api.graph.*;
 import com.analyzer.core.collector.CollectionContext;
-import com.analyzer.core.detector.FileDetector;
+import com.analyzer.api.detector.FileDetector;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.filter.FileIgnoreFilter;
-import com.analyzer.core.graph.*;
 import com.analyzer.core.inspector.*;
 import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectDeserializer;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.JARClassLoaderService;
+import com.analyzer.api.inspector.Inspector;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -456,8 +457,8 @@ public class AnalysisEngine {
      * @return list of ClassNode inspectors
      */
     @SuppressWarnings("unchecked")
-    private List<Inspector<com.analyzer.core.graph.JavaClassNode>> getClassNodeInspectors() {
-        return (List<Inspector<com.analyzer.core.graph.JavaClassNode>>) (List<?>) inspectorRegistry
+    private List<Inspector<JavaClassNode>> getClassNodeInspectors() {
+        return (List<Inspector<JavaClassNode>>) (List<?>) inspectorRegistry
                 .getClassNodeInspectors();
     }
 
@@ -467,7 +468,7 @@ public class AnalysisEngine {
      * convergence.
      */
     private void executeMultiPassOnClassNodes(Project project, int maxPasses) {
-        List<Inspector<com.analyzer.core.graph.JavaClassNode>> inspectors = getClassNodeInspectors();
+        List<Inspector<JavaClassNode>> inspectors = getClassNodeInspectors();
 
         if (inspectors.isEmpty()) {
             logger.info("No ClassNode inspectors found, skipping Phase 4");
@@ -480,7 +481,7 @@ public class AnalysisEngine {
             return;
         }
 
-        List<com.analyzer.core.graph.JavaClassNode> classNodes = classNodeRepository.findAll();
+        List<JavaClassNode> classNodes = classNodeRepository.findAll();
 
         if (classNodes.isEmpty()) {
             logger.info("No JavaClassNode objects to analyze, skipping Phase 4");
@@ -508,7 +509,7 @@ public class AnalysisEngine {
             Set<String> triggeredInspectors = new HashSet<>();
 
             try (ProgressBar pb = new ProgressBar("Phase 4 Pass " + pass, classNodes.size())) {
-                for (com.analyzer.core.graph.JavaClassNode classNode : classNodes) {
+                for (JavaClassNode classNode : classNodes) {
                     Set<String> nodeInspectors = analyzeClassNodeWithTracking(classNode, inspectors,
                             passStartTime, executionProfile, pass);
                     if (!nodeInspectors.isEmpty()) {
@@ -569,15 +570,15 @@ public class AnalysisEngine {
      * @param pass             the current pass number
      * @return set of inspector names that were triggered for this node
      */
-    private Set<String> analyzeClassNodeWithTracking(com.analyzer.core.graph.JavaClassNode classNode,
-            List<Inspector<com.analyzer.core.graph.JavaClassNode>> inspectors,
-            LocalDateTime passStartTime,
-            ExecutionProfile executionProfile,
-            int pass) {
+    private Set<String> analyzeClassNodeWithTracking(JavaClassNode classNode,
+                                                     List<Inspector<JavaClassNode>> inspectors,
+                                                     LocalDateTime passStartTime,
+                                                     ExecutionProfile executionProfile,
+                                                     int pass) {
         Set<String> triggeredInspectors = new HashSet<>();
         ExecutionProfile.ExecutionPhase phase = ExecutionProfile.ExecutionPhase.PHASE_4_CLASSNODE_ANALYSIS;
 
-        for (Inspector<com.analyzer.core.graph.JavaClassNode> inspector : inspectors) {
+        for (Inspector<JavaClassNode> inspector : inspectors) {
             try {
                 String inspectorName = inspector.getName();
                 boolean shouldRun = true;
@@ -598,7 +599,7 @@ public class AnalysisEngine {
                         long startTime = System.nanoTime();
 
                         // Execute inspector
-                        NodeDecorator<com.analyzer.core.graph.JavaClassNode> decorator = new NodeDecorator<>(classNode);
+                        NodeDecorator<JavaClassNode> decorator = new NodeDecorator<>(classNode);
                         inspector.inspect(classNode, decorator);
 
                         // Record execution timing in ExecutionProfile with pass number
@@ -1060,21 +1061,19 @@ public class AnalysisEngine {
     public AnalysisStatistics getStatistics() {
         return new AnalysisStatistics(
                 inspectorRegistry.getInspectorCount(),
-                inspectorRegistry.getSourceInspectorCount(),
-                inspectorRegistry.getBinaryInspectorCount(),
                 availableAnalyses.size());
     }
 
     /**
      * Statistics about the analysis execution.
      */
-    public record AnalysisStatistics(int totalInspectors, int sourceInspectors, int binaryInspectors,
-            int totalAnalyses) {
+    public record AnalysisStatistics(int totalInspectors, int totalAnalyses
+    ) {
 
         @Override
         public String toString() {
-            return String.format("Analysis Statistics: %d total inspectors (%d source, %d binary), %d analyses",
-                    totalInspectors, sourceInspectors, binaryInspectors, totalAnalyses);
+            return String.format("Analysis Statistics: %d total inspectors, %d analyses",
+                    totalInspectors, totalAnalyses);
         }
     }
 

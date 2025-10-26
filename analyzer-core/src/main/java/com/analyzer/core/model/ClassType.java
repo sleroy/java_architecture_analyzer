@@ -1,5 +1,4 @@
 package com.analyzer.core.model;
-import com.analyzer.core.inspector.InspectorDependencies;
 
 /**
  * Enumeration of different class types that can be discovered during analysis.

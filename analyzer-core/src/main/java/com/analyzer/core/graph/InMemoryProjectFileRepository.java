@@ -1,5 +1,7 @@
 package com.analyzer.core.graph;
 
+import com.analyzer.api.graph.GraphRepository;
+import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.core.model.ProjectFile;
 
 import javax.inject.Inject;

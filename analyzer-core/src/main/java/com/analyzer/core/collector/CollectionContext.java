@@ -1,8 +1,9 @@
 package com.analyzer.core.collector;
 
-import com.analyzer.core.graph.ClassNodeRepository;
-import com.analyzer.core.graph.JavaClassNode;
-import com.analyzer.core.graph.ProjectFileRepository;
+import com.analyzer.api.collector.Collector;
+import com.analyzer.api.graph.ClassNodeRepository;
+import com.analyzer.api.graph.JavaClassNode;
+import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.core.model.ProjectFile;
 
 import java.nio.file.Path;

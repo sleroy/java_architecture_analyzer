@@ -1,9 +1,10 @@
 package com.analyzer.core.collector;
 
-import com.analyzer.core.graph.JavaClassNode;
+import com.analyzer.api.collector.ClassNodeCollector;
+import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.resource.ResourceLocation;
-import com.analyzer.resource.ResourceResolver;
+import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.api.resource.ResourceResolver;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParseResult;
 import com.github.javaparser.ast.CompilationUnit;

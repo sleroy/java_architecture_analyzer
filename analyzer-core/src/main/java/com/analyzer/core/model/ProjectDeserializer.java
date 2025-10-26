@@ -1,10 +1,9 @@
 package com.analyzer.core.model;
 
-import com.analyzer.core.inspector.InspectorDependencies;
-
-import com.analyzer.core.graph.GraphEdge;
-import com.analyzer.core.graph.GraphNode;
-import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.api.graph.ProjectFileRepository;
+import com.analyzer.api.graph.GraphEdge;
+import com.analyzer.api.graph.GraphNode;
+import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.core.serialization.JsonSerializationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,7 +48,7 @@ public class ProjectDeserializer {
      * @throws IOException if loading fails
      */
     public Project loadProject(Path jsonPath, GraphRepository graphRepository,
-            com.analyzer.core.graph.ProjectFileRepository projectFileRepository) throws IOException {
+            ProjectFileRepository projectFileRepository) throws IOException {
         if (!Files.exists(jsonPath)) {
             throw new IOException("Project analysis file not found: " + jsonPath);
         }
