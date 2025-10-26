@@ -4,7 +4,6 @@ import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.graph.ProjectFileRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
-import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.Opcodes;
@@ -43,6 +42,13 @@ public class TypeInspectorASMInspectorV2 extends AbstractASMClassInspector {
 
     // Property key for JavaClassNode type information
     public static final String PROP_CLASS_TYPE = "java.class.type";
+
+    /**
+     * Tag definitions for backward compatibility.
+     */
+    public static class TAGS {
+        public static final String TAG_CLASS_TYPE = "java.class.type";
+    }
 
     @Inject
     public TypeInspectorASMInspectorV2(ProjectFileRepository projectFileRepository,
@@ -83,7 +89,7 @@ public class TypeInspectorASMInspectorV2 extends AbstractASMClassInspector {
             setProperty(PROP_CLASS_TYPE, classType);
 
             // Also enable tag for backward compatibility with dependency system
-            enableTag(TypeInspectorASMInspector.TAGS.TAG_CLASS_TYPE);
+            enableTag(TAGS.TAG_CLASS_TYPE);
 
             super.visit(version, access, name, signature, superName, interfaces);
         }

@@ -21,19 +21,19 @@ import com.analyzer.resource.ResourceResolver;
  * - Code organization and structure
  * - Appropriate use of design patterns
  */
-@InspectorDependencies(produces = { CodeQualityInspectorAbstractAbstract.TAG_CODE_QUALITY_AI })
-public class CodeQualityInspectorAbstractAbstract extends AbstractBedrockInspectorAbstract {
+@InspectorDependencies(produces = { CodeQualityInspector.TAG_CODE_QUALITY_AI })
+public class CodeQualityInspector extends AbstractBedrockInspectorAbstract {
 
     public static final String NAME = "Code Quality (AI)";
     public static final String TAG_CODE_QUALITY_AI = "code_quality_ai";
 
     /**
-     * Creates a CodeQualityInspectorAbstractAbstract with the specified
+     * Creates a CodeQualityInspector with the specified
      * ResourceResolver.
      *
      * @param resourceResolver the resolver for accessing source file resources
      */
-    public CodeQualityInspectorAbstractAbstract(ResourceResolver resourceResolver) {
+    public CodeQualityInspector(ResourceResolver resourceResolver) {
         super(resourceResolver);
     }
 

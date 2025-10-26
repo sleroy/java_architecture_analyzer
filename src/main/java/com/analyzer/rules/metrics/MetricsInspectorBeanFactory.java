@@ -9,12 +9,11 @@ public class MetricsInspectorBeanFactory implements BeanFactory {
         container.addComponent(AnnotationCountInspector.class);
         container.addComponent(ClassMetricsInspectorV2.class);
         container.addComponent(ClocInspector.class);
-        container.addComponent(CodeQualityInspectorAbstractAbstract.class);
+        container.addComponent(CodeQualityInspector.class);
         container.addComponent(CyclomaticComplexityInspector.class);
         container.addComponent(FileMetricsInspector.class);
         container.addComponent(InheritanceDepthInspector.class);
         container.addComponent(InterfaceNumberInspector.class);
-        container.addComponent(MethodCountInspector.class);
         container.addComponent(MethodCountInspectorV2.class);
         container.addComponent(ThreadLocalUsageInspector.class);
         container.addComponent(TypeUsageInspector.class);

@@ -11,7 +11,8 @@ public class GraphNodeEntity {
     private String id;
     private String nodeType;
     private String displayLabel;
-    private String properties;  // JSON string for flexible properties
+    private String properties; // JSON string for flexible properties
+    private String metricsMap; // JSON string for metrics
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -23,6 +24,14 @@ public class GraphNodeEntity {
         this.nodeType = nodeType;
         this.displayLabel = displayLabel;
         this.properties = properties;
+    }
+
+    public GraphNodeEntity(String id, String nodeType, String displayLabel, String properties, String metricsMap) {
+        this.id = id;
+        this.nodeType = nodeType;
+        this.displayLabel = displayLabel;
+        this.properties = properties;
+        this.metricsMap = metricsMap;
     }
 
     // Getters and Setters
@@ -57,6 +66,14 @@ public class GraphNodeEntity {
 
     public void setProperties(String properties) {
         this.properties = properties;
+    }
+
+    public String getMetricsMap() {
+        return metricsMap;
+    }
+
+    public void setMetricsMap(String metricsMap) {
+        this.metricsMap = metricsMap;
     }
 
     public LocalDateTime getCreatedAt() {

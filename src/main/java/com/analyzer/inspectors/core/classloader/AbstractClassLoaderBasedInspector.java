@@ -10,6 +10,7 @@ import com.analyzer.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.*;
 import java.net.URLClassLoader;
 
 /**
@@ -27,7 +28,8 @@ import java.net.URLClassLoader;
  * Class<?> object to perform runtime analysis that would not be possible
  * with static bytecode analysis alone.
  */
-@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_DETECTED}, produces = {InspectorTags.TAG_JAVA_CLASSLOADER})
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED, InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME}, produces = {
+        InspectorTags.TAG_JAVA_CLASSLOADER })
 public abstract class AbstractClassLoaderBasedInspector implements Inspector<ProjectFile> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractClassLoaderBasedInspector.class);
@@ -43,7 +45,7 @@ public abstract class AbstractClassLoaderBasedInspector implements Inspector<Pro
      * @param classLoaderService the service providing the shared ClassLoader
      */
     protected AbstractClassLoaderBasedInspector(ResourceResolver resourceResolver,
-                                                JARClassLoaderService classLoaderService) {
+            JARClassLoaderService classLoaderService) {
         this.resourceResolver = resourceResolver;
         this.classLoaderService = classLoaderService;
 
@@ -56,49 +58,49 @@ public abstract class AbstractClassLoaderBasedInspector implements Inspector<Pro
             URLClassLoader sharedClassLoader = classLoaderService.getSharedClassLoader();
 
             // Attempt to load the class by its fully qualified name
-            String fullyQualifiedName = projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
+            String fullyQualifiedName = projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
             if (fullyQualifiedName == null || fullyQualifiedName.isEmpty()) {
                 logger.error("No fully qualified class name found for project file: {}", projectFile.getFilePath());
                 nodeDecorator.error("No fully qualified class name available");
                 return;
             }
-            logger.warn("Attempting to load class: {}", fullyQualifiedName);
+            logger.debug("Attempting to load class: {}", fullyQualifiedName);
 
             Class<?> loadedClass = sharedClassLoader.loadClass(fullyQualifiedName);
 
             // SUCCESS: Class loaded successfully, delegate to concrete implementation
-            logger.warn("Successfully loaded class: {}", fullyQualifiedName);
+            logger.debug("Successfully loaded class: {}", fullyQualifiedName);
             nodeDecorator.setProperty(InspectorTags.TAG_JAVA_CLASSLOADER, true);
             analyzeLoadedClass(loadedClass, projectFile, nodeDecorator);
 
         } catch (ClassNotFoundException e) {
             // Class not found - this is expected for many classes
             logger.warn("Class not found in ClassLoader: {} ({})",
-                    projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
+                    projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
             nodeDecorator.error(e);
 
         } catch (NoClassDefFoundError e) {
             // Missing dependencies - also expected
             logger.warn("Missing dependencies for class: {} ({})",
-                    projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
+                    projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
             nodeDecorator.error(e);
 
         } catch (LinkageError e) {
             // Linkage issues - treat as not applicable
             logger.warn("Linkage error loading class: {} ({})",
-                    projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
+                    projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
             nodeDecorator.error(e);
 
         } catch (SecurityException e) {
             // Security restrictions - treat as not applicable
             logger.warn("Security restriction loading class: {} ({})",
-                    projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
+                    projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
             nodeDecorator.error(e);
 
         } catch (Exception e) {
             // Unexpected errors - return as error
             logger.warn("Unexpected error loading class: {} ({})",
-                    projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
+                    projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME), e.getMessage());
             nodeDecorator.error(
                     "Unexpected error loading class: " + e.getMessage());
         }
@@ -128,7 +130,7 @@ public abstract class AbstractClassLoaderBasedInspector implements Inspector<Pro
      * @param projectFileDecorator
      */
     protected abstract void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile,
-                                               NodeDecorator<ProjectFile> projectFileDecorator);
+            NodeDecorator<ProjectFile> projectFileDecorator);
 
     /**
      * Gets the shared ClassLoader service used by this inspector.
@@ -190,11 +192,116 @@ public abstract class AbstractClassLoaderBasedInspector implements Inspector<Pro
      * @return a string describing the ClassLoader status
      */
     protected String getClassLoaderInfo() {
-        if (!classLoaderService.isInitialized()) {
-            return "ClassLoader not initialized";
-        }
-
         int jarCount = classLoaderService.getJarCount();
         return String.format("ClassLoader initialized with %d JAR(s)", jarCount);
+    }
+
+    // ==================== METRIC AGGREGATION HELPERS ====================
+
+    /**
+     * Aggregates a metric using MAX strategy - keeps the maximum value seen.
+     * Useful for metrics like inheritance depth, interface count where we want
+     * to identify the most complex class in a file.
+     * 
+     * @param projectFile the project file to store aggregated metrics on
+     * @param metricName  base name of the metric (e.g., "inheritance.depth")
+     * @param classValue  the value from the current class
+     */
+    protected void aggregateMaxMetric(ProjectFile projectFile, String metricName, double classValue) {
+        Double currentMax = projectFile.getDoubleProperty(metricName + ".max");
+        if (currentMax == null || classValue > currentMax) {
+            projectFile.setProperty(metricName + ".max", classValue);
+        }
+
+        // Track how many classes contributed to this aggregate
+        Integer count = projectFile.getIntegerProperty(metricName + ".classes_analyzed", 0);
+        projectFile.setProperty(metricName + ".classes_analyzed", count + 1);
+    }
+
+    /**
+     * Aggregates a metric using MAX strategy for integer values.
+     * 
+     * @param projectFile the project file to store aggregated metrics on
+     * @param metricName  base name of the metric
+     * @param classValue  the integer value from the current class
+     */
+    protected void aggregateMaxMetric(ProjectFile projectFile, String metricName, int classValue) {
+        aggregateMaxMetric(projectFile, metricName, (double) classValue);
+    }
+
+    /**
+     * Aggregates a metric using AVG strategy - computes running average.
+     * Also tracks MIN and MAX for additional insights.
+     * Useful for metrics like code quality where we want overall file quality.
+     * 
+     * @param projectFile the project file to store aggregated metrics on
+     * @param metricName  base name of the metric (e.g., "code.quality.score")
+     * @param classValue  the value from the current class
+     */
+    protected void aggregateAvgMetric(ProjectFile projectFile, String metricName, double classValue) {
+        // Get current sum and count
+        Double currentSum = projectFile.getDoubleProperty(metricName + ".sum", 0.0);
+        Integer count = projectFile.getIntegerProperty(metricName + ".count", 0);
+
+        // Update sum and count
+        double newSum = currentSum + classValue;
+        int newCount = count + 1;
+
+        projectFile.setProperty(metricName + ".sum", newSum);
+        projectFile.setProperty(metricName + ".count", newCount);
+        projectFile.setProperty(metricName + ".avg", newSum / newCount);
+
+        // Track min/max for additional insights
+        updateMinMax(projectFile, metricName, classValue);
+    }
+
+    /**
+     * Updates MIN and MAX values for a metric.
+     * Helper method used by aggregation strategies.
+     * 
+     * @param projectFile the project file to update
+     * @param metricName  base name of the metric
+     * @param value       the current value to compare
+     */
+    protected void updateMinMax(ProjectFile projectFile, String metricName, double value) {
+        // Update MIN
+        Double currentMin = projectFile.getDoubleProperty(metricName + ".min");
+        if (currentMin == null || value < currentMin) {
+            projectFile.setProperty(metricName + ".min", value);
+        }
+
+        // Update MAX
+        Double currentMax = projectFile.getDoubleProperty(metricName + ".max");
+        if (currentMax == null || value > currentMax) {
+            projectFile.setProperty(metricName + ".max", value);
+        }
+    }
+
+    /**
+     * Aggregates a metric using SUM strategy - accumulates total.
+     * Useful for metrics that should be summed across all classes in a file.
+     * 
+     * @param projectFile the project file to store aggregated metrics on
+     * @param metricName  base name of the metric
+     * @param classValue  the value to add to the sum
+     */
+    protected void aggregateSumMetric(ProjectFile projectFile, String metricName, double classValue) {
+        Double currentSum = projectFile.getDoubleProperty(metricName + ".sum", 0.0);
+        projectFile.setProperty(metricName + ".sum", currentSum + classValue);
+
+        // Track count
+        Integer count = projectFile.getIntegerProperty(metricName + ".classes_analyzed", 0);
+        projectFile.setProperty(metricName + ".classes_analyzed", count + 1);
+    }
+
+    /**
+     * Aggregates a metric using SUM strategy for integer values.
+     * 
+     * @param projectFile the project file to store aggregated metrics on
+     * @param metricName  base name of the metric
+     * @param classValue  the integer value to add to the sum
+     */
+    protected void aggregateSumMetric(ProjectFile projectFile, String metricName, int classValue) {
+        aggregateSumMetric(projectFile, metricName, (double) classValue);
     }
 }

@@ -1,5 +1,63 @@
 # Changelog
 
+## [1.8.0] - 2025-10-26
+### Added
+- Two-level metrics implementation for TypeUsageInspector and ThreadLocalUsageInspector
+  - TypeUsageInspector: MAX aggregation strategy for type complexity analysis
+  - ThreadLocalUsageInspector: SUM aggregation strategy for ThreadLocal usage counting
+  - Class-level metrics stored on JavaClassNode
+  - File-level aggregates stored on ProjectFile for quick insights
+
+### Fixed
+- TypeUsageInspector: Corrected FQN property accessor to use `getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME)`
+- ThreadLocalUsageInspector: Corrected FQN property accessor to use `getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME)`
+
+### Changed
+- Updated JavaDoc for both inspectors to document two-level metrics system
+- Enhanced method documentation with aggregation strategy explanations
+
+### Technical Details
+- TypeUsageInspector file-level properties:
+  - `types.total_unique.max` - Maximum unique types across classes
+  - `types.complexity_score.max` - Highest complexity score
+  - `types.*.classes_analyzed` - Number of classes analyzed
+- ThreadLocalUsageInspector file-level properties:
+  - `threadlocal.count.sum` - Total ThreadLocal fields across classes
+  - `threadlocal.count.classes_analyzed` - Number of classes analyzed
+- Leverages existing aggregation helpers from AbstractClassLoaderBasedInspector
+- Complete system now covers 4 inspectors with two-level metrics
+
+## [1.7.0] - 2025-10-26
+### Changed
+- Refactored JARClassLoaderService to implement parent-child classloader hierarchy
+  - Parent classloader: Common dependencies from Maven .m2 repository and system classpath
+  - Child classloader: Application-specific JARs from project directories
+  - Improved class loading delegation and isolation
+
+### Added
+- `classifyJars()` method to separate common JARs from application JARs
+- `isSystemClasspathJar()` helper method for JAR classification
+- `getParentClassLoader()` and `getChildClassLoader()` accessor methods
+- Comprehensive test suite (JARClassLoaderServiceTest) with 6 test cases
+  - Parent-child hierarchy validation
+  - JAR count aggregation across both loaders
+  - Proper shutdown sequence (child then parent)
+  - Empty project handling
+  - JAR classification logic verification
+  - Classloader delegation testing
+
+### Technical Details
+- Parent classloader loads JARs from:
+  - Maven local repository (.m2/repository)
+  - System JRE/JDK libraries
+  - System classpath entries
+- Child classloader loads JARs from:
+  - Project directories (target, lib, libs)
+  - Application-specific build artifacts
+- Proper resource cleanup with hierarchical shutdown
+- Enhanced logging with [Parent] and [Child] prefixes
+- Zero compilation errors introduced
+
 ## [1.6.0] - 2025-10-21 🎉
 ### MAJOR MILESTONE: PHASE 6 ARCHITECTURAL VALIDATION COMPLETE!
 ### Validated

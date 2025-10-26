@@ -67,7 +67,7 @@ public abstract class AbstractASMClassInspector extends AbstractJavaClassInspect
         ProjectFile projectFile = projectFileOpt.get();
         
         // Verify this is a binary class file
-        if (!projectFile.getBooleanProperty(InspectorTags.TAG_JAVA_IS_BINARY, false)) {
+        if (!projectFile.hasTag(InspectorTags.TAG_JAVA_IS_BINARY)) {
             decorator.error("ProjectFile is not a binary class file: " + projectFile.getFilePath());
             return;
         }

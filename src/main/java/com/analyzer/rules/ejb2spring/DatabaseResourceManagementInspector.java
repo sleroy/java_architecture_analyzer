@@ -91,7 +91,7 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
     @Override
     protected void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation,
             NodeDecorator<ProjectFile> decorator) throws IOException {
-        String fqn = projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
+        String fqn = projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
         if (fqn != null && !fqn.isEmpty()) {
             JavaClassNode classNode = classNodeRepository.getOrCreateByFqn(fqn);
             classNode.setProjectFileId(projectFile.getId());
@@ -430,7 +430,7 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
         if (classNodeRepository != null) {
             try {
                 // Create a simple GraphNode for the resource configuration
-                String fqn = projectFile.getStringProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
+                String fqn = projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
                 if (fqn != null && !fqn.isEmpty()) {
                     JavaClassNode classNode = classNodeRepository.getOrCreateByFqn(fqn);
                     classNode.setProperty("resource.config.node", true);

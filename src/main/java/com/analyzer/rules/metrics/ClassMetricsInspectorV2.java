@@ -4,7 +4,6 @@ import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.graph.ProjectFileRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
-import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.MethodVisitor;

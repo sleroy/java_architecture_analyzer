@@ -20,37 +20,61 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Inspector that detects ThreadLocal usage within Java classes using runtime class loading.
+ * Inspector that detects ThreadLocal usage within Java classes using runtime
+ * class loading.
  * 
  * <p>
- * This inspector analyzes classes to identify fields of type {@link ThreadLocal} or its subclasses.
- * When ThreadLocal usage is detected, it marks the corresponding JavaClassNode with appropriate tags
+ * This inspector analyzes classes to identify fields of type
+ * {@link ThreadLocal} or its subclasses.
+ * When ThreadLocal usage is detected, it marks the corresponding JavaClassNode
+ * with appropriate tags
  * and stores detailed metrics about the ThreadLocal fields found.
  * </p>
  * 
  * <p>
- * ThreadLocal variables are commonly used for maintaining thread-specific state in multi-threaded
+ * ThreadLocal variables are commonly used for maintaining thread-specific state
+ * in multi-threaded
  * applications. Detecting their usage is important for:
  * </p>
  * <ul>
  * <li>Understanding thread-safety patterns in the codebase</li>
- * <li>Identifying potential memory leak risks (ThreadLocal instances not properly cleaned up)</li>
+ * <li>Identifying potential memory leak risks (ThreadLocal instances not
+ * properly cleaned up)</li>
  * <li>Analyzing concurrency design patterns</li>
  * <li>Migration planning when moving to different concurrency models</li>
  * </ul>
  * 
  * <p>
- * The inspector uses reflection to examine all declared fields in a class and checks if they
- * are assignable from ThreadLocal. It also captures the generic type parameter if present.
+ * <strong>Two-Level Metrics System:</strong>
+ * </p>
+ * <ul>
+ * <li><strong>Class-Level Metrics</strong> (JavaClassNode): Detailed
+ * ThreadLocal usage per class</li>
+ * <li><strong>File-Level Aggregates</strong> (ProjectFile): SUM aggregation
+ * strategy - total ThreadLocal
+ * count across all classes in each file</li>
+ * </ul>
+ * 
+ * <p>
+ * Aggregated file-level properties:
+ * </p>
+ * <ul>
+ * <li>threadlocal.count.sum - Total ThreadLocal fields across all classes</li>
+ * <li>threadlocal.count.classes_analyzed - Number of classes analyzed</li>
+ * </ul>
+ * 
+ * <p>
+ * The inspector uses reflection to examine all declared fields in a class and
+ * checks if they
+ * are assignable from ThreadLocal. It also captures the generic type parameter
+ * if present.
  * </p>
  * 
  * @author Java Architecture Analyzer
  * @since Phase 2.4 - ClassLoader-Based Metrics
  */
-@InspectorDependencies(
-    requires = { InspectorTags.TAG_JAVA_DETECTED }, 
-    produces = { "threadlocal.detected", "threadlocal.count" }
-)
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED }, produces = { "threadlocal.detected",
+        "threadlocal.count" })
 public class ThreadLocalUsageInspector extends AbstractClassLoaderBasedInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(ThreadLocalUsageInspector.class);
@@ -85,8 +109,8 @@ public class ThreadLocalUsageInspector extends AbstractClassLoaderBasedInspector
     }
 
     @Override
-    protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile, 
-                                     NodeDecorator<ProjectFile> projectFileDecorator) {
+    protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile,
+            NodeDecorator<ProjectFile> projectFileDecorator) {
         try {
             logger.debug("Analyzing ThreadLocal usage for class: {}", loadedClass.getName());
 
@@ -96,7 +120,7 @@ public class ThreadLocalUsageInspector extends AbstractClassLoaderBasedInspector
             if (metrics.hasThreadLocalFields()) {
                 // Mark the class as using ThreadLocal
                 attachThreadLocalMetricsToGraphNode(projectFile, metrics, projectFileDecorator);
-                
+
                 logger.info("ThreadLocal usage detected in class: {} - {} field(s) found",
                         loadedClass.getName(), metrics.getThreadLocalCount());
             } else {
@@ -124,7 +148,7 @@ public class ThreadLocalUsageInspector extends AbstractClassLoaderBasedInspector
             if (isThreadLocalField(field)) {
                 String fieldInfo = buildFieldInfo(field);
                 metrics.addThreadLocalField(fieldInfo);
-                
+
                 logger.debug("ThreadLocal field detected: {} in class {}",
                         field.getName(), clazz.getName());
             }
@@ -145,7 +169,8 @@ public class ThreadLocalUsageInspector extends AbstractClassLoaderBasedInspector
     }
 
     /**
-     * Builds a descriptive string for a ThreadLocal field including its generic type if available.
+     * Builds a descriptive string for a ThreadLocal field including its generic
+     * type if available.
      * 
      * @param field the ThreadLocal field
      * @return a string describing the field
@@ -172,34 +197,60 @@ public class ThreadLocalUsageInspector extends AbstractClassLoaderBasedInspector
     }
 
     /**
-     * Attaches ThreadLocal usage metrics to the corresponding JavaClassNode and tags.
+     * Attaches ThreadLocal usage metrics to the corresponding JavaClassNode
+     * AND aggregates file-level metrics on ProjectFile using SUM strategy.
      * 
-     * @param projectFile the project file context
-     * @param metrics the ThreadLocal usage metrics
+     * <p>
+     * Aggregation Strategy: SUM - accumulates total ThreadLocal usage count across
+     * all classes in the file
+     * </p>
+     * 
+     * @param projectFile          the project file context
+     * @param metrics              the ThreadLocal usage metrics
      * @param projectFileDecorator the decorator for adding tags
      */
     private void attachThreadLocalMetricsToGraphNode(ProjectFile projectFile,
-                                                     ThreadLocalUsageMetrics metrics,
-                                                     NodeDecorator<ProjectFile> projectFileDecorator) {
-        // Update JavaClassNode in graph repository if available
-        if (graphRepository != null) {
-            String fullyQualifiedName = (String) projectFile.getProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME);
-            if (fullyQualifiedName != null) {
-                graphRepository.getNodeById(fullyQualifiedName).ifPresent(node -> {
-                    if (node instanceof JavaClassNode) {
-                        JavaClassNode classNode = (JavaClassNode) node;
-                        logger.debug("Marking JavaClassNode as using ThreadLocal: {}", fullyQualifiedName);
-                        classNode.setProperty(PROP_THREADLOCAL_DETECTED, true);
-                        classNode.setProperty(PROP_THREADLOCAL_COUNT, metrics.getThreadLocalCount());
-                        classNode.setProperty(PROP_THREADLOCAL_FIELDS, String.join(", ", metrics.getFieldNames()));
-                        classNode.addTag(TAG_USES_THREADLOCAL);
-                    }
-                });
-            }
+            ThreadLocalUsageMetrics metrics,
+            NodeDecorator<ProjectFile> projectFileDecorator) {
+        if (graphRepository == null) {
+            logger.warn("GraphRepository not available - metrics cannot be attached to JavaClassNode.");
+            return;
         }
 
-        logger.debug("Stored ThreadLocal usage metrics for class: {} ({} fields)",
-                projectFile.getProperty(InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME), metrics.getThreadLocalCount());
+        String fullyQualifiedName = projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
+        if (fullyQualifiedName == null) {
+            logger.warn("Could not find fullyQualifiedName for project file: {}",
+                    projectFile.getRelativePath());
+            return;
+        }
+
+        // LEVEL 1: Store detailed metrics on JavaClassNode (class-level)
+        graphRepository.getNodeById(fullyQualifiedName).ifPresent(node -> {
+            if (node instanceof JavaClassNode) {
+                JavaClassNode classNode = (JavaClassNode) node;
+                logger.debug("Marking JavaClassNode as using ThreadLocal: {}", fullyQualifiedName);
+
+                classNode.setProperty(PROP_THREADLOCAL_DETECTED, true);
+                classNode.setProperty(PROP_THREADLOCAL_COUNT, metrics.getThreadLocalCount());
+                classNode.setProperty(PROP_THREADLOCAL_FIELDS, String.join(", ", metrics.getFieldNames()));
+                classNode.addTag(TAG_USES_THREADLOCAL);
+
+                logger.debug("Stored ThreadLocal usage metrics on JavaClassNode: {} ({} fields)",
+                        fullyQualifiedName, metrics.getThreadLocalCount());
+            } else {
+                logger.debug("Node found for {} is not a JavaClassNode", fullyQualifiedName);
+            }
+        });
+
+        // LEVEL 2: Aggregate metrics on ProjectFile (file-level summary)
+        // Use SUM strategy - accumulate total ThreadLocal usage count
+        aggregateSumMetric(projectFile, "threadlocal.count", metrics.getThreadLocalCount());
+
+        logger.debug(
+                "Aggregated ThreadLocal metrics on ProjectFile: {} (total_sum={}, classes_analyzed={})",
+                projectFile.getRelativePath(),
+                projectFile.getDoubleProperty("threadlocal.count.sum"),
+                projectFile.getIntegerProperty("threadlocal.count.classes_analyzed"));
     }
 
     /**

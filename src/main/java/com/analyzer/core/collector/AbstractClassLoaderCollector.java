@@ -129,11 +129,6 @@ public abstract class AbstractClassLoaderCollector implements ClassNodeCollector
      */
     protected String extractFQNUsingClassLoader(ProjectFile source) {
         try {
-            // Get shared classloader
-            if (!jarClassLoaderService.isInitialized()) {
-                logger.warn("JARClassLoaderService not initialized for {}", source.getRelativePath());
-                return null;
-            }
 
             URLClassLoader classLoader = jarClassLoaderService.getSharedClassLoader();
 

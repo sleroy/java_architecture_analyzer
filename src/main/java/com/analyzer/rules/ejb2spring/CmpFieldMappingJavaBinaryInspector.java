@@ -7,9 +7,9 @@ import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.inspectors.core.binary.AbstractBinaryClassNodeInspector;
-import com.analyzer.rules.graph.BinaryJavaClassNodeInspector;
 import com.analyzer.resource.ResourceLocation;
 import com.analyzer.resource.ResourceResolver;
+import com.analyzer.rules.graph.BinaryJavaClassNodeInspectorV2;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Opcodes;
@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * Phase 1 - Foundation Inspector (P0 Critical Priority)
  */
-@InspectorDependencies(need = { BinaryJavaClassNodeInspector.class }, requires = {
+@InspectorDependencies(need = { BinaryJavaClassNodeInspectorV2.class }, requires = {
         InspectorTags.TAG_JAVA_DETECTED }, produces = {
                 EjbMigrationTags.EJB_CMP_FIELD_MAPPING,
                 EjbMigrationTags.EJB_CMP_FIELD,

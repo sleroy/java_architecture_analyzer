@@ -12,6 +12,7 @@ import com.analyzer.core.inspector.*;
 import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectDeserializer;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.resource.JARClassLoaderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -106,6 +107,9 @@ public class AnalysisEngine {
 
         // PHASE 1: File Discovery with Ignore Filtering
         logger.info("=== PHASE 1: File Discovery with Filtering ===");
+        JARClassLoaderService jarClassLoaderService = inspectorRegistry.getJarClassLoaderService();
+        jarClassLoaderService.scanProjectJars(project);
+
         scanProjectFilesWithFiltering(project);
 
         // PHASE 2: ClassNode Collection
@@ -1003,11 +1007,13 @@ public class AnalysisEngine {
                 if (!validation.isValid()) {
                     logger.warn("Existing project analysis file is invalid: {}", validation.getMessage());
                     logger.info("Creating new project analysis instead");
-                    return new Project(projectPath);
+                    return new Project(projectPath, projectPath.getFileName().toString(), projectFileRepository);
                 }
 
-                // Load the project with graph repository if available
-                Project existingProject = deserializer.loadProject(existingAnalysisFile, graphRepository);
+                // Load the project with graph repository and project file repository if
+                // available
+                Project existingProject = deserializer.loadProject(existingAnalysisFile, graphRepository,
+                        projectFileRepository);
 
                 logger.info("Successfully loaded existing project analysis with {} files",
                         existingProject.getProjectFiles().size());
@@ -1025,8 +1031,8 @@ public class AnalysisEngine {
             logger.info("No existing project analysis found, creating new analysis for: {}", projectPath);
         }
 
-        // Fallback: create new project
-        return new Project(projectPath);
+        // Fallback: create new project with repository
+        return new Project(projectPath, projectPath.getFileName().toString(), projectFileRepository);
     }
 
     /**

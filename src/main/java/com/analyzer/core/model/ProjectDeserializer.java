@@ -5,9 +5,9 @@ import com.analyzer.core.inspector.InspectorDependencies;
 import com.analyzer.core.graph.GraphEdge;
 import com.analyzer.core.graph.GraphNode;
 import com.analyzer.core.graph.GraphRepository;
+import com.analyzer.core.serialization.JsonSerializationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,22 +24,32 @@ import java.util.*;
 public class ProjectDeserializer {
 
     private static final Logger logger = LoggerFactory.getLogger(ProjectDeserializer.class);
+    private final JsonSerializationService jsonSerializer;
     private final ObjectMapper objectMapper;
 
     public ProjectDeserializer() {
-        this.objectMapper = new ObjectMapper();
-        this.objectMapper.registerModule(new JavaTimeModule());
+        this(new JsonSerializationService());
+    }
+
+    public ProjectDeserializer(JsonSerializationService jsonSerializer) {
+        this.jsonSerializer = jsonSerializer;
+        this.objectMapper = jsonSerializer.getObjectMapper();
     }
 
     /**
      * Load a complete project analysis from JSON file.
      * 
-     * @param jsonPath        path to the JSON file containing project analysis
-     * @param graphRepository optional graph repository to populate with graph data
+     * @param jsonPath              path to the JSON file containing project
+     *                              analysis
+     * @param graphRepository       optional graph repository to populate with graph
+     *                              data
+     * @param projectFileRepository optional project file repository for registering
+     *                              loaded files
      * @return the loaded Project object
      * @throws IOException if loading fails
      */
-    public Project loadProject(Path jsonPath, GraphRepository graphRepository) throws IOException {
+    public Project loadProject(Path jsonPath, GraphRepository graphRepository,
+            com.analyzer.core.graph.ProjectFileRepository projectFileRepository) throws IOException {
         if (!Files.exists(jsonPath)) {
             throw new IOException("Project analysis file not found: " + jsonPath);
         }
@@ -53,7 +63,7 @@ public class ProjectDeserializer {
         String projectPathStr = root.get("projectPath").asText();
         Path projectPath = jsonPath.getParent().resolve(projectPathStr).normalize();
 
-        Project project = new Project(projectPath, projectName);
+        Project project = new Project(projectPath, projectName, projectFileRepository);
 
         // Set timestamps
         if (root.has("createdAt") && !root.get("createdAt").isNull()) {
@@ -91,6 +101,12 @@ public class ProjectDeserializer {
 
                 ProjectFile projectFile = deserializeProjectFile(fileNode, project.getProjectPath());
                 project.addProjectFile(projectFile);
+
+                // Register in repository if available
+                if (projectFileRepository != null) {
+                    projectFileRepository.save(projectFile);
+                }
+
                 fileCount++;
             }
 
@@ -142,7 +158,7 @@ public class ProjectDeserializer {
                     String tagName = tagEntry.getKey();
                     JsonNode tagValueNode = tagEntry.getValue();
 
-                    Object tagValue = convertJsonNodeToObject(tagValueNode);
+                    Object tagValue = jsonSerializer.convertValue(tagValueNode, Object.class);
                     if (tagValue instanceof Boolean && (Boolean) tagValue) {
                         projectFile.addTag(tagName);
                     } else {
@@ -152,6 +168,29 @@ public class ProjectDeserializer {
                 }
 
                 logger.debug("Loaded {} tags for file: {}", tagCount, relativePath);
+            }
+
+            // Load metrics if available
+            if (fileNode.has("metrics") && !fileNode.get("metrics").isNull()) {
+                JsonNode metricsNode = fileNode.get("metrics");
+                Iterator<Map.Entry<String, JsonNode>> metricsIterator = metricsNode.fields();
+
+                int metricCount = 0;
+                while (metricsIterator.hasNext()) {
+                    Map.Entry<String, JsonNode> metricEntry = metricsIterator.next();
+                    String metricName = metricEntry.getKey();
+                    JsonNode metricValueNode = metricEntry.getValue();
+
+                    if (metricValueNode.isNumber()) {
+                        double metricValue = metricValueNode.asDouble();
+                        projectFile.getMetrics().setMetric(metricName, metricValue);
+                        metricCount++;
+                    } else {
+                        logger.warn("Skipping non-numeric metric '{}' for file: {}", metricName, relativePath);
+                    }
+                }
+
+                logger.debug("Loaded {} metrics for file: {}", metricCount, relativePath);
             }
 
             // Load inspector execution times if available
@@ -189,41 +228,6 @@ public class ProjectDeserializer {
     }
 
     /**
-     * Convert JsonNode to appropriate Java object type.
-     */
-    private Object convertJsonNodeToObject(JsonNode node) {
-        if (node.isNull()) {
-            return null;
-        } else if (node.isBoolean()) {
-            return node.asBoolean();
-        } else if (node.isInt()) {
-            return node.asInt();
-        } else if (node.isLong()) {
-            return node.asLong();
-        } else if (node.isDouble()) {
-            return node.asDouble();
-        } else if (node.isTextual()) {
-            return node.asText();
-        } else if (node.isArray()) {
-            List<Object> list = new ArrayList<>();
-            for (JsonNode item : node) {
-                list.add(convertJsonNodeToObject(item));
-            }
-            return list;
-        } else if (node.isObject()) {
-            Map<String, Object> map = new HashMap<>();
-            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
-            while (fields.hasNext()) {
-                Map.Entry<String, JsonNode> entry = fields.next();
-                map.put(entry.getKey(), convertJsonNodeToObject(entry.getValue()));
-            }
-            return map;
-        } else {
-            return node.asText(); // fallback to string representation
-        }
-    }
-
-    /**
      * Load graph data into the provided graph repository.
      */
     private void loadGraphData(JsonNode root, GraphRepository graphRepository) {
@@ -235,7 +239,7 @@ public class ProjectDeserializer {
             if (root.has("graphNodes") && !root.get("graphNodes").isNull()) {
                 JsonNode nodesArray = root.get("graphNodes");
                 for (JsonNode nodeJson : nodesArray) {
-                    GraphNode node = objectMapper.convertValue(nodeJson, GraphNode.class);
+                    GraphNode node = jsonSerializer.convertValue(nodeJson, GraphNode.class);
                     graphRepository.getOrCreateNode(node);
                     nodeCount++;
                 }
@@ -245,7 +249,7 @@ public class ProjectDeserializer {
             if (root.has("graphEdges") && !root.get("graphEdges").isNull()) {
                 JsonNode edgesArray = root.get("graphEdges");
                 for (JsonNode edgeJson : edgesArray) {
-                    GraphEdge edge = objectMapper.convertValue(edgeJson, GraphEdge.class);
+                    GraphEdge edge = jsonSerializer.convertValue(edgeJson, GraphEdge.class);
                     // For edges, we need to reconstruct using source and target nodes
                     // This is more complex since we need to find the actual node instances
                     // For now, we'll skip edge reconstruction as it requires proper node resolution
