@@ -60,34 +60,38 @@ public class Project {
     }
 
     /**
-     * Add a project file to the project
+     * Add a project file to the project.
+     * Uses absolute path (ID) as key to ensure uniqueness.
      */
     public void addProjectFile(ProjectFile projectFile) {
         Objects.requireNonNull(projectFile, "ProjectFile cannot be null");
-        projectFiles.put(projectFile.getRelativePath(), projectFile);
+        String id = projectFile.getId(); // Use absolute path as key for uniqueness
+        projectFiles.put(id, projectFile);
     }
 
     /**
-     * Remove a project file from the project
+     * Remove a project file from the project by its absolute path (ID)
      */
-    public void removeProjectFile(String relativePath) {
-        projectFiles.remove(relativePath);
+    public void removeProjectFile(String absolutePath) {
+        projectFiles.remove(absolutePath);
     }
 
     /**
-     * Get a specific project file by its relative path
+     * Get a specific project file by its absolute path (ID)
      */
-    public ProjectFile getProjectFile(String relativePath) {
-        return projectFiles.get(relativePath);
+    public ProjectFile getProjectFile(String absolutePath) {
+        return projectFiles.get(absolutePath);
     }
 
     /**
-     * Get or create a project file with the given relative path and absolute path.
+     * Get or create a project file with the given absolute path.
      * If the file doesn't exist, creates a new ProjectFile and adds it to the
      * project.
+     * Uses absolute path as key to ensure uniqueness across the project.
      */
     public ProjectFile getOrCreateProjectFile(String relativePath, Path absolutePath) {
-        return projectFiles.computeIfAbsent(relativePath, key -> new ProjectFile(absolutePath, this.projectPath));
+        String id = absolutePath.toString(); // Use absolute path as key
+        return projectFiles.computeIfAbsent(id, key -> new ProjectFile(absolutePath, this.projectPath));
     }
 
     /**

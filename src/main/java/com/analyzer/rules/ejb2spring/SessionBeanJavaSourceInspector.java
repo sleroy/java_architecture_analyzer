@@ -66,7 +66,7 @@ public class SessionBeanJavaSourceInspector extends AbstractJavaClassInspector {
     }
 
     public static class TAGS {
-        public static final String TAG_IS_SESSION_BEAN = "session_bean_inspector.is_session_bean";
+        public static final String TAG_IS_SESSION_BEAN = "ejb.is_session_bean";
     }
 
     /**

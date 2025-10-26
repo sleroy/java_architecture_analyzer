@@ -3,6 +3,9 @@ package com.analyzer.cli;
 import com.analyzer.analysis.Analysis;
 import com.analyzer.core.AnalysisConstants;
 import com.analyzer.core.collector.CollectorBeanFactory;
+import com.analyzer.core.db.GraphDatabaseConfig;
+import com.analyzer.core.db.repository.GraphRepository;
+import com.analyzer.core.db.serializer.GraphDatabaseSerializer;
 import com.analyzer.core.engine.AnalysisEngine;
 import com.analyzer.core.export.CsvExporter;
 import com.analyzer.core.export.ProjectSerializer;
@@ -22,6 +25,7 @@ import picocli.CommandLine.Option;
 
 import java.io.File;
 import java.nio.charset.Charset;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -97,7 +101,6 @@ public class InventoryCommand implements Callable<Integer> {
             // 3. Create empty analysis list (will be enhanced later)
             List<Analysis> analyses = new ArrayList<>();
 
-
             // 4. Create fresh analysis container for this analysis run
 
             // 5. Get Analysis Engine from analysis container (all dependencies
@@ -130,13 +133,33 @@ public class InventoryCommand implements Callable<Integer> {
             // Export project data as JSON - compute path relative to project directory
             File jsonOutputDir = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
                     .resolve(AnalysisConstants.PROJECT_DATA_DIR).toFile();
-            ProjectSerializer projectSerializer = new ProjectSerializer(jsonOutputDir);
+            ProjectSerializer projectSerializer = new ProjectSerializer(jsonOutputDir,
+                    analysisEngine.getGraphRepository());
             logger.info("Serializing project data to JSON...");
             projectSerializer.serialize(project);
 
+            // Also serialize to H2 database (with preserved node IDs!)
+            java.nio.file.Path dbPath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
+                    .resolve("graph.db");
+            logger.info("Initializing H2 database at: {}", dbPath);
+            GraphDatabaseConfig dbConfig = new GraphDatabaseConfig();
+            dbConfig.initialize(dbPath);
+
+            logger.info("Serializing project data to H2 database...");
+            GraphDatabaseSerializer dbSerializer = new GraphDatabaseSerializer(dbConfig);
+            dbSerializer.serialize(project);
+
+            // Show database statistics
+            GraphRepository repo = new GraphRepository(dbConfig);
+            var stats = repo.getStatistics();
+            logger.info("Database statistics: {}", stats);
+
             logger.info("Analysis completed successfully!");
-            logger.info("Results written to: {}", outputFile.getAbsolutePath());
-            logger.info("Project data serialized to: {}", jsonOutputDir.getAbsolutePath());
+            logger.info("CSV results written to: {}", outputFile.getAbsolutePath());
+            logger.info("JSON data serialized to: {}", jsonOutputDir.getAbsolutePath());
+            logger.info("H2 database created at: {}", dbPath + ".mv.db");
+            logger.info("  - Node IDs preserved as original file paths/FQNs");
+            logger.info("  - {} total nodes stored", stats.nodeCount());
 
             return 0;
         } catch (Exception e) {

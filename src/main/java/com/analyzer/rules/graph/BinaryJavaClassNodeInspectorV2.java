@@ -4,7 +4,6 @@ import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.graph.ProjectFileRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
-import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.Opcodes;
@@ -36,7 +35,7 @@ import javax.inject.Inject;
  * @author Phase 3 - Class-Centric Architecture Migration
  * @since Phase 3 - Systematic Inspector Migration
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = {
+@InspectorDependencies(produces = {
         BinaryJavaClassNodeInspector.TAGS.TAG_JAVA_CLASS_NODE_BINARY })
 public class BinaryJavaClassNodeInspectorV2 extends AbstractASMClassInspector {
 
@@ -46,6 +45,11 @@ public class BinaryJavaClassNodeInspectorV2 extends AbstractASMClassInspector {
     public BinaryJavaClassNodeInspectorV2(ProjectFileRepository projectFileRepository,
             ResourceResolver resourceResolver) {
         super(projectFileRepository, resourceResolver);
+    }
+
+    @Override
+    public boolean canProcess(JavaClassNode objectToAnalyze) {
+        return super.canProcess(objectToAnalyze);
     }
 
     @Override

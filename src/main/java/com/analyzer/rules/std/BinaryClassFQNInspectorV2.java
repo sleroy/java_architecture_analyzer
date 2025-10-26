@@ -34,7 +34,7 @@ import javax.inject.Inject;
  * @author Phase 3 - Class-Centric Architecture Migration
  * @since Phase 3 - Systematic Inspector Migration
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = {
+@InspectorDependencies(requires = {  }, produces = {
         InspectorTags.TAG_JAVA_FULLY_QUALIFIED_NAME,
         InspectorTags.TAG_JAVA_PACKAGE_NAME,
         InspectorTags.TAG_JAVA_CLASS_NAME })

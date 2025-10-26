@@ -1,7 +1,5 @@
 package com.analyzer.core.engine;
 
-import com.analyzer.core.inspector.InspectorDependencies;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,17 +7,12 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Tracks comprehensive execution metrics for inspector analysis including
  * timing,
  * phase distribution, and usage statistics.
- * 
- * Provides detailed reporting on:
- * - Which inspectors executed vs unused
- * - Average execution times and performance metrics
- * - Phase distribution (file detection vs analysis)
- * - Pass-by-pass convergence analysis
  */
 public class ExecutionProfile {
 
@@ -44,59 +37,21 @@ public class ExecutionProfile {
         }
 
         public String getShortName() {
-            switch (this) {
-                case PHASE_1A_FILESYSTEM_SCAN:
-                    return "Phase 1a";
-                case PHASE_1C_EXTRACTED_CONTENT:
-                    return "Phase 1c";
-                case PHASE_2_CLASSNODE_COLLECTION:
-                    return "Phase 2";
-                case PHASE_3_PROJECTFILE_ANALYSIS:
-                    return "Phase 3";
-                case PHASE_4_CLASSNODE_ANALYSIS:
-                    return "Phase 4";
-                default:
-                    return this.toString();
-            }
+            return displayName.substring(0, displayName.indexOf(':'));
         }
     }
 
-    // Individual execution record
-    public static class InspectorExecution {
-        private final String inspectorName;
-        private final ExecutionPhase phase;
-        private final Integer passNumber; // null for Phase 1
-        private final long executionTimeMs;
-        private final LocalDateTime timestamp;
+    // Individual execution record (converted to record)
+    public record InspectorExecution(
+            String inspectorName,
+            ExecutionPhase phase,
+            Integer passNumber,
+            long executionTimeMs,
+            LocalDateTime timestamp) {
 
         public InspectorExecution(String inspectorName, ExecutionPhase phase, Integer passNumber,
                 long executionTimeMs) {
-            this.inspectorName = inspectorName;
-            this.phase = phase;
-            this.passNumber = passNumber;
-            this.executionTimeMs = executionTimeMs;
-            this.timestamp = LocalDateTime.now();
-        }
-
-        // Getters
-        public String getInspectorName() {
-            return inspectorName;
-        }
-
-        public ExecutionPhase getPhase() {
-            return phase;
-        }
-
-        public Integer getPassNumber() {
-            return passNumber;
-        }
-
-        public long getExecutionTimeMs() {
-            return executionTimeMs;
-        }
-
-        public LocalDateTime getTimestamp() {
-            return timestamp;
+            this(inspectorName, phase, passNumber, executionTimeMs, LocalDateTime.now());
         }
     }
 
@@ -105,8 +60,6 @@ public class ExecutionProfile {
     private final List<InspectorExecution> executions;
     private final LocalDateTime analysisStartTime;
     private LocalDateTime analysisEndTime;
-
-    // Analysis metrics
     private int totalPasses = 0;
     private int totalFilesProcessed = 0;
 
@@ -114,105 +67,64 @@ public class ExecutionProfile {
         this.registeredInspectors = new HashSet<>(availableInspectors);
         this.executions = new ArrayList<>();
         this.analysisStartTime = LocalDateTime.now();
-
         logger.info("ExecutionProfile initialized with {} available inspectors", availableInspectors.size());
     }
 
-    /**
-     * Records an inspector execution in Phase 1 (file detection/extraction).
-     * 
-     * @param executionTimeNs execution time in nanoseconds (will be converted to
-     *                        milliseconds for storage and display)
-     */
     public void recordInspectorExecution(String inspectorName, ExecutionPhase phase, long executionTimeNs) {
         recordInspectorExecution(inspectorName, phase, null, executionTimeNs);
     }
 
-    /**
-     * Records an inspector execution in Phase 2 (analysis) with pass tracking.
-     * 
-     * @param executionTimeNs execution time in nanoseconds (will be converted to
-     *                        milliseconds for storage and display)
-     */
     public void recordInspectorExecution(String inspectorName, ExecutionPhase phase, int passNumber,
             long executionTimeNs) {
         recordInspectorExecution(inspectorName, phase, Integer.valueOf(passNumber), executionTimeNs);
     }
 
-    /**
-     * Records an inspector execution with full details.
-     * 
-     * @param executionTimeNs execution time in nanoseconds (will be converted to
-     *                        milliseconds for storage and display)
-     */
     private void recordInspectorExecution(String inspectorName, ExecutionPhase phase, Integer passNumber,
             long executionTimeNs) {
-        // Convert nanoseconds to milliseconds for storage and display
         long executionTimeMs = executionTimeNs / 1_000_000;
-        InspectorExecution execution = new InspectorExecution(inspectorName, phase, passNumber, executionTimeMs);
-        executions.add(execution);
-
+        executions.add(new InspectorExecution(inspectorName, phase, passNumber, executionTimeMs));
         logger.debug("Recorded execution: {} in {} ({}ms)", inspectorName,
                 phase.getShortName() + (passNumber != null ? " Pass " + passNumber : ""), executionTimeMs);
     }
 
-    /**
-     * Sets analysis completion metrics.
-     */
     public void setAnalysisMetrics(int totalPasses, int totalFiles) {
         this.totalPasses = totalPasses;
         this.totalFilesProcessed = totalFiles;
     }
 
-    /**
-     * Marks analysis as complete and finalizes timing.
-     */
     public void markAnalysisComplete() {
         this.analysisEndTime = LocalDateTime.now();
         logger.info("ExecutionProfile analysis completed with {} executions recorded", executions.size());
     }
 
-    /**
-     * Generates comprehensive execution report.
-     */
     public ExecutionReport generateReport() {
         return new ExecutionReport();
     }
 
-    /**
-     * Logs the comprehensive execution report.
-     */
     public void logReport() {
-        ExecutionReport report = generateReport();
-        report.logReport();
+        generateReport().logReport();
     }
 
     /**
      * Comprehensive execution report with formatted output.
      */
     public class ExecutionReport {
-
         private final Map<String, List<InspectorExecution>> executionsByInspector;
         private final Set<String> executedInspectors;
         private final Set<String> unusedInspectors;
         private final Duration analysisDuration;
 
         public ExecutionReport() {
-            // Group executions by inspector
             this.executionsByInspector = executions.stream()
-                    .collect(Collectors.groupingBy(InspectorExecution::getInspectorName));
-
+                    .collect(Collectors.groupingBy(InspectorExecution::inspectorName));
             this.executedInspectors = executionsByInspector.keySet();
             this.unusedInspectors = new HashSet<>(registeredInspectors);
             this.unusedInspectors.removeAll(executedInspectors);
-
-            this.analysisDuration = analysisEndTime != null ? Duration.between(analysisStartTime, analysisEndTime)
+            this.analysisDuration = analysisEndTime != null
+                    ? Duration.between(analysisStartTime, analysisEndTime)
                     : Duration.ZERO;
         }
 
-        /**
-         * Logs the complete execution report.
-         */
         public void logReport() {
             logger.info("=== EXECUTION PROFILE REPORT ===");
             logAnalysisSummary();
@@ -224,8 +136,8 @@ public class ExecutionProfile {
         }
 
         private void logAnalysisSummary() {
-            String durationStr = formatDuration(analysisDuration);
-            logger.info("Analysis Duration: {} ({} seconds)", durationStr, analysisDuration.getSeconds());
+            logger.info("Analysis Duration: {} ({} seconds)", formatDuration(analysisDuration),
+                    analysisDuration.getSeconds());
             logger.info("Total Passes: {}", totalPasses);
             logger.info("Total Files Processed: {}", String.format("%,d", totalFilesProcessed));
             logger.info("");
@@ -233,123 +145,89 @@ public class ExecutionProfile {
 
         private void logInspectorExecutionSummary() {
             logger.info("Inspector Execution Summary:");
-
-            // Calculate column widths
             int nameWidth = Math.max(35, registeredInspectors.stream().mapToInt(String::length).max().orElse(35));
 
-            // Print header with simple ASCII characters
-            String headerFormat = "+" + "-".repeat(nameWidth + 2)
-                    + "+" + "-".repeat(10) + "+" + "-".repeat(13) + "+" + "-".repeat(15) + "+" + "-".repeat(13) + "+"
-                    + "-".repeat(17) + "+";
-            logger.info(headerFormat);
-
-            // Print title row using String.format
+            // Table structure
+            int[] columnWidths = { nameWidth + 2, 10, 13, 15, 13, 17 };
+            String border = buildTableBorder(columnWidths);
             String titleFormat = "| %-" + nameWidth + "s | %-8s | %-11s | %-13s | %-11s | %-15s |";
-            String titleRow = String.format(titleFormat, "Inspector Name", "Status", "Executions", "Avg Time (ms)",
-                    "Total (ms)", "Phase(s)");
-            logger.info(titleRow);
 
-            String separatorFormat = "+" + "-".repeat(nameWidth + 2)
-                    + "+" + "-".repeat(10) + "+" + "-".repeat(13) + "+" + "-".repeat(15) + "+" + "-".repeat(13) + "+"
-                    + "-".repeat(17) + "+";
-            logger.info(separatorFormat);
+            logger.info(border);
+            logger.info(String.format(titleFormat, "Inspector Name", "Status", "Executions",
+                    "Avg Time (ms)", "Total (ms)", "Phase(s)"));
+            logger.info(border);
 
-            // Sort inspectors: executed first (alphabetically), then unused
-            // (alphabetically)
-            List<String> sortedInspectors = new ArrayList<>();
-            sortedInspectors.addAll(executedInspectors.stream().sorted().collect(Collectors.toList()));
-            sortedInspectors.addAll(unusedInspectors.stream().sorted().collect(Collectors.toList()));
-
-            // Print each inspector row using String.format
-            String rowFormat = "| %-" + nameWidth + "s | %-8s | %-11s | %-13s | %-11s | %-15s |";
+            // Sort and display inspectors
+            List<String> sortedInspectors = Stream.concat(
+                    executedInspectors.stream().sorted(),
+                    unusedInspectors.stream().sorted()).toList();
 
             for (String inspectorName : sortedInspectors) {
                 if (executedInspectors.contains(inspectorName)) {
-                    List<InspectorExecution> inspectorExecutions = executionsByInspector.get(inspectorName);
-                    int executionCount = inspectorExecutions.size();
-                    double avgTime = inspectorExecutions.stream().mapToLong(InspectorExecution::getExecutionTimeMs)
-                            .average().orElse(0.0);
-                    long totalTime = inspectorExecutions.stream().mapToLong(InspectorExecution::getExecutionTimeMs)
-                            .sum();
-                    String phases = formatInspectorPhases(inspectorExecutions);
-
-                    String row = String.format(rowFormat,
-                            truncate(inspectorName, nameWidth),
-                            "EXECUTED",
-                            String.format("%,d", executionCount),
-                            String.format("%.1f", avgTime),
-                            String.format("%,d", totalTime),
-                            truncate(phases, 15));
-                    logger.info(row);
+                    logExecutedInspector(inspectorName, nameWidth, titleFormat);
                 } else {
-                    String row = String.format(rowFormat,
-                            truncate(inspectorName, nameWidth),
-                            "UNUSED",
-                            "0",
-                            "N/A",
-                            "0",
-                            "-");
-                    logger.info(row);
+                    logger.info(String.format(titleFormat, truncate(inspectorName, nameWidth),
+                            "UNUSED", "0", "N/A", "0", "-"));
                 }
             }
 
-            String footerFormat = "+" + "-".repeat(nameWidth + 2)
-                    + "+" + "-".repeat(10) + "+" + "-".repeat(13) + "+" + "-".repeat(15) + "+" + "-".repeat(13) + "+"
-                    + "-".repeat(17) + "+";
-            logger.info(footerFormat);
+            logger.info(border);
             logger.info("");
+        }
+
+        private void logExecutedInspector(String inspectorName, int nameWidth, String format) {
+            List<InspectorExecution> inspectorExecutions = executionsByInspector.get(inspectorName);
+            double avgTime = inspectorExecutions.stream()
+                    .mapToLong(InspectorExecution::executionTimeMs).average().orElse(0.0);
+            long totalTime = inspectorExecutions.stream()
+                    .mapToLong(InspectorExecution::executionTimeMs).sum();
+
+            logger.info(String.format(format,
+                    truncate(inspectorName, nameWidth),
+                    "EXECUTED",
+                    String.format("%,d", inspectorExecutions.size()),
+                    String.format("%.1f", avgTime),
+                    String.format("%,d", totalTime),
+                    truncate(formatInspectorPhases(inspectorExecutions), 15)));
         }
 
         private void logPerformanceAnalysis() {
             if (executions.isEmpty()) {
-                logger.info("Performance Analysis: No executions recorded");
-                logger.info("");
+                logger.info("Performance Analysis: No executions recorded\n");
                 return;
             }
 
             logger.info("Performance Analysis:");
+            double overallAvgTime = executions.stream()
+                    .mapToLong(InspectorExecution::executionTimeMs).average().orElse(0.0);
 
-            long totalExecutions = executions.size();
-            double overallAvgTime = executions.stream().mapToLong(InspectorExecution::getExecutionTimeMs).average()
-                    .orElse(0.0);
-
-            // Find slowest and fastest inspectors
             Map<String, Double> avgTimesByInspector = executionsByInspector.entrySet().stream()
-                    .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            entry -> entry.getValue().stream().mapToLong(InspectorExecution::getExecutionTimeMs)
+                    .collect(Collectors.toMap(Map.Entry::getKey,
+                            e -> e.getValue().stream().mapToLong(InspectorExecution::executionTimeMs)
                                     .average().orElse(0.0)));
 
-            Optional<Map.Entry<String, Double>> slowest = avgTimesByInspector.entrySet().stream()
-                    .max(Map.Entry.comparingByValue());
-            Optional<Map.Entry<String, Double>> fastest = avgTimesByInspector.entrySet().stream()
-                    .min(Map.Entry.comparingByValue());
-
-            logger.info("• Total Inspector Executions: {}", String.format("%,d", totalExecutions));
+            logger.info("• Total Inspector Executions: {}", String.format("%,d", executions.size()));
             logger.info("• Average Execution Time: {}", String.format("%.1fms", overallAvgTime));
 
-            if (slowest.isPresent()) {
-                logger.info("• Slowest Inspector: {} (avg: {})", slowest.get().getKey(),
-                        String.format("%.1fms", slowest.get().getValue()));
-            }
-            if (fastest.isPresent()) {
-                logger.info("• Fastest Inspector: {} (avg: {})", fastest.get().getKey(),
-                        String.format("%.1fms", fastest.get().getValue()));
-            }
-
+            avgTimesByInspector.entrySet().stream().max(Map.Entry.comparingByValue())
+                    .ifPresent(e -> logger.info("• Slowest Inspector: {} (avg: {})",
+                            e.getKey(), String.format("%.1fms", e.getValue())));
+            avgTimesByInspector.entrySet().stream().min(Map.Entry.comparingByValue())
+                    .ifPresent(e -> logger.info("• Fastest Inspector: {} (avg: {})",
+                            e.getKey(), String.format("%.1fms", e.getValue())));
             logger.info("");
         }
 
         private void logUtilizationAnalysis() {
             int totalInspectors = registeredInspectors.size();
             int executedCount = executedInspectors.size();
-            int unusedCount = unusedInspectors.size();
             double utilizationRate = totalInspectors > 0 ? (executedCount * 100.0) / totalInspectors : 0.0;
 
             logger.info("Utilization Analysis:");
             logger.info("• Total Available Inspectors: {}", totalInspectors);
             logger.info("• Executed Inspectors: {} ({})", executedCount, String.format("%.1f%%", utilizationRate));
-            logger.info("• Unused Inspectors: {} ({})", unusedCount, String.format("%.1f%%", 100.0 - utilizationRate));
+            logger.info("• Unused Inspectors: {} ({})", unusedInspectors.size(),
+                    String.format("%.1f%%", 100.0 - utilizationRate));
             logger.info("");
         }
 
@@ -357,70 +235,52 @@ public class ExecutionProfile {
             if (unusedInspectors.isEmpty()) {
                 logger.info("Unused Inspectors: None - all inspectors were utilized!");
             } else {
-                List<String> sortedUnused = unusedInspectors.stream().sorted().collect(Collectors.toList());
                 logger.info("Unused Inspectors:");
-                logger.info("[{}]", String.join(", ", sortedUnused));
+                logger.info("[{}]", String.join(", ", unusedInspectors.stream().sorted().toList()));
             }
         }
 
         private String formatInspectorPhases(List<InspectorExecution> inspectorExecutions) {
-            if (inspectorExecutions.isEmpty()) {
+            if (inspectorExecutions.isEmpty())
                 return "-";
-            }
 
-            // Group executions by phase and collect pass numbers
             Map<ExecutionPhase, Set<Integer>> phasePassMap = new LinkedHashMap<>();
-
             for (InspectorExecution execution : inspectorExecutions) {
-                ExecutionPhase phase = execution.getPhase();
-                Integer passNumber = execution.getPassNumber();
-
-                phasePassMap.computeIfAbsent(phase, k -> new TreeSet<>());
-                if (passNumber != null) {
-                    phasePassMap.get(phase).add(passNumber);
+                phasePassMap.computeIfAbsent(execution.phase(), k -> new TreeSet<>());
+                if (execution.passNumber() != null) {
+                    phasePassMap.get(execution.phase()).add(execution.passNumber());
                 }
             }
 
-            // Sort phases and format for display with pass numbers
-            List<String> phaseStrings = phasePassMap.entrySet().stream()
+            return phasePassMap.entrySet().stream()
                     .sorted(Map.Entry.comparingByKey())
                     .map(entry -> {
-                        ExecutionPhase phase = entry.getKey();
+                        String phaseName = entry.getKey().getShortName();
                         Set<Integer> passes = entry.getValue();
-
-                        if (passes.isEmpty()) {
-                            // Phase without pass numbers (e.g., Phase 1)
-                            return phase.getShortName();
-                        } else {
-                            // Phase with pass numbers (e.g., "Phase 4 Pass 1, Pass 2")
-                            String passStr = passes.stream()
-                                    .map(p -> "Pass " + p)
-                                    .collect(Collectors.joining(", "));
-                            return phase.getShortName() + " " + passStr;
-                        }
+                        if (passes.isEmpty())
+                            return phaseName;
+                        return phaseName + " " + passes.stream()
+                                .map(p -> "Pass " + p).collect(Collectors.joining(", "));
                     })
-                    .collect(Collectors.toList());
-
-            return String.join("; ", phaseStrings);
+                    .collect(Collectors.joining("; "));
         }
 
         private String formatDuration(Duration duration) {
             long hours = duration.toHours();
             long minutes = duration.toMinutesPart();
             long seconds = duration.toSecondsPart();
+            return hours > 0 ? String.format("%02d:%02d:%02d", hours, minutes, seconds)
+                    : String.format("%02d:%02d", minutes, seconds);
+        }
 
-            if (hours > 0) {
-                return String.format("%02d:%02d:%02d", hours, minutes, seconds);
-            } else {
-                return String.format("%02d:%02d", minutes, seconds);
-            }
+        private String buildTableBorder(int[] columnWidths) {
+            return Arrays.stream(columnWidths)
+                    .mapToObj(w -> "+" + "-".repeat(w))
+                    .collect(Collectors.joining()) + "+";
         }
 
         private String truncate(String str, int maxLength) {
-            if (str.length() <= maxLength) {
-                return str;
-            }
-            return str.substring(0, maxLength - 3) + "...";
+            return str.length() <= maxLength ? str : str.substring(0, maxLength - 3) + "...";
         }
 
         // Getters for programmatic access

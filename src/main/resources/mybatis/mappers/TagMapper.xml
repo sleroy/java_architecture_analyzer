@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.analyzer.core.db.mapper.TagMapper">
+
+    <!-- Result Map -->
+    <resultMap id="TagResultMap" type="NodeTag">
+        <result property="nodeId" column="node_id"/>
+        <result property="tag" column="tag"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <!-- Insert Tag - Using MERGE to handle duplicates -->
+    <insert id="insertTag" parameterType="NodeTag">
+        MERGE INTO node_tags (node_id, tag, created_at)
+        KEY(node_id, tag)
+        VALUES (#{nodeId}, #{tag}, CURRENT_TIMESTAMP)
+    </insert>
+
+    <!-- Insert Tags Batch - Using MERGE to handle duplicates -->
+    <insert id="insertTags">
+        MERGE INTO node_tags (node_id, tag, created_at)
+        KEY(node_id, tag)
+        VALUES
+        <foreach collection="tags" item="tag" separator=",">
+            (#{tag.nodeId}, #{tag.tag}, CURRENT_TIMESTAMP)
+        </foreach>
+    </insert>
+
+    <!-- Find by Node ID -->
+    <select id="findByNodeId" parameterType="string" resultMap="TagResultMap">
+        SELECT node_id, tag, created_at
+        FROM node_tags
+        WHERE node_id = #{nodeId}
+        ORDER BY tag
+    </select>
+
+    <!-- Find by Tag -->
+    <select id="findByTag" parameterType="string" resultMap="TagResultMap">
+        SELECT node_id, tag, created_at
+        FROM node_tags
+        WHERE tag = #{tag}
+        ORDER BY node_id
+    </select>
+
+    <!-- Find All Unique Tags -->
+    <select id="findAllUniqueTags" resultType="string">
+        SELECT DISTINCT tag
+        FROM node_tags
+        ORDER BY tag
+    </select>
+
+    <!-- Has Tag -->
+    <select id="hasTag" resultType="boolean">
+        SELECT COUNT(*) > 0
+        FROM node_tags
+        WHERE node_id = #{nodeId} AND tag = #{tag}
+    </select>
+
+    <!-- Delete Tag -->
+    <delete id="deleteTag">
+        DELETE FROM node_tags
+        WHERE node_id = #{nodeId} AND tag = #{tag}
+    </delete>
+
+    <!-- Delete by Node ID -->
+    <delete id="deleteByNodeId" parameterType="string">
+        DELETE FROM node_tags WHERE node_id = #{nodeId}
+    </delete>
+
+    <!-- Delete All -->
+    <delete id="deleteAll">
+        DELETE FROM node_tags
+    </delete>
+
+    <!-- Count Tags -->
+    <select id="countTags" resultType="int">
+        SELECT COUNT(*) FROM node_tags
+    </select>
+
+    <!-- Count Nodes with Tag -->
+    <select id="countNodesWithTag" parameterType="string" resultType="int">
+        SELECT COUNT(DISTINCT node_id) FROM node_tags WHERE tag = #{tag}
+    </select>
+
+</mapper>

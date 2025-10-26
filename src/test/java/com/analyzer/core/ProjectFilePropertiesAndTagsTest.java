@@ -44,7 +44,7 @@ public class ProjectFilePropertiesAndTagsTest {
 
         // Test actual Integer value
         projectFile.setProperty("intValue", 42);
-        assertEquals(42, projectFile.getProperty("intValue"));
+        assertEquals(42, (Integer) projectFile.getProperty("intValue"));
     }
 
     @Test
@@ -54,7 +54,7 @@ public class ProjectFilePropertiesAndTagsTest {
 
         // Test actual Long value
         projectFile.setProperty("longValue", 123456789L);
-        assertEquals(123456789L, projectFile.getProperty("longValue"));
+        assertEquals(123456789L, (Long) projectFile.getProperty("longValue"));
     }
 
     @Test
@@ -115,7 +115,7 @@ public class ProjectFilePropertiesAndTagsTest {
         // Test retrieval with getProperty and hasTag
         assertEquals("InventoryExample", projectFile.getProperty("java.className"));
         assertEquals("com.example", projectFile.getProperty("java.packageName"));
-        assertEquals(150, projectFile.getProperty("java.lineCount"));
+        assertEquals(150, (Integer) projectFile.getProperty("java.lineCount"));
         assertTrue(projectFile.hasTag("java.hasMainMethod"));
         assertEquals(12.5, projectFile.getProperty("java.complexity"));
 

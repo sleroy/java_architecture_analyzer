@@ -127,8 +127,7 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
                     metrics.getTotalUniqueTypes(), loadedClass.getName());
 
         } catch (Exception e) {
-            logger.warn("Error analyzing type usage for class: {} - {}",
-                    loadedClass.getName(), e.getMessage());
+            logger.warn("Error analyzing type usage for class: {}", loadedClass.getName(), e);
             projectFileDecorator.error("Failed to analyze type usage: " + e.getMessage());
         }
     }
@@ -392,7 +391,8 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
 
         String fullyQualifiedName = (String) projectFile.getProperty("fullyQualifiedName");
         if (fullyQualifiedName == null) {
-            logger.warn("Could not find fullyQualifiedName for project file: {}", projectFile.getProperty("filePath"));
+            logger.warn("Could not find fullyQualifiedName for project file: {}",
+                    (Object) projectFile.getProperty("filePath"));
             return;
         }
 

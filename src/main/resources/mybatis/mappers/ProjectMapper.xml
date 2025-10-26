@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.analyzer.core.db.mapper.ProjectMapper">
+
+    <!-- Result Map -->
+    <resultMap id="ProjectResultMap" type="Project">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="rootPath" column="root_path"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- Insert Project -->
+    <insert id="insertProject" parameterType="Project" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO projects (name, root_path, description, created_at, updated_at)
+        VALUES (#{name}, #{rootPath}, #{description}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <!-- Find by ID -->
+    <select id="findById" parameterType="long" resultMap="ProjectResultMap">
+        SELECT id, name, root_path, description, created_at, updated_at
+        FROM projects
+        WHERE id = #{id}
+    </select>
+
+    <!-- Find by Name -->
+    <select id="findByName" parameterType="string" resultMap="ProjectResultMap">
+        SELECT id, name, root_path, description, created_at, updated_at
+        FROM projects
+        WHERE name = #{name}
+    </select>
+
+    <!-- Find by Root Path -->
+    <select id="findByRootPath" parameterType="string" resultMap="ProjectResultMap">
+        SELECT id, name, root_path, description, created_at, updated_at
+        FROM projects
+        WHERE root_path = #{rootPath}
+    </select>
+
+    <!-- Find All -->
+    <select id="findAll" resultMap="ProjectResultMap">
+        SELECT id, name, root_path, description, created_at, updated_at
+        FROM projects
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- Update Project -->
+    <update id="updateProject" parameterType="Project">
+        UPDATE projects
+        SET name = #{name},
+            root_path = #{rootPath},
+            description = #{description},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <!-- Delete Project -->
+    <delete id="deleteProject" parameterType="long">
+        DELETE FROM projects WHERE id = #{id}
+    </delete>
+
+    <!-- Delete All -->
+    <delete id="deleteAll">
+        DELETE FROM projects
+    </delete>
+
+    <!-- Count Projects -->
+    <select id="countProjects" resultType="int">
+        SELECT COUNT(*) FROM projects
+    </select>
+
+</mapper>

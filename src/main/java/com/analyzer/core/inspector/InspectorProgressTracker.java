@@ -1,5 +1,4 @@
 package com.analyzer.core.inspector;
-import com.analyzer.core.inspector.InspectorDependencies;
 
 import com.analyzer.core.model.ProjectFile;
 import org.slf4j.Logger;
@@ -226,30 +225,30 @@ public class InspectorProgressTracker {
      * Log a comprehensive report of inspector progress and processing order.
      */
     public void logProgressReport() {
-        logger.info("=== Inspector Progress Report ===");
+        logger.debug("=== Inspector Progress Report ===");
 
         ProgressSummary summary = getProgressSummary();
-        logger.info("Summary: {} inspectors triggered, {} total executions, tracking duration: {}",
+        logger.debug("Summary: {} inspectors triggered, {} total executions, tracking duration: {}",
                 summary.getTriggeredInspectorsCount(), summary.getTotalExecutions(), summary.getTrackingDuration());
 
         if (!firstTriggers.isEmpty()) {
-            logger.info("=== Inspector Processing Order (First-Time Triggers) ===");
-            getAllFirstTriggers().forEach(trigger -> logger.info("#{}: {} (first triggered on '{}')",
+            logger.debug("=== Inspector Processing Order (First-Time Triggers) ===");
+            getAllFirstTriggers().forEach(trigger -> logger.debug("#{}: {} (first triggered on '{}')",
                     trigger.getProcessingOrder(),
                     trigger.getInspectorName(),
                     trigger.getFirstProjectFilePath()));
         }
 
         if (!filesProcessedPerInspector.isEmpty()) {
-            logger.info("=== Files Processed Per Inspector (Top 10) ===");
+            logger.debug("=== Files Processed Per Inspector (Top 10) ===");
             filesProcessedPerInspector.entrySet().stream()
                     .sorted(Map.Entry.<String, AtomicInteger>comparingByValue(
                             (a, b) -> Integer.compare(b.get(), a.get())))
                     .limit(10)
-                    .forEach(entry -> logger.info("{}: {} files", entry.getKey(), entry.getValue().get()));
+                    .forEach(entry -> logger.debug("{}: {} files", entry.getKey(), entry.getValue().get()));
         }
 
-        logger.info("=== End Inspector Progress Report ===");
+        logger.debug("=== End Inspector Progress Report ===");
     }
 
     /**

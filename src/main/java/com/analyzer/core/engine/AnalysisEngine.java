@@ -72,8 +72,6 @@ public class AnalysisEngine {
         this.progressTracker = progressTracker != null ? progressTracker : new InspectorProgressTracker();
     }
 
-
-
     /**
      * Sets the analyses to execute on the project.
      * This should be called after getting the AnalysisEngine from PicoContainer
@@ -105,7 +103,6 @@ public class AnalysisEngine {
 
         // Step 1: Try to reload existing project data for incremental analysis
         Project project = loadExistingProjectOrCreate(projectPath);
-
 
         // PHASE 1: File Discovery with Ignore Filtering
         logger.info("=== PHASE 1: File Discovery with Filtering ===");
@@ -256,7 +253,7 @@ public class AnalysisEngine {
                 // Record failed execution in ExecutionProfile
                 if (executionProfile != null) {
                     executionProfile.recordInspectorExecution(detector.getName(), phase, 0); // 0 time for failed
-                                                                                              // execution
+                                                                                             // execution
                 }
             }
         }
@@ -265,26 +262,15 @@ public class AnalysisEngine {
     }
 
     /**
-     * Checks if a ProjectFile represents a JAR-like archive.
+     * Checks if a ProjectFile represents an archive (JAR/WAR/EAR/ZIP).
      */
-    private boolean isJarFile(ProjectFile file) {
+    private boolean isArchiveFile(ProjectFile file) {
         if (file == null || file.getFileName() == null) {
             return false;
         }
-
         String fileName = file.getFileName().toLowerCase();
-        return fileName.endsWith(".jar") ||
-                fileName.endsWith(".war") ||
-                fileName.endsWith(".ear") ||
-                fileName.endsWith(".zip");
-    }
-
-    /**
-     * Checks if a ProjectFile represents an archive (same as isJarFile, renamed for
-     * clarity).
-     */
-    private boolean isArchiveFile(ProjectFile file) {
-        return isJarFile(file);
+        return fileName.endsWith(".jar") || fileName.endsWith(".war") ||
+                fileName.endsWith(".ear") || fileName.endsWith(".zip");
     }
 
     /**
@@ -500,11 +486,11 @@ public class AnalysisEngine {
         logger.info("Phase 4: Executing {} inspectors on {} class nodes (max passes: {})",
                 inspectors.size(), classNodes.size(), maxPasses);
 
-        // Initialize execution profile for Phase 4 tracking
-        ExecutionProfile executionProfile = new ExecutionProfile(
-                inspectors.stream()
-                        .map(Inspector::getName)
-                        .toList());
+        // Initialize execution profile for Phase 4 - only track ClassNode inspectors
+        List<String> phase4InspectorNames = inspectors.stream()
+                .map(Inspector::getName)
+                .toList();
+        ExecutionProfile executionProfile = new ExecutionProfile(phase4InspectorNames);
 
         int pass = 1;
         boolean hasChanges = true;
@@ -611,9 +597,9 @@ public class AnalysisEngine {
                         NodeDecorator<com.analyzer.core.graph.JavaClassNode> decorator = new NodeDecorator<>(classNode);
                         inspector.inspect(classNode, decorator);
 
-                        // Record execution timing in ExecutionProfile
+                        // Record execution timing in ExecutionProfile with pass number
                         long executionTimeNanos = System.nanoTime() - startTime;
-                        executionProfile.recordInspectorExecution(inspectorName, phase, executionTimeNanos);
+                        executionProfile.recordInspectorExecution(inspectorName, phase, pass, executionTimeNanos);
 
                         logger.debug("Inspector '{}' executed on class: {}", inspectorName,
                                 classNode.getFullyQualifiedName());
@@ -658,8 +644,11 @@ public class AnalysisEngine {
         logger.info("Phase 3: Executing {} inspectors on {} project files (max passes: {})",
                 inspectors.size(), project.getProjectFiles().size(), maxPasses);
 
-        // Initialize execution profile for comprehensive tracking
-        ExecutionProfile executionProfile = new ExecutionProfile(inspectorRegistry.getInspectorNames());
+        // Initialize execution profile for Phase 3 - only track ProjectFile inspectors
+        List<String> phase3InspectorNames = inspectors.stream()
+                .map(Inspector::getName)
+                .toList();
+        ExecutionProfile executionProfile = new ExecutionProfile(phase3InspectorNames);
 
         // Print list of available inspectors by name during Phase 3
         logger.info("=== Available Inspectors ===");
@@ -745,22 +734,7 @@ public class AnalysisEngine {
      * Result of analyzing a ProjectFile - contains processing status and triggered
      * inspectors.
      */
-    private static class ProjectFileAnalysisResult {
-        private final boolean wasProcessed;
-        private final Set<String> triggeredInspectors;
-
-        public ProjectFileAnalysisResult(boolean wasProcessed, Set<String> triggeredInspectors) {
-            this.wasProcessed = wasProcessed;
-            this.triggeredInspectors = new HashSet<>(triggeredInspectors);
-        }
-
-        public boolean wasProcessed() {
-            return wasProcessed;
-        }
-
-        public Set<String> getTriggeredInspectors() {
-            return triggeredInspectors;
-        }
+    private record ProjectFileAnalysisResult(boolean wasProcessed, Set<String> triggeredInspectors) {
     }
 
     /**
@@ -782,7 +756,7 @@ public class AnalysisEngine {
             int pass) {
         ProjectFileAnalysisResult result = analyzeProjectFileInternal(projectFile, inspectors, passStartTime, true,
                 executionProfile, pass);
-        return result.getTriggeredInspectors();
+        return result.triggeredInspectors();
     }
 
     /**
@@ -839,10 +813,10 @@ public class AnalysisEngine {
 
                         executeInspector(projectFile, inspector);
 
-                        // Record execution timing in ExecutionProfile
+                        // Record execution timing in ExecutionProfile with pass number
                         if (executionProfile != null) {
                             long executionTimeNanos = System.nanoTime() - startTime;
-                            executionProfile.recordInspectorExecution(inspectorName, phase, executionTimeNanos);
+                            executionProfile.recordInspectorExecution(inspectorName, phase, pass, executionTimeNanos);
                         }
 
                         logger.debug("Inspector '{}' executed on file: {}", inspectorName,
@@ -896,7 +870,6 @@ public class AnalysisEngine {
         inspector.inspect(projectFile, decorator);
     }
 
-
     private void executeDetector(ProjectFile projectFile, FileDetector fileDetector) {
         // Record fileDetector trigger for progress tracking
         progressTracker.recordInspectorTrigger(fileDetector.getName(), projectFile);
@@ -905,7 +878,7 @@ public class AnalysisEngine {
         // No need for manual injection anymore
 
         NodeDecorator<ProjectFile> decorator = new NodeDecorator<>(projectFile);
-        fileDetector.detect( decorator);
+        fileDetector.detect(decorator);
     }
 
     /**

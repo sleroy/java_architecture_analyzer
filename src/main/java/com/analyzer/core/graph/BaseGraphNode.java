@@ -1,11 +1,6 @@
 package com.analyzer.core.graph;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -96,7 +91,7 @@ public abstract class BaseGraphNode implements GraphNode {
      * @param defaultValue Default value if property is missing
      * @return Property value or default
      */
-    protected String getStringProperty(String key, String defaultValue) {
+    public String getStringProperty(String key, String defaultValue) {
         return getProperty(key, String.class, defaultValue);
     }
 
@@ -118,7 +113,7 @@ public abstract class BaseGraphNode implements GraphNode {
      * @param defaultValue Default value if property is missing
      * @return Property value or default
      */
-    protected int getIntProperty(String key, int defaultValue) {
+    public int getIntProperty(String key, int defaultValue) {
         return getProperty(key, Integer.class, defaultValue);
     }
 
@@ -128,7 +123,7 @@ public abstract class BaseGraphNode implements GraphNode {
      * @param key Property key
      * @return true if property exists and is not null
      */
-    protected boolean hasProperty(String key) {
+    public boolean hasProperty(String key) {
         return properties.containsKey(key) && properties.get(key) != null;
     }
 
@@ -137,7 +132,7 @@ public abstract class BaseGraphNode implements GraphNode {
      *
      * @return Set of property keys
      */
-    protected java.util.Set<String> getPropertyKeys() {
+    public java.util.Set<String> getPropertyKeys() {
         return new java.util.HashSet<>(properties.keySet());
     }
 
@@ -193,5 +188,11 @@ public abstract class BaseGraphNode implements GraphNode {
     @Override
     public void removeTag(String tag) {
         this.tags.remove(tag);
+    }
+
+    public boolean hasAllTags(String[] tags) {
+        if (tags == null || tags.length == 0)
+            return true;
+        return Arrays.stream(tags).allMatch(this::hasTag);
     }
 }

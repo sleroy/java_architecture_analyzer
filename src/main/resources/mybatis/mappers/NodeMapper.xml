@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.analyzer.core.db.mapper.NodeMapper">
+
+    <!-- Result Map -->
+    <resultMap id="NodeResultMap" type="GraphNode">
+        <id property="id" column="id"/>
+        <result property="nodeType" column="node_type"/>
+        <result property="displayLabel" column="display_label"/>
+        <result property="properties" column="properties"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- Insert Node -->
+    <insert id="insertNode" parameterType="GraphNode">
+        INSERT INTO nodes (id, node_type, display_label, properties, created_at, updated_at)
+        VALUES (#{id}, #{nodeType}, #{displayLabel}, #{properties}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <!-- Merge Node (Insert or Update) -->
+    <insert id="mergeNode" parameterType="GraphNode">
+        MERGE INTO nodes (id, node_type, display_label, properties, created_at, updated_at)
+        KEY(id)
+        VALUES (#{id}, #{nodeType}, #{displayLabel}, #{properties}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <!-- Merge Properties using JSON_MERGEPATCH -->
+    <update id="mergeProperties">
+        UPDATE nodes
+        SET properties = JSON_MERGEPATCH(properties, #{propertiesPatch}),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{nodeId}
+    </update>
+
+    <!-- Find by ID -->
+    <select id="findById" parameterType="string" resultMap="NodeResultMap">
+        SELECT id, node_type, display_label, properties, created_at, updated_at
+        FROM nodes
+        WHERE id = #{id}
+    </select>
+
+    <!-- Find by Type -->
+    <select id="findByType" parameterType="string" resultMap="NodeResultMap">
+        SELECT id, node_type, display_label, properties, created_at, updated_at
+        FROM nodes
+        WHERE node_type = #{nodeType}
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- Find by JSON Property Value -->
+    <select id="findByPropertyValue" resultMap="NodeResultMap">
+        SELECT id, node_type, display_label, properties, created_at, updated_at
+        FROM nodes
+        WHERE JSON_VALUE(properties, #{jsonPath}) = #{value}
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- Find All -->
+    <select id="findAll" resultMap="NodeResultMap">
+        SELECT id, node_type, display_label, properties, created_at, updated_at
+        FROM nodes
+        ORDER BY node_type, created_at DESC
+    </select>
+
+    <!-- Update Node -->
+    <update id="updateNode" parameterType="GraphNode">
+        UPDATE nodes
+        SET node_type = #{nodeType},
+            display_label = #{displayLabel},
+            properties = #{properties},
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <!-- Delete Node -->
+    <delete id="deleteNode" parameterType="string">
+        DELETE FROM nodes WHERE id = #{id}
+    </delete>
+
+    <!-- Delete All Nodes -->
+    <delete id="deleteAll">
+        DELETE FROM nodes
+    </delete>
+
+    <!-- Count Nodes -->
+    <select id="countNodes" resultType="int">
+        SELECT COUNT(*) FROM nodes
+    </select>
+
+    <!-- Count by Type -->
+    <select id="countByType" parameterType="string" resultType="int">
+        SELECT COUNT(*) FROM nodes WHERE node_type = #{nodeType}
+    </select>
+
+    <!-- Exists -->
+    <select id="exists" parameterType="string" resultType="boolean">
+        SELECT COUNT(*) > 0 FROM nodes WHERE id = #{id}
+    </select>
+
+</mapper>

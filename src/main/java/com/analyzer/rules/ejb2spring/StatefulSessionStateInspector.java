@@ -4,7 +4,6 @@ import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.graph.ProjectFileRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
-import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.FieldVisitor;
@@ -61,8 +60,7 @@ import java.util.*;
  * @see StatefulSessionStateInspector Original file-centric version
  */
 @InspectorDependencies(requires = {
-        EjbMigrationTags.EJB_STATEFUL_SESSION_BEAN,
-        InspectorTags.TAG_JAVA_IS_BINARY
+        EjbMigrationTags.EJB_STATEFUL_SESSION_BEAN
 }, produces = {
         EjbMigrationTags.STATEFUL_SESSION_STATE,
         EjbMigrationTags.CONVERSATIONAL_STATE,

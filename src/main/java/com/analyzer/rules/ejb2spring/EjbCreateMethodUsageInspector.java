@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
  * @since Phase 3 - Systematic Inspector Migration
  * @see EjbCreateMethodUsageInspector Original file-centric version
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = {
+@InspectorDependencies(requires = {  }, produces = {
         EjbMigrationTags.EJB_CREATE_METHOD,
         EjbMigrationTags.EJB_CREATE_METHOD_USAGE,
         EjbMigrationTags.EJB_HOME_INTERFACE,

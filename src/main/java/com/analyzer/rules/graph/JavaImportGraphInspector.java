@@ -218,15 +218,15 @@ public class JavaImportGraphInspector extends AbstractProjectFileInspector {
 
         private static String determineNodeType(String fqn) {
             if (fqn.startsWith("java.")) {
-                return "java_api_class";
+                return "java_class";
             } else if (fqn.startsWith("javax.")) {
-                return "javaee_api_class";
+                return "java_class";
             } else if (fqn.startsWith("org.springframework.")) {
-                return "spring_class";
+                return "java_class";
             } else if (fqn.startsWith("com.analyzer.")) {
-                return "project_class";
+                return "java_class";
             } else {
-                return "external_class";
+                return "java_class";
             }
         }
 

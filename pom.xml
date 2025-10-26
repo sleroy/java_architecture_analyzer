@@ -49,6 +49,10 @@
         <!-- Graph Storage System -->
         <jgrapht.version>1.5.2</jgrapht.version>
         <picocontainer.version>2.15</picocontainer.version>
+        
+        <!-- Database -->
+        <h2.version>2.2.224</h2.version>
+        <mybatis.version>3.5.19</mybatis.version>
     </properties>
 
     <!-- OpenRewrite + Spring recipes -->
@@ -172,6 +176,11 @@
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-jaxb-annotations</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-configuration2</artifactId>
             <version>${commons-configuration.version}</version>
@@ -199,6 +208,13 @@
             <artifactId>jaxb-runtime</artifactId>
             <version>${jaxb-runtime.version}</version>
         </dependency>
+        
+        <!-- JAXB API for Jackson JAXB module (javax.xml.bind namespace) -->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+        </dependency>
 
         <!-- Graph Storage System -->
         <dependency>
@@ -224,6 +240,19 @@
             <version>1</version>
         </dependency>
 
+        <!-- H2 Database -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>${h2.version}</version>
+        </dependency>
+        
+        <!-- MyBatis -->
+        <dependency>
+            <groupId>org.mybatis</groupId>
+            <artifactId>mybatis</artifactId>
+            <version>${mybatis.version}</version>
+        </dependency>
 
         <!-- Test Dependencies -->
         <dependency>

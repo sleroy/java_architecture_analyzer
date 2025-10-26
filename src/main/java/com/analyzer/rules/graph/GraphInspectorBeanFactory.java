@@ -8,6 +8,7 @@ public class GraphInspectorBeanFactory implements BeanFactory {
     public void registerBeans(MutablePicoContainer container) {
         container.addComponent(BinaryJavaClassNodeInspector.class);
         container.addComponent(BinaryJavaClassNodeInspectorV2.class);
+        container.addComponent(BinaryClassCouplingGraphInspector.class);
         container.addComponent(JavaImportGraphInspector.class);
         container.addComponent(SourceJavaClassNodeInspector.class);
     }

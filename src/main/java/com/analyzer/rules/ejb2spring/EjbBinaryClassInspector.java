@@ -4,7 +4,6 @@ import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.graph.JavaClassNode;
 import com.analyzer.core.graph.ProjectFileRepository;
 import com.analyzer.core.inspector.InspectorDependencies;
-import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.inspectors.core.binary.AbstractASMClassInspector;
 import com.analyzer.resource.ResourceResolver;
 import org.objectweb.asm.AnnotationVisitor;
@@ -63,7 +62,7 @@ import java.util.*;
  * @since Phase 3 - Systematic Inspector Migration (Replaced with class-centric
  *        architecture)
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_BINARY }, produces = {
+@InspectorDependencies(requires = {  }, produces = {
         EjbMigrationTags.EJB_BEAN_DETECTED,
         EjbMigrationTags.EJB_SESSION_BEAN,
         EjbMigrationTags.EJB_STATELESS_SESSION_BEAN,
