@@ -6,17 +6,24 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.analyzer</groupId>
-    <artifactId>java-architecture-analyzer</artifactId>
+    <artifactId>java-architecture-analyzer-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
 
-    <name>Java Architecture Analyzer - EJB to Spring Boot Migration Toolkit</name>
+    <name>Java Architecture Analyzer - Parent</name>
     <description>Static analysis and migration tool for Java applications with EJB-to-Spring Boot transformation capabilities</description>
 
+    <modules>
+        <module>analyzer-core</module>
+        <module>analyzer-inspectors</module>
+        <module>analyzer-ejb2spring</module>
+        <module>analyzer-app</module>
+    </modules>
+
     <properties>
-    <maven.compiler.source>21</maven.compiler.source>
-    <maven.compiler.target>21</maven.compiler.target>
-    <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         
@@ -55,9 +62,26 @@
         <mybatis.version>3.5.19</mybatis.version>
     </properties>
 
-    <!-- OpenRewrite + Spring recipes -->
     <dependencyManagement>
         <dependencies>
+            <!-- Internal Modules -->
+            <dependency>
+                <groupId>com.analyzer</groupId>
+                <artifactId>analyzer-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.analyzer</groupId>
+                <artifactId>analyzer-inspectors</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.analyzer</groupId>
+                <artifactId>analyzer-ejb2spring</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- OpenRewrite BOM -->
             <dependency>
                 <groupId>org.openrewrite</groupId>
                 <artifactId>rewrite-bom</artifactId>
@@ -65,230 +89,235 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <!-- CLI Framework -->
+            <dependency>
+                <groupId>info.picocli</groupId>
+                <artifactId>picocli</artifactId>
+                <version>${picocli.version}</version>
+            </dependency>
+
+            <!-- Binary Analysis Libraries -->
+            <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm</artifactId>
+                <version>${asm.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm-commons</artifactId>
+                <version>${asm.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.bcel</groupId>
+                <artifactId>bcel</artifactId>
+                <version>${bcel.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.javassist</groupId>
+                <artifactId>javassist</artifactId>
+                <version>${javassist.version}</version>
+            </dependency>
+
+            <!-- Source Code Parsing Libraries -->
+            <dependency>
+                <groupId>com.github.javaparser</groupId>
+                <artifactId>javaparser-core</artifactId>
+                <version>${javaparser.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.forge.roaster</groupId>
+                <artifactId>roaster-jdt</artifactId>
+                <version>${roaster.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.sonarsource.java</groupId>
+                <artifactId>sonar-java-plugin</artifactId>
+                <version>7.16.0.30901</version>
+            </dependency>
+
+            <!-- Utilities -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-csv</artifactId>
+                <version>${commons-csv.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.18.0</version>
+            </dependency>
+
+            <!-- Logging -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+
+            <!-- Progress Bar -->
+            <dependency>
+                <groupId>me.tongfei</groupId>
+                <artifactId>progressbar</artifactId>
+                <version>0.10.1</version>
+            </dependency>
+
+            <!-- AWS SDK for Bedrock Integration -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bedrockruntime</artifactId>
+                <version>2.21.29</version>
+            </dependency>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>auth</artifactId>
+                <version>2.21.29</version>
+            </dependency>
+            
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp</artifactId>
+                <version>${okhttp.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.module</groupId>
+                <artifactId>jackson-module-jaxb-annotations</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-configuration2</artifactId>
+                <version>${commons-configuration.version}</version>
+            </dependency>
+
+            <!-- OpenRewrite -->
+            <dependency>
+                <groupId>org.openrewrite.recipe</groupId>
+                <artifactId>rewrite-spring</artifactId>
+                <version>${rewrite-spring.version}</version>
+            </dependency>
+
+            <!-- XML Binding -->
+            <dependency>
+                <groupId>jakarta.xml.bind</groupId>
+                <artifactId>jakarta.xml.bind-api</artifactId>
+                <version>${jakarta-xml-bind.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-runtime</artifactId>
+                <version>${jaxb-runtime.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>2.3.1</version>
+            </dependency>
+
+            <!-- Graph Storage System -->
+            <dependency>
+                <groupId>org.jgrapht</groupId>
+                <artifactId>jgrapht-core</artifactId>
+                <version>${jgrapht.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jgrapht</groupId>
+                <artifactId>jgrapht-io</artifactId>
+                <version>${jgrapht.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.picocontainer</groupId>
+                <artifactId>picocontainer</artifactId>
+                <version>${picocontainer.version}</version>
+            </dependency>
+
+            <!-- Dependency Injection -->
+            <dependency>
+                <groupId>javax.inject</groupId>
+                <artifactId>javax.inject</artifactId>
+                <version>1</version>
+            </dependency>
+
+            <!-- Database -->
+            <dependency>
+                <groupId>com.h2database</groupId>
+                <artifactId>h2</artifactId>
+                <version>${h2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mybatis</groupId>
+                <artifactId>mybatis</artifactId>
+                <version>${mybatis.version}</version>
+            </dependency>
+
+            <!-- Test Dependencies -->
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-junit-jupiter</artifactId>
+                <version>${mockito.version}</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
-    <dependencies>
-        <!-- CLI Framework -->
-        <dependency>
-            <groupId>info.picocli</groupId>
-            <artifactId>picocli</artifactId>
-            <version>${picocli.version}</version>
-        </dependency>
-
-        <!-- Binary Analysis Libraries -->
-        <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm</artifactId>
-            <version>${asm.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm-commons</artifactId>
-            <version>${asm.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.bcel</groupId>
-            <artifactId>bcel</artifactId>
-            <version>${bcel.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.javassist</groupId>
-            <artifactId>javassist</artifactId>
-            <version>${javassist.version}</version>
-        </dependency>
-
-        <!-- Source Code Parsing Libraries -->
-        <dependency>
-            <groupId>com.github.javaparser</groupId>
-            <artifactId>javaparser-core</artifactId>
-            <version>${javaparser.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jboss.forge.roaster</groupId>
-            <artifactId>roaster-jdt</artifactId>
-            <version>${roaster.version}</version>
-        </dependency>
-        <!-- SonarSource Java parser - using sonar-java plugin instead -->
-        <dependency>
-            <groupId>org.sonarsource.java</groupId>
-            <artifactId>sonar-java-plugin</artifactId>
-            <version>7.16.0.30901</version>
-        </dependency>
-
-        <!-- Utilities -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-csv</artifactId>
-            <version>${commons-csv.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>3.18.0</version>
-        </dependency>
-
-        <!-- Logging -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>${logback.version}</version>
-        </dependency>
-
-        <!-- Progress Bar -->
-        <dependency>
-            <groupId>me.tongfei</groupId>
-            <artifactId>progressbar</artifactId>
-            <version>0.10.1</version>
-        </dependency>
-
-        <!-- AWS SDK for Bedrock Integration -->
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>bedrockruntime</artifactId>
-            <version>2.21.29</version>
-        </dependency>
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>auth</artifactId>
-            <version>2.21.29</version>
-        </dependency>
-        
-        <!-- Keep OkHttp as backup for custom integrations if needed -->
-        <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
-            <version>${okhttp.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.module</groupId>
-            <artifactId>jackson-module-jaxb-annotations</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-configuration2</artifactId>
-            <version>${commons-configuration.version}</version>
-        </dependency>
-
-        <!-- OpenRewrite for AST transformations -->
-        <dependency>
-            <groupId>org.openrewrite</groupId>
-            <artifactId>rewrite-java</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.openrewrite.recipe</groupId>
-            <artifactId>rewrite-spring</artifactId>
-            <version>${rewrite-spring.version}</version>
-        </dependency>
-
-        <!-- XML Binding for ejb-jar.xml parsing -->
-        <dependency>
-            <groupId>jakarta.xml.bind</groupId>
-            <artifactId>jakarta.xml.bind-api</artifactId>
-            <version>${jakarta-xml-bind.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish.jaxb</groupId>
-            <artifactId>jaxb-runtime</artifactId>
-            <version>${jaxb-runtime.version}</version>
-        </dependency>
-        
-        <!-- JAXB API for Jackson JAXB module (javax.xml.bind namespace) -->
-        <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-            <version>2.3.1</version>
-        </dependency>
-
-        <!-- Graph Storage System -->
-        <dependency>
-            <groupId>org.jgrapht</groupId>
-            <artifactId>jgrapht-core</artifactId>
-            <version>${jgrapht.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jgrapht</groupId>
-            <artifactId>jgrapht-io</artifactId>
-            <version>${jgrapht.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.picocontainer</groupId>
-            <artifactId>picocontainer</artifactId>
-            <version>${picocontainer.version}</version>
-        </dependency>
-
-        <!-- Dependency Injection annotations -->
-        <dependency>
-            <groupId>javax.inject</groupId>
-            <artifactId>javax.inject</artifactId>
-            <version>1</version>
-        </dependency>
-
-        <!-- H2 Database -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <version>${h2.version}</version>
-        </dependency>
-        
-        <!-- MyBatis -->
-        <dependency>
-            <groupId>org.mybatis</groupId>
-            <artifactId>mybatis</artifactId>
-            <version>${mybatis.version}</version>
-        </dependency>
-
-        <!-- Test Dependencies -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>${mockito.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <version>${mockito.version}</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
-
     <build>
-        <plugins>
-            <!-- Compiler Plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
-                <configuration>
-                    <!-- Use release to ensure proper cross-compilation target -->
-                    <release>${maven.compiler.release}</release>
-                    <encoding>UTF-8</encoding>
-                </configuration>
-            </plugin>
+        <pluginManagement>
+            <plugins>
+                <!-- Compiler Plugin -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.11.0</version>
+                    <configuration>
+                        <release>${maven.compiler.release}</release>
+                        <encoding>UTF-8</encoding>
+                    </configuration>
+                </plugin>
 
+                <!-- Surefire Plugin for Tests -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.2.2</version>
+                </plugin>
+
+                <!-- JAR Plugin -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.3.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <plugins>
             <!-- Enforce JDK version during build -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -310,77 +339,6 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
-
-            <!-- Surefire Plugin for Tests -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.2</version>
-            </plugin>
-
-            <!-- OpenRewrite executor -->
-            <plugin>
-                <groupId>org.openrewrite.maven</groupId>
-                <artifactId>rewrite-maven-plugin</artifactId>
-                <version>5.36.0</version>
-                <configuration>
-                    <activeRecipes>
-                        <!-- we'll activate from CLI, but keep defaults here -->
-                    </activeRecipes>
-                    <plainTextMasks>
-                        <plainTextMask>**/*.xml</plainTextMask>
-                        <plainTextMask>**/*.properties</plainTextMask>
-                        <plainTextMask>**/*.yml</plainTextMask>
-                    </plainTextMasks>
-                </configuration>
-            </plugin>
-
-
-            <!-- Application Assembler Plugin -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>appassembler-maven-plugin</artifactId>
-                <version>2.1.0</version>
-                <configuration>
-                    <programs>
-                        <program>
-                            <mainClass>com.analyzer.cli.AnalyzerCLI</mainClass>
-                            <id>java-architecture-analyzer</id>
-                        </program>
-                    </programs>
-                    <repositoryLayout>flat</repositoryLayout>
-                    <repositoryName>lib</repositoryName>
-                    <useWildcardClassPath>true</useWildcardClassPath>
-                    <extraJvmArguments>-Xmx2g -Xms512m -XX:+UseG1GC</extraJvmArguments>
-                    <binFileExtensions>
-                        <unix>.sh</unix>
-                    </binFileExtensions>
-                    <showConsoleWindow>false</showConsoleWindow>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>assemble</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>assemble</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- JAR Plugin -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.3.0</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>com.analyzer.cli.AnalyzerCLI</mainClass>
-                        </manifest>
-                    </archive>
-                </configuration>
             </plugin>
         </plugins>
     </build>
