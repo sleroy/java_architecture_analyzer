@@ -2,11 +2,14 @@ package com.analyzer.core.model;
 
 import com.analyzer.api.graph.BaseGraphNode;
 import com.analyzer.core.inspector.InspectorTags;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -35,6 +38,40 @@ public class ProjectFile extends BaseGraphNode {
 
     public ProjectFile(Path filePath, Path projectRoot, String sourceJarPath, String jarEntryPath) {
         this(filePath, projectRoot, sourceJarPath, jarEntryPath, new Date());
+    }
+
+    @JsonCreator
+    private ProjectFile(
+            @JsonProperty("filePath") String filePathStr,
+            @JsonProperty("relativePath") String relativePath,
+            @JsonProperty("fileName") String fileName,
+            @JsonProperty("fileExtension") String fileExtension,
+            @JsonProperty("discoveredAt") Date discoveredAt,
+            @JsonProperty("sourceJarPath") String sourceJarPath,
+            @JsonProperty("jarEntryPath") String jarEntryPath,
+            @JsonProperty("virtual") boolean isVirtual,
+            @JsonProperty("tags") Set<String> tags,
+            @JsonProperty("allProperties") Map<String, Object> allProperties) {
+        super(Objects.requireNonNull(filePathStr, "File path cannot be null"), "file");
+
+        this.filePath = Paths.get(filePathStr);
+        this.relativePath = relativePath != null ? relativePath : "";
+        this.fileName = fileName != null ? fileName : "";
+        this.fileExtension = fileExtension != null ? fileExtension : "";
+        this.discoveredAt = discoveredAt != null ? discoveredAt : new Date();
+        this.sourceJarPath = sourceJarPath;
+        this.jarEntryPath = jarEntryPath;
+        this.isVirtual = isVirtual;
+
+        // Restore tags from deserialization
+        if (tags != null) {
+            tags.forEach(this::addTag);
+        }
+
+        // Restore properties from deserialization
+        if (allProperties != null) {
+            allProperties.forEach(this::setProperty);
+        }
     }
 
     private ProjectFile(Path filePath, Path projectRoot, String sourceJarPath, String jarEntryPath, Date discoveredAt) {
@@ -107,6 +144,7 @@ public class ProjectFile extends BaseGraphNode {
         return jarEntryPath;
     }
 
+    @JsonIgnore
     public boolean isJarInternal() {
         return isVirtual;
     }
@@ -230,8 +268,16 @@ public class ProjectFile extends BaseGraphNode {
         return true;
     }
 
+    @JsonProperty("allProperties")
     public Map<String, Object> getAllProperties() {
         return getNodeProperties();
+    }
+
+    @JsonProperty("allProperties")
+    public void setAllProperties(Map<String, Object> props) {
+        if (props != null) {
+            props.forEach(this::setProperty);
+        }
     }
 
     public void removeProperty(String propertyName) {
@@ -240,18 +286,22 @@ public class ProjectFile extends BaseGraphNode {
 
     // ==================== METRIC GETTERS (File-level only) ====================
 
+    @JsonIgnore
     public long getFileSize() {
         return getLongProperty(InspectorTags.TAG_METRIC_FILE_SIZE, 0L);
     }
 
+    @JsonIgnore
     public int getLinesOfCode() {
         return getIntegerProperty(InspectorTags.TAG_METRIC_LINES_OF_CODE, 0);
     }
 
+    @JsonIgnore
     public int getCommentLines() {
         return getIntegerProperty(InspectorTags.TAG_METRIC_COMMENT_LINES, 0);
     }
 
+    @JsonIgnore
     public int getBlankLines() {
         return getIntegerProperty(InspectorTags.TAG_METRIC_BLANK_LINES, 0);
     }
@@ -278,6 +328,7 @@ public class ProjectFile extends BaseGraphNode {
         return executionTime.get().isAfter(fileModTime) || executionTime.get().isEqual(fileModTime);
     }
 
+    @JsonIgnore
     public LocalDateTime getFileModificationTime() {
         if (cachedFileModificationTime == null) {
             try {
@@ -292,10 +343,12 @@ public class ProjectFile extends BaseGraphNode {
         return cachedFileModificationTime;
     }
 
+    @JsonIgnore
     public void clearFileModificationTimeCache() {
         cachedFileModificationTime = null;
     }
 
+    @JsonIgnore
     public Map<String, LocalDateTime> getAllInspectorExecutionTimes() {
         return Collections.unmodifiableMap(inspectorExecutionTimes);
     }
@@ -314,6 +367,7 @@ public class ProjectFile extends BaseGraphNode {
     // inherited from BaseGraphNode
 
     @Override
+    @JsonIgnore
     public String getDisplayLabel() {
         String fqn = getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
         if (fqn != null) {
