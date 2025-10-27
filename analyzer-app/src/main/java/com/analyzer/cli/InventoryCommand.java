@@ -7,7 +7,6 @@ import com.analyzer.core.db.GraphDatabaseConfig;
 import com.analyzer.core.db.repository.GraphRepository;
 import com.analyzer.core.db.serializer.GraphDatabaseSerializer;
 import com.analyzer.core.engine.AnalysisEngine;
-import com.analyzer.core.export.CsvExporter;
 import com.analyzer.core.export.ProjectSerializer;
 import com.analyzer.api.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorRegistry;
@@ -42,10 +41,6 @@ public class InventoryCommand implements Callable<Integer> {
     @Option(names = { "--project" }, description = "Path to the project directory to analyze", required = true)
     private String projectPath;
 
-    @Option(names = {
-            "--output" }, description = "Output file for the analysis results (CSV format)", defaultValue = "out/inventory.csv")
-    private File outputFile;
-
     @Option(names = { "--encoding" }, description = "Default encoding to use for reading files")
     private String encoding = Charset.defaultCharset().name();
 
@@ -75,7 +70,6 @@ public class InventoryCommand implements Callable<Integer> {
 
         logger.info("Configuration:");
         logger.info("  Project path: {}", projectPath);
-        logger.info("  Output file: {}", outputFile);
         logger.info("  Encoding: {}", encoding);
         logger.info("  Java version: {}", javaVersion);
         logger.info("  Inspectors: {}", inspectors);
@@ -121,25 +115,9 @@ public class InventoryCommand implements Callable<Integer> {
 
             logger.info("Project analysis completed. Found {} files", project.getProjectFiles().size());
 
-            // 6. Generate CSV output with inspector results (will need to be updated for
-            // ProjectFile)
-            CsvExporter csvExporter = new CsvExporter(outputFile);
-            List<Inspector> inspectorList = analysisEngine.getInspectors(inspectors);
-
-            logger.info("Exporting results to CSV...");
-            csvExporter.exportToCsv(project, inspectorList);
-
-            // Export project data as JSON - compute path relative to project directory
-            File jsonOutputDir = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
-                    .resolve(AnalysisConstants.PROJECT_DATA_DIR).toFile();
-            ProjectSerializer projectSerializer = new ProjectSerializer(jsonOutputDir,
-                    analysisEngine.getGraphRepository());
-            logger.info("Serializing project data to JSON...");
-            projectSerializer.serialize(project);
-
-            // Also serialize to H2 database (with preserved node IDs!)
+            // Serialize to H2 database (with preserved node IDs!)
             java.nio.file.Path dbPath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
-                    .resolve("graph.db");
+                    .resolve(AnalysisConstants.GRAPH_DB_NAME);
             logger.info("Initializing H2 database at: {}", dbPath);
             GraphDatabaseConfig dbConfig = new GraphDatabaseConfig();
             dbConfig.initialize(dbPath);
@@ -154,11 +132,12 @@ public class InventoryCommand implements Callable<Integer> {
             logger.info("Database statistics: {}", stats);
 
             logger.info("Analysis completed successfully!");
-            logger.info("CSV results written to: {}", outputFile.getAbsolutePath());
-            logger.info("JSON data serialized to: {}", jsonOutputDir.getAbsolutePath());
             logger.info("H2 database created at: {}", dbPath + ".mv.db");
             logger.info("  - Node IDs preserved as original file paths/FQNs");
             logger.info("  - {} total nodes stored", stats.nodeCount());
+            logger.info("To export data:");
+            logger.info("  - CSV: Use csv_export --project {} --output <file.csv>", projectPath);
+            logger.info("  - JSON: Use json_export --project {} --json-output <output-dir>", projectPath);
 
             return 0;
         } catch (Exception e) {
@@ -226,10 +205,6 @@ public class InventoryCommand implements Callable<Integer> {
 
     public String getProjectPath() {
         return projectPath;
-    }
-
-    public File getOutputFile() {
-        return outputFile;
     }
 
     public String getEncoding() {

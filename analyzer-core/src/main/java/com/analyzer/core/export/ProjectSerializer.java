@@ -115,33 +115,52 @@ public class ProjectSerializer {
         // Add tags
         nodeData.put("tags", node.getTags());
 
-        // Add properties - transform dotted keys into nested structures
-        Map<String, Object> properties = node.getNodeProperties();
-        if (properties != null && !properties.isEmpty()) {
-            Map<String, Object> processedProperties = new HashMap<>();
-            for (Map.Entry<String, Object> entry : properties.entrySet()) {
+        // Separate properties and metrics
+        Map<String, Object> allProperties = node.getNodeProperties();
+        if (allProperties != null && !allProperties.isEmpty()) {
+            Map<String, Object> regularProperties = new HashMap<>();
+            Map<String, Object> metrics = new HashMap<>();
+
+            // Separate metrics from regular properties
+            for (Map.Entry<String, Object> entry : allProperties.entrySet()) {
                 String key = entry.getKey();
                 Object value = entry.getValue();
 
-                if (value instanceof String) {
-                    String strValue = ((String) value).trim();
-                    if (strValue.startsWith("{") && strValue.endsWith("}")) {
-                        try {
-                            Object parsedJson = mapper.readValue(strValue, Object.class);
-                            processedProperties.put(key, parsedJson);
-                        } catch (IOException e) {
-                            // Not valid JSON, keep original value
-                            processedProperties.put(key, value);
+                if (key.startsWith("metrics.")) {
+                    // Extract metric name without prefix
+                    String metricName = key.substring(8);
+                    metrics.put(metricName, value);
+                } else {
+                    // Process regular properties
+                    if (value instanceof String) {
+                        String strValue = ((String) value).trim();
+                        if (strValue.startsWith("{") && strValue.endsWith("}")) {
+                            try {
+                                Object parsedJson = mapper.readValue(strValue, Object.class);
+                                regularProperties.put(key, parsedJson);
+                            } catch (IOException e) {
+                                // Not valid JSON, keep original value
+                                regularProperties.put(key, value);
+                            }
+                        } else {
+                            regularProperties.put(key, value);
                         }
                     } else {
-                        processedProperties.put(key, value);
+                        regularProperties.put(key, value);
                     }
-                } else {
-                    processedProperties.put(key, value);
                 }
             }
-            Map<String, Object> nestedProperties = PropertyNestingTransformer.nestProperties(processedProperties);
-            nodeData.put("properties", nestedProperties);
+
+            // Add nested properties
+            if (!regularProperties.isEmpty()) {
+                Map<String, Object> nestedProperties = PropertyNestingTransformer.nestProperties(regularProperties);
+                nodeData.put("properties", nestedProperties);
+            }
+
+            // Add metrics as separate section
+            if (!metrics.isEmpty()) {
+                nodeData.put("metrics", metrics);
+            }
         }
 
         // Organize nodes by their type (project_file, class_node, etc.)

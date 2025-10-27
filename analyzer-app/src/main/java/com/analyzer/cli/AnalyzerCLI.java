@@ -10,6 +10,8 @@ import picocli.CommandLine.HelpCommand;
  */
 @Command(name = "java-architecture-analyzer", description = "Static analysis tool for Java applications", version = "1.0.0-SNAPSHOT", mixinStandardHelpOptions = true, subcommands = {
         InventoryCommand.class,
+        CsvExportCommand.class,
+        JsonExportCommand.class,
         InspectorDependencyGraphCommand.class,
         HelpCommand.class
 })

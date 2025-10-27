@@ -17,12 +17,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * Serializes a Project object into the H2 graph database.
- * Converts ProjectFiles into nodes with all their properties and tags preserved.
+ * Converts ProjectFiles into nodes with all their properties and tags
+ * preserved.
  */
 public class GraphDatabaseSerializer {
 
@@ -57,8 +59,7 @@ public class GraphDatabaseSerializer {
             ProjectEntity projectEntity = new ProjectEntity(
                     project.getProjectName(),
                     project.getProjectPath().toString(),
-                    "Java Architecture Analysis"
-            );
+                    "Java Architecture Analysis");
             projectMapper.insertProject(projectEntity);
             logger.info("Saved project metadata: {}", project.getProjectName());
 
@@ -70,14 +71,29 @@ public class GraphDatabaseSerializer {
             for (ProjectFile file : project.getProjectFiles().values()) {
                 // Validate properties before serialization
                 PropertiesValidator.validate(file.getNodeProperties());
-                
-                // Create node with JSON properties
+
+                // Extract metrics from properties (keys starting with "metrics.")
+                Map<String, Object> properties = file.getNodeProperties();
+                Map<String, Object> regularProps = new HashMap<>();
+                Map<String, Object> metrics = new HashMap<>();
+
+                for (Map.Entry<String, Object> entry : properties.entrySet()) {
+                    if (entry.getKey().startsWith("metrics.")) {
+                        String metricName = entry.getKey().substring(8); // Remove "metrics." prefix
+                        metrics.put(metricName, entry.getValue());
+                    } else {
+                        regularProps.put(entry.getKey(), entry.getValue());
+                    }
+                }
+
+                // Create node with JSON properties and metrics
                 String nodeId = file.getId();
                 String nodeType = determineNodeType(file);
                 String displayLabel = file.getDisplayLabel();
-                String propertiesJson = jsonMapper.writeValueAsString(file.getNodeProperties());
+                String propertiesJson = jsonMapper.writeValueAsString(regularProps);
+                String metricsJson = metrics.isEmpty() ? null : jsonMapper.writeValueAsString(metrics);
 
-                GraphNodeEntity node = new GraphNodeEntity(nodeId, nodeType, displayLabel, propertiesJson);
+                GraphNodeEntity node = new GraphNodeEntity(nodeId, nodeType, displayLabel, propertiesJson, metricsJson);
                 nodeMapper.mergeNode(node); // Use merge to handle duplicates gracefully
 
                 // Collect tags for batch insert
@@ -118,17 +134,32 @@ public class GraphDatabaseSerializer {
         try (SqlSession session = config.openSession()) {
             // Validate properties before serialization
             PropertiesValidator.validate(file.getNodeProperties());
-            
+
             NodeMapper nodeMapper = session.getMapper(NodeMapper.class);
             TagMapper tagMapper = session.getMapper(TagMapper.class);
 
-            // Create node with JSON properties
+            // Extract metrics from properties (keys starting with "metrics.")
+            Map<String, Object> properties = file.getNodeProperties();
+            Map<String, Object> regularProps = new HashMap<>();
+            Map<String, Object> metrics = new HashMap<>();
+
+            for (Map.Entry<String, Object> entry : properties.entrySet()) {
+                if (entry.getKey().startsWith("metrics.")) {
+                    String metricName = entry.getKey().substring(8); // Remove "metrics." prefix
+                    metrics.put(metricName, entry.getValue());
+                } else {
+                    regularProps.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+            // Create node with JSON properties and metrics
             String nodeId = file.getId();
             String nodeType = determineNodeType(file);
             String displayLabel = file.getDisplayLabel();
-            String propertiesJson = jsonMapper.writeValueAsString(file.getNodeProperties());
+            String propertiesJson = jsonMapper.writeValueAsString(regularProps);
+            String metricsJson = metrics.isEmpty() ? null : jsonMapper.writeValueAsString(metrics);
 
-            GraphNodeEntity node = new GraphNodeEntity(nodeId, nodeType, displayLabel, propertiesJson);
+            GraphNodeEntity node = new GraphNodeEntity(nodeId, nodeType, displayLabel, propertiesJson, metricsJson);
             nodeMapper.insertNode(node);
 
             // Save tags (replace all tags)
@@ -158,11 +189,16 @@ public class GraphDatabaseSerializer {
 
     private String determineNodeType(ProjectFile file) {
         String fileName = file.getFileName().toLowerCase();
-        if (fileName.endsWith(".java")) return "java";
-        if (fileName.endsWith(".xml")) return "xml";
-        if (fileName.endsWith(".properties")) return "properties";
-        if (fileName.endsWith(".yml") || fileName.endsWith(".yaml")) return "yaml";
-        if (fileName.endsWith(".json")) return "json";
+        if (fileName.endsWith(".java"))
+            return "java";
+        if (fileName.endsWith(".xml"))
+            return "xml";
+        if (fileName.endsWith(".properties"))
+            return "properties";
+        if (fileName.endsWith(".yml") || fileName.endsWith(".yaml"))
+            return "yaml";
+        if (fileName.endsWith(".json"))
+            return "json";
         return "file";
     }
 

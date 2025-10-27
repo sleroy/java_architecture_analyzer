@@ -26,6 +26,7 @@ public abstract class BaseGraphNode implements GraphNode {
     private final Map<String, Double> metrics = new HashMap<>();
     private final Map<String, Object> properties;
     private final Set<String> tags;
+    @JsonProperty("id")
     private final String nodeId;
     private final String nodeType;
 
@@ -53,6 +54,7 @@ public abstract class BaseGraphNode implements GraphNode {
     }
 
     @Override
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public Map<String, Object> getNodeProperties() {
         return new HashMap<>(properties);
     }
@@ -136,6 +138,7 @@ public abstract class BaseGraphNode implements GraphNode {
      *
      * @return Set of property keys
      */
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public java.util.Set<String> getPropertyKeys() {
         return new java.util.HashSet<>(properties.keySet());
     }

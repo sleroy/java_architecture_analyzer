@@ -96,6 +96,20 @@
             <artifactId>jackson-module-jaxb-annotations</artifactId>
         </dependency>
 
+        <!-- JAXB API - Required for Jackson JAXB module -->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+        </dependency>
+
         <!-- Graph Storage System -->
         <dependency>
             <groupId>org.jgrapht</groupId>
