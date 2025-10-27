@@ -40,8 +40,11 @@ public class ProjectSerializer {
         // Serialize edges
         serializeEdges();
 
-        // Serialize project metadata
-        serializeProject(project);
+        // Note: project.json removed as redundant - project metadata can be derived
+        // from:
+        // - Project name: from directory name or context
+        // - File count: from node count in database
+        // - Root path: known from analysis context
     }
 
     private void serializeNodes() throws IOException {
@@ -173,13 +176,9 @@ public class ProjectSerializer {
         mapper.writeValue(nodeFile, nodeData);
     }
 
-    private void serializeProject(Project project) throws IOException {
-        Map<String, Object> projectData = new HashMap<>();
-        projectData.put("name", project.getProjectName());
-        projectData.put("rootPath", project.getProjectPath().toString());
-        projectData.put("fileCount", project.getProjectFiles().size());
-
-        File projectFile = outputDir.toPath().resolve("project.json").toFile();
-        mapper.writeValue(projectFile, projectData);
-    }
+    // Removed serializeProject() method - project.json was redundant
+    // Project metadata is available from:
+    // 1. Project name: derived from directory name
+    // 2. File count: can be queried from nodes table
+    // 3. Root path: known from analysis context
 }

@@ -24,9 +24,7 @@ public class InventoryExample {
             Files.delete(configFile);
         }
 
-        int exitCode = new CommandLine(new AnalyzerCLI()).execute(new String[] {
-                "inventory", "--project", folder, "--java_version", "17"
-        });
+        int exitCode = new CommandLine(new AnalyzerCLI()).execute("inventory", "--project", folder, "--java_version", "17");
 
 
         logger.info("---------------------------------------------------------------");
@@ -37,9 +35,7 @@ public class InventoryExample {
         logger.info("");
         logger.info("");
 
-        int exitCode2 = new CommandLine(new AnalyzerCLI()).execute(new String[] {
-                "json_export", "--project", folder, "--json-output", "/tmp/example"
-        });
+        int exitCode2 = new CommandLine(new AnalyzerCLI()).execute("json_export", "--project", folder, "--json-output", "/tmp/example");
 
     }
 }
