@@ -1,19 +1,13 @@
 package com.analyzer.cli;
 
-import com.analyzer.api.graph.GraphEdge;
-import com.analyzer.api.graph.GraphNode;
 import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.core.AnalysisConstants;
 import com.analyzer.core.db.GraphDatabaseConfig;
-import com.analyzer.core.db.entity.GraphEdgeEntity;
-import com.analyzer.core.db.entity.GraphNodeEntity;
+import com.analyzer.core.db.loader.GraphDatabaseLoader;
+import com.analyzer.core.db.loader.LoadOptions;
 import com.analyzer.core.export.ProjectSerializer;
-import com.analyzer.core.graph.InMemoryGraphRepository;
 import com.analyzer.core.model.Project;
-import com.analyzer.core.model.ProjectFile;
-import com.analyzer.core.serialization.JsonSerializationService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
+import com.analyzer.core.db.repository.H2GraphStorageRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -25,7 +19,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 
 /**
  * JSON Export command implementation.
@@ -75,32 +68,47 @@ public class JsonExportCommand implements Callable<Integer> {
 
         try {
             // Check if database exists
-            Path dbPath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
-                    .resolve(AnalysisConstants.GRAPH_DB_NAME + ".mv.db");
-            if (!Files.exists(dbPath)) {
-                logger.error("Database not found at: {}", dbPath);
+            Path dbFileNamePath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
+                    .resolve(AnalysisConstants.getCompleteDatabaseName());
+            if (!Files.exists(dbFileNamePath)) {
+                logger.error("Database not found at: {}", dbFileNamePath);
                 logger.error("Please run the 'inventory' command first to create the database.");
                 return 1;
             }
 
             // Initialize database connection (H2 adds .mv.db automatically, so use base
             // path)
-            Path dbBasePath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
-                    .resolve(AnalysisConstants.GRAPH_DB_NAME);
+            Path dbPath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR).resolve(AnalysisConstants.GRAPH_DB_NAME);
             logger.info("Loading database from: {}", dbPath);
             GraphDatabaseConfig dbConfig = new GraphDatabaseConfig();
-            dbConfig.initialize(dbBasePath);
+            dbConfig.initialize(dbPath);
 
             // Create H2 database repository to load data
-            com.analyzer.core.db.repository.GraphRepository dbRepository = new com.analyzer.core.db.repository.GraphRepository(
+            var dbRepository = new H2GraphStorageRepository(
                     dbConfig);
 
             // Get statistics
             var stats = dbRepository.getStatistics();
             logger.info("Database loaded: {}", stats);
 
-            // Load data from H2 into in-memory repository
-            GraphRepository inMemoryRepo = loadDataFromDatabase(dbRepository, nodeTypeFilters, edgeTypeFilters);
+            // Load data from H2 into in-memory repository using GraphDatabaseLoader
+            LoadOptions.Builder optionsBuilder = LoadOptions.builder()
+                    .withProjectRoot(projectDir);
+
+            if (nodeTypeFilters != null && !nodeTypeFilters.isEmpty()) {
+                optionsBuilder.withNodeTypeFilters(nodeTypeFilters);
+            } else {
+                optionsBuilder.loadAllNodes();
+            }
+
+            if (edgeTypeFilters != null && !edgeTypeFilters.isEmpty()) {
+                optionsBuilder.withEdgeTypeFilters(edgeTypeFilters);
+            } else {
+                optionsBuilder.withCommonEdgeTypes();
+            }
+
+            LoadOptions loadOptions = optionsBuilder.build();
+            GraphRepository inMemoryRepo = GraphDatabaseLoader.loadFromDatabase(dbRepository, loadOptions);
 
             // Create minimal project object for serialization
             Project project = createMinimalProject(projectDir, inMemoryRepo);
@@ -151,112 +159,6 @@ public class JsonExportCommand implements Callable<Integer> {
         }
         // Relative path is resolved against current working directory
         return Paths.get(System.getProperty("user.dir")).resolve(outputPath).normalize();
-    }
-
-    /**
-     * Load data from H2 database into an in-memory GraphRepository.
-     * Applies optional node and edge type filters.
-     */
-    private GraphRepository loadDataFromDatabase(
-            com.analyzer.core.db.repository.GraphRepository dbRepo,
-            List<String> nodeTypeFilters,
-            List<String> edgeTypeFilters) {
-
-        InMemoryGraphRepository memoryRepo = new InMemoryGraphRepository();
-        JsonSerializationService jsonSerializer = new JsonSerializationService();
-
-        // Load nodes with optional filtering
-        logger.info("Loading nodes from database...");
-        List<GraphNodeEntity> nodeEntities;
-
-        if (nodeTypeFilters != null && !nodeTypeFilters.isEmpty()) {
-            nodeEntities = new ArrayList<>();
-            for (String nodeType : nodeTypeFilters) {
-                nodeEntities.addAll(dbRepo.findNodesByType(nodeType));
-            }
-            logger.info("Filtered to {} node types", nodeTypeFilters.size());
-        } else {
-            // Load all nodes - we need to get them by querying different types
-            // For now, load common types (this should ideally query all types from DB)
-            nodeEntities = new ArrayList<>();
-            for (String type : Arrays.asList("java", "xml", "properties", "yaml", "json", "file")) {
-                nodeEntities.addAll(dbRepo.findNodesByType(type));
-            }
-        }
-
-        // Convert entities to ProjectFile nodes and add to memory repository
-        Map<String, GraphNode> nodeMap = new HashMap<>();
-        for (GraphNodeEntity entity : nodeEntities) {
-            try {
-                // Deserialize properties from JSON
-                Map<String, Object> properties = jsonSerializer.deserializeProperties(entity.getProperties());
-
-                // Load metrics from database and add with "metrics." prefix
-                String metricsMapStr = entity.getMetricsMap();
-                if (metricsMapStr != null && !metricsMapStr.isEmpty()) {
-                    Map<String, Object> metrics = jsonSerializer.deserializeProperties(metricsMapStr);
-                    // Add metrics back with prefix
-                    for (Map.Entry<String, Object> entry : metrics.entrySet()) {
-                        properties.put("metrics." + entry.getKey(), entry.getValue());
-                    }
-                }
-
-                // Create ProjectFile from entity data
-                ProjectFile projectFile = new ProjectFile(
-                        java.nio.file.Paths.get(entity.getId()),
-                        java.nio.file.Paths.get(".") // Placeholder parent path
-                );
-
-                // Set properties
-                for (Map.Entry<String, Object> entry : properties.entrySet()) {
-                    projectFile.setProperty(entry.getKey(), entry.getValue());
-                }
-
-                // Add to memory repository
-                memoryRepo.addNode(projectFile);
-                nodeMap.put(entity.getId(), projectFile);
-
-            } catch (Exception e) {
-                logger.warn("Failed to load node {}: {}", entity.getId(), e.getMessage());
-            }
-        }
-
-        logger.info("Loaded {} nodes into memory", nodeMap.size());
-
-        // Load edges with optional filtering
-        logger.info("Loading edges from database...");
-        List<GraphEdgeEntity> edgeEntities;
-
-        if (edgeTypeFilters != null && !edgeTypeFilters.isEmpty()) {
-            edgeEntities = new ArrayList<>();
-            for (String edgeType : edgeTypeFilters) {
-                edgeEntities.addAll(dbRepo.findEdgesByType(edgeType));
-            }
-            logger.info("Filtered to {} edge types", edgeTypeFilters.size());
-        } else {
-            // This would ideally load all edges, but we don't have a method for that
-            // in the current db repository API
-            edgeEntities = new ArrayList<>();
-            logger.warn("Cannot load all edges - GraphRepository.findEdgesByType needs all types");
-        }
-
-        // Convert edge entities and add to memory repository
-        int edgesAdded = 0;
-        for (GraphEdgeEntity entity : edgeEntities) {
-            GraphNode source = nodeMap.get(entity.getSourceId());
-            GraphNode target = nodeMap.get(entity.getTargetId());
-
-            if (source != null && target != null) {
-                memoryRepo.getOrCreateEdge(source, target, entity.getEdgeType());
-                edgesAdded++;
-            } else {
-                logger.debug("Skipping edge - source or target node not found: {} -> {}",
-                        entity.getSourceId(), entity.getTargetId());
-            }
-        }
-
-        logger.info("Loaded {} edges into memory", edgesAdded);
-        return memoryRepo;
     }
 
     /**

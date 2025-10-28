@@ -2,6 +2,8 @@ package com.analyzer.core.inspector;
 
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.GraphNode;
+import com.analyzer.core.model.Package;
+import com.analyzer.core.model.ProjectFile;
 
 /**
  * Enum representing the types of nodes that inspectors can process.
@@ -23,7 +25,7 @@ public enum InspectorTargetType {
      * Inspector analyzes ProjectFile objects (Phase 3).
      * These inspectors work on file-level metadata and properties.
      */
-    PROJECT_FILE(com.analyzer.core.model.ProjectFile.class),
+    PROJECT_FILE(ProjectFile.class),
     
     /**
      * Inspector analyzes JavaClassNode objects (Phase 4).
@@ -35,7 +37,7 @@ public enum InspectorTargetType {
      * Inspector analyzes Package objects.
      * These inspectors work on package-level aggregations.
      */
-    PACKAGE(com.analyzer.core.model.Package.class),
+    PACKAGE(Package.class),
     
     /**
      * Inspector can analyze any GraphNode type.
@@ -72,11 +74,11 @@ public enum InspectorTargetType {
      * @return the corresponding InspectorTargetType, or ANY if no specific match
      */
     public static InspectorTargetType fromClass(Class<?> clazz) {
-        if (com.analyzer.core.model.ProjectFile.class.isAssignableFrom(clazz)) {
+        if (ProjectFile.class.isAssignableFrom(clazz)) {
             return PROJECT_FILE;
         } else if (JavaClassNode.class.isAssignableFrom(clazz)) {
             return JAVA_CLASS_NODE;
-        } else if (com.analyzer.core.model.Package.class.isAssignableFrom(clazz)) {
+        } else if (Package.class.isAssignableFrom(clazz)) {
             return PACKAGE;
         }
         return ANY;

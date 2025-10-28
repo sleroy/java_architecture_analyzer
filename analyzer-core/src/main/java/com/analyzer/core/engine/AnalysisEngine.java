@@ -8,10 +8,14 @@ import com.analyzer.core.collector.CollectionContext;
 import com.analyzer.api.detector.FileDetector;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.filter.FileIgnoreFilter;
-import com.analyzer.core.inspector.*;
+import com.analyzer.core.inspector.InspectorProgressTracker;
+import com.analyzer.core.inspector.InspectorRegistry;
+import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.inspector.InspectorTargetType;
 import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectDeserializer;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.model.ProjectHolder;
 import com.analyzer.core.resource.JARClassLoaderService;
 import com.analyzer.api.inspector.Inspector;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -50,6 +54,7 @@ public class AnalysisEngine {
     private final ProjectFileRepository projectFileRepository;
     private final ClassNodeRepository classNodeRepository;
     private final InspectorProgressTracker progressTracker;
+    private final ProjectHolder projectHolder;
 
     /**
      * Primary constructor used by PicoContainer for dependency injection.
@@ -60,18 +65,21 @@ public class AnalysisEngine {
      * @param projectFileRepository the project file repository
      * @param classNodeRepository   the class node repository
      * @param progressTracker       the progress tracker
+     * @param projectHolder         the project holder for DI into inspectors
      */
     public AnalysisEngine(InspectorRegistry inspectorRegistry,
             GraphRepository graphRepository,
             ProjectFileRepository projectFileRepository,
             ClassNodeRepository classNodeRepository,
-            InspectorProgressTracker progressTracker) {
+            InspectorProgressTracker progressTracker,
+            ProjectHolder projectHolder) {
         this.inspectorRegistry = inspectorRegistry;
         this.availableAnalyses = new ArrayList<>();
         this.graphRepository = graphRepository;
         this.projectFileRepository = projectFileRepository;
         this.classNodeRepository = classNodeRepository;
         this.progressTracker = progressTracker != null ? progressTracker : new InspectorProgressTracker();
+        this.projectHolder = projectHolder;
     }
 
     /**
@@ -101,15 +109,45 @@ public class AnalysisEngine {
      */
     public Project analyzeProject(Path projectPath, List<String> requestedInspectors, int maxPasses)
             throws IOException {
+        return analyzeProject(projectPath, requestedInspectors, maxPasses, null);
+    }
+
+    /**
+     * Analyzes a project using the new ProjectFile-based workflow with multi-pass
+     * algorithm.
+     * Supports incremental analysis by automatically reloading existing project
+     * data if available.
+     *
+     * @param projectPath         the path to the project directory
+     * @param requestedInspectors list of inspector names to use (null = all)
+     * @param maxPasses           maximum number of analysis passes for convergence
+     * @param packageFilters      list of application package prefixes (e.g.,
+     *                            "com.example", "com.myapp")
+     * @return the analyzed Project object
+     */
+    public Project analyzeProject(Path projectPath, List<String> requestedInspectors, int maxPasses,
+            List<String> packageFilters) throws IOException {
         logger.info("Starting multi-pass project analysis for: {} (max passes: {})", projectPath, maxPasses);
 
         // Step 1: Try to reload existing project data for incremental analysis
         Project project = loadExistingProjectOrCreate(projectPath);
 
+        // Store package filters in Project metadata for inspectors to access
+        if (packageFilters != null && !packageFilters.isEmpty()) {
+            project.setProjectData("application.packages", packageFilters);
+            logger.info("Application package filters configured: {}", packageFilters);
+        }
+
+        // Inject Project into ProjectHolder so inspectors can access it via DI
+        projectHolder.setProject(project);
+        logger.debug("Project injected into ProjectHolder for inspector access");
+
         // PHASE 1: File Discovery with Ignore Filtering
         logger.info("=== PHASE 1: File Discovery with Filtering ===");
         JARClassLoaderService jarClassLoaderService = inspectorRegistry.getJarClassLoaderService();
-        jarClassLoaderService.scanProjectJars(project);
+        // Disabled by default: .m2 repository contains many JARs that can slow down
+        // analysis
+        jarClassLoaderService.scanProjectJars(project, false);
 
         scanProjectFilesWithFiltering(project);
 
@@ -571,26 +609,17 @@ public class AnalysisEngine {
      * @return set of inspector names that were triggered for this node
      */
     private Set<String> analyzeClassNodeWithTracking(JavaClassNode classNode,
-                                                     List<Inspector<JavaClassNode>> inspectors,
-                                                     LocalDateTime passStartTime,
-                                                     ExecutionProfile executionProfile,
-                                                     int pass) {
+            List<Inspector<JavaClassNode>> inspectors,
+            LocalDateTime passStartTime,
+            ExecutionProfile executionProfile,
+            int pass) {
         Set<String> triggeredInspectors = new HashSet<>();
         ExecutionProfile.ExecutionPhase phase = ExecutionProfile.ExecutionPhase.PHASE_4_CLASSNODE_ANALYSIS;
 
         for (Inspector<JavaClassNode> inspector : inspectors) {
             try {
                 String inspectorName = inspector.getName();
-                boolean shouldRun = true;
 
-                // Check if this inspector needs to run on this node
-                if (classNode.isInspectorUpToDate(inspectorName)) {
-                    logger.debug("Inspector '{}' up-to-date for class: {}", inspectorName,
-                            classNode.getFullyQualifiedName());
-                    shouldRun = false;
-                }
-
-                if (shouldRun) {
                     logger.debug("Inspector '{}' needs to run on class: {}", inspectorName,
                             classNode.getFullyQualifiedName());
 
@@ -616,7 +645,6 @@ public class AnalysisEngine {
                         logger.debug("Inspector '{}' not supported for class: {}", inspectorName,
                                 classNode.getFullyQualifiedName());
                     }
-                }
             } catch (Exception e) {
                 logger.error("Error running inspector '{}' on class '{}': {}",
                         inspector.getName(), classNode.getFullyQualifiedName(), e.getMessage());
@@ -1067,8 +1095,7 @@ public class AnalysisEngine {
     /**
      * Statistics about the analysis execution.
      */
-    public record AnalysisStatistics(int totalInspectors, int totalAnalyses
-    ) {
+    public record AnalysisStatistics(int totalInspectors, int totalAnalyses) {
 
         @Override
         public String toString() {

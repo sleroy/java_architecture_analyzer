@@ -51,7 +51,7 @@ class JARClassLoaderServiceTest {
         Project project = new Project(tempDir);
 
         // Initialize the classloader hierarchy
-        service.scanProjectJars(project);
+        service.scanProjectJars(project, false);
 
         // Verify that the child classloader is not null
         assertNotNull(service.getSharedClassLoader(), "Child classloader should be initialized");
@@ -76,7 +76,7 @@ class JARClassLoaderServiceTest {
     void testGetJarCountWithBothLoaders() {
         Project project = new Project(tempDir);
 
-        service.scanProjectJars(project);
+        service.scanProjectJars(project, false);
 
         int totalCount = service.getJarCount();
         int parentCount = service.getParentClassLoader() != null ? service.getParentClassLoader().getURLs().length : 0;
@@ -90,7 +90,7 @@ class JARClassLoaderServiceTest {
     void testShutdownClosesAllClassLoaders() {
         Project project = new Project(tempDir);
 
-        service.scanProjectJars(project);
+        service.scanProjectJars(project, false);
 
         // Verify classloaders are initialized
         assertNotNull(service.getChildClassLoader());
@@ -107,7 +107,7 @@ class JARClassLoaderServiceTest {
     void testEmptyProjectInitializesEmptyClassLoaders() {
         Project project = new Project(tempDir);
 
-        service.scanProjectJars(project);
+        service.scanProjectJars(project, false);
 
         // Even with no JARs, classloaders should be initialized
         assertNotNull(service.getSharedClassLoader());
@@ -126,7 +126,7 @@ class JARClassLoaderServiceTest {
         if (Files.exists(m2RepoPath)) {
             Project project = new Project(tempDir);
 
-            service.scanProjectJars(project);
+            service.scanProjectJars(project, false);
 
             // If .m2 repo exists, we should have parent classloader with common JARs
             // (This is a soft assertion since it depends on the system)
@@ -139,7 +139,7 @@ class JARClassLoaderServiceTest {
     void testClassLoaderDelegation() {
         Project project = new Project(tempDir);
 
-        service.scanProjectJars(project);
+        service.scanProjectJars(project, false);
 
         URLClassLoader childLoader = service.getChildClassLoader();
         assertNotNull(childLoader);

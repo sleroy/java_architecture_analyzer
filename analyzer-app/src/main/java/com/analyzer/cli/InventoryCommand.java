@@ -2,21 +2,22 @@ package com.analyzer.cli;
 
 import com.analyzer.api.analysis.Analysis;
 import com.analyzer.core.AnalysisConstants;
+import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.dev.collectors.CollectorBeanFactory;
 import com.analyzer.core.db.GraphDatabaseConfig;
-import com.analyzer.core.db.repository.GraphRepository;
+import com.analyzer.core.db.loader.GraphDatabaseLoader;
+import com.analyzer.core.db.loader.LoadOptions;
+import com.analyzer.core.db.repository.H2GraphStorageRepository;
 import com.analyzer.core.db.serializer.GraphDatabaseSerializer;
 import com.analyzer.core.engine.AnalysisEngine;
-import com.analyzer.core.export.ProjectSerializer;
-import com.analyzer.api.inspector.Inspector;
 import com.analyzer.core.inspector.InspectorRegistry;
 import com.analyzer.core.model.Project;
 import com.analyzer.dev.detection.FileDetectionBeanFactory;
 import com.analyzer.core.resource.CompositeResourceResolver;
+import com.analyzer.rules.std.StdInspectorBeanFactory;
 import com.analyzer.rules.ejb2spring.Ejb2SpringInspectorBeanFactory;
 import com.analyzer.rules.graph.GraphInspectorBeanFactory;
 import com.analyzer.rules.metrics.MetricsInspectorBeanFactory;
-import com.analyzer.rules.std.StdInspectorBeanFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -24,8 +25,10 @@ import picocli.CommandLine.Option;
 
 import java.io.File;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.concurrent.Callable;
 
 /**
@@ -109,9 +112,12 @@ public class InventoryCommand implements Callable<Integer> {
 
             logger.info("{}", analysisEngine.getStatistics());
 
-            // 5. Analyze the project using new architecture with multi-pass algorithm
+            // Load existing database if it exists
             java.nio.file.Path projectDir = java.nio.file.Paths.get(projectPath);
-            Project project = analysisEngine.analyzeProject(projectDir, inspectors, maxPasses);
+            Project existingProject = loadExistingDatabase(projectDir, analysisEngine);
+
+            // 5. Analyze the project using new architecture with multi-pass algorithm
+            Project project = analysisEngine.analyzeProject(projectDir, inspectors, maxPasses, packageFilters);
 
             logger.info("Project analysis completed. Found {} files", project.getProjectFiles().size());
 
@@ -127,12 +133,12 @@ public class InventoryCommand implements Callable<Integer> {
             dbSerializer.serialize(project);
 
             // Show database statistics
-            GraphRepository repo = new GraphRepository(dbConfig);
+            H2GraphStorageRepository repo = new H2GraphStorageRepository(dbConfig);
             var stats = repo.getStatistics();
             logger.info("Database statistics: {}", stats);
 
             logger.info("Analysis completed successfully!");
-            logger.info("H2 database created at: {}", dbPath + ".mv.db");
+            logger.info("H2 database created at: {}", dbPath);
             logger.info("  - Node IDs preserved as original file paths/FQNs");
             logger.info("  - {} total nodes stored", stats.nodeCount());
             logger.info("To export data:");
@@ -225,5 +231,81 @@ public class InventoryCommand implements Callable<Integer> {
 
     public int getMaxPasses() {
         return maxPasses;
+    }
+
+    /**
+     * Loads existing database if it exists and pre-populates the analysis engine's
+     * graph repository.
+     * This enables incremental analysis by starting with previously analyzed data.
+     * 
+     * @param projectDir     The project directory
+     * @param analysisEngine The analysis engine to populate
+     * @return Existing Project object if database found, null otherwise
+     */
+    private Project loadExistingDatabase(Path projectDir, AnalysisEngine analysisEngine) {
+        try {
+            // Check if database exists
+            Path dbPath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
+                    .resolve(AnalysisConstants.getCompleteDatabaseName());
+
+            if (!Files.exists(dbPath)) {
+                logger.info("No existing database found at: {}", dbPath);
+                logger.info("Starting fresh analysis...");
+                return null;
+            }
+
+            // Initialize database connection
+            Path dbBasePath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
+                    .resolve(AnalysisConstants.GRAPH_DB_NAME);
+            logger.info("Found existing database at: {}", dbPath);
+            logger.info("Loading existing data...");
+
+            GraphDatabaseConfig dbConfig = new GraphDatabaseConfig();
+            dbConfig.initialize(dbBasePath);
+
+            // Create H2 database repository to load data
+            H2GraphStorageRepository dbRepository = new H2GraphStorageRepository(dbConfig);
+
+            // Get statistics
+            var stats = dbRepository.getStatistics();
+            logger.info("Existing database contains: {}", stats);
+
+            // Load data from database into the analysis engine's graph repository
+            loadDataIntoEngine(dbRepository, analysisEngine);
+
+            logger.info("Existing database loaded successfully. Will update with new analysis results.");
+
+            // Return a minimal project object (mainly for reference)
+            return new Project(projectDir, projectDir.getFileName().toString());
+
+        } catch (Exception e) {
+            logger.warn("Failed to load existing database: {}", e.getMessage());
+            logger.info("Continuing with fresh analysis...");
+            return null;
+        }
+    }
+
+    /**
+     * Loads data from H2 database into the AnalysisEngine's graph repository.
+     * 
+     * @param dbRepo         The database repository to read from
+     * @param analysisEngine The analysis engine whose graph repository to populate
+     */
+    private void loadDataIntoEngine(H2GraphStorageRepository dbRepo, AnalysisEngine analysisEngine) {
+        // Get the graph repository from the analysis engine
+        GraphRepository graphRepo = analysisEngine.getGraphRepository();
+        if (graphRepo == null) {
+            logger.warn("Cannot load data - AnalysisEngine has no GraphRepository");
+            return;
+        }
+
+        // Use GraphDatabaseLoader to populate the repository
+        LoadOptions loadOptions = LoadOptions.builder()
+                .loadAllNodes()
+                .withCommonEdgeTypes()
+                .withProjectRoot(Paths.get("."))
+                .build();
+
+        GraphDatabaseLoader.loadIntoRepository(dbRepo, graphRepo, loadOptions);
     }
 }

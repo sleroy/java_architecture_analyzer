@@ -2,6 +2,7 @@ package com.analyzer.api.graph;
 
 import com.analyzer.api.metrics.Metrics;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.model.Package;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -17,7 +18,7 @@ import java.util.Set;
 @JsonSubTypes({
         @JsonSubTypes.Type(value = ProjectFile.class, name = "ProjectFile"),
         @JsonSubTypes.Type(value = JavaClassNode.class, name = "JavaClassNode"),
-        @JsonSubTypes.Type(value = com.analyzer.core.model.Package.class, name = "Package")
+        @JsonSubTypes.Type(value = Package.class, name = "Package")
 })
 public interface GraphNode {
 

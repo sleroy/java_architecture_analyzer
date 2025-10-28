@@ -65,7 +65,7 @@ public class GraphDatabaseSerializer {
 
             // Serialize all project files as nodes
             int nodeCount = 0;
-            int batchSize = 100;
+            int batchSize = 1000;
             List<NodeTagEntity> tagBatch = new ArrayList<>();
 
             for (ProjectFile file : project.getProjectFiles().values()) {

@@ -1,6 +1,9 @@
 package com.analyzer.core.db;
 
-import com.analyzer.core.db.mapper.*;
+import com.analyzer.core.db.entity.GraphEdgeEntity;
+import com.analyzer.core.db.entity.GraphNodeEntity;
+import com.analyzer.core.db.entity.NodeTagEntity;
+import com.analyzer.core.db.entity.ProjectEntity;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.io.Resources;
 import org.apache.ibatis.mapping.Environment;
@@ -118,10 +121,10 @@ public class GraphDatabaseConfig {
         configuration.setLogImpl(org.apache.ibatis.logging.slf4j.Slf4jImpl.class);
 
         // Register type aliases
-        configuration.getTypeAliasRegistry().registerAlias("GraphNode", com.analyzer.core.db.entity.GraphNodeEntity.class);
-        configuration.getTypeAliasRegistry().registerAlias("GraphEdge", com.analyzer.core.db.entity.GraphEdgeEntity.class);
-        configuration.getTypeAliasRegistry().registerAlias("NodeTag", com.analyzer.core.db.entity.NodeTagEntity.class);
-        configuration.getTypeAliasRegistry().registerAlias("Project", com.analyzer.core.db.entity.ProjectEntity.class);
+        configuration.getTypeAliasRegistry().registerAlias("GraphNode", GraphNodeEntity.class);
+        configuration.getTypeAliasRegistry().registerAlias("GraphEdge", GraphEdgeEntity.class);
+        configuration.getTypeAliasRegistry().registerAlias("NodeTag", NodeTagEntity.class);
+        configuration.getTypeAliasRegistry().registerAlias("Project", ProjectEntity.class);
 
         // Load mapper XML files using XMLMapperBuilder
         String[] mapperResources = {
