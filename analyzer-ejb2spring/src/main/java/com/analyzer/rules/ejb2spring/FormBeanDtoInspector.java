@@ -5,6 +5,7 @@ import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractJavaClassInspector;
 import com.analyzer.api.resource.ResourceResolver;
@@ -60,7 +61,7 @@ public class FormBeanDtoInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-                                NodeDecorator projectFileDecorator) {
+                                NodeDecorator<ProjectFile> projectFileDecorator) {
 
         // Only analyze non-abstract classes
         if (!(type instanceof ClassOrInterfaceDeclaration) ||

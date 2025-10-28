@@ -58,7 +58,7 @@ public class ServiceLocatorInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-                                NodeDecorator projectFileDecorator) {
+                                NodeDecorator<ProjectFile> projectFileDecorator) {
 
         ServiceLocatorDetector detector = new ServiceLocatorDetector();
         type.accept(detector, null);

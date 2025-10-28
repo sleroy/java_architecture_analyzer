@@ -4,6 +4,7 @@ import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractJavaClassInspector;
 import com.analyzer.api.resource.ResourceResolver;
@@ -44,9 +45,8 @@ public class SessionBeanJavaSourceInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-                                NodeDecorator projectFileDecorator) {
-        if (type instanceof ClassOrInterfaceDeclaration) {
-            ClassOrInterfaceDeclaration classDecl = (ClassOrInterfaceDeclaration) type;
+                                NodeDecorator<ProjectFile> projectFileDecorator) {
+        if (type instanceof ClassOrInterfaceDeclaration classDecl) {
             SessionBeanDetector detector = new SessionBeanDetector();
             classDecl.accept(detector, null);
 

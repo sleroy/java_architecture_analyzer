@@ -40,7 +40,6 @@ import javax.inject.Inject;
  * @see AbstractSourceParserCollector
  * @see ClassNodeCollector
  * @see BinaryJavaClassNodeCollector
- * @see ClassLoaderJavaClassNodeCollector
  * @since 1.3.2 - Additional Collector Types
  */
 public class SourceJavaClassNodeCollector extends AbstractSourceParserCollector {

@@ -14,6 +14,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.InputStream;
 
+import static com.analyzer.core.inspector.InspectorTags.*;
+import static com.analyzer.core.inspector.InspectorTags.FORMAT_BINARY;
+import static com.analyzer.core.inspector.InspectorTags.LANGUAGE_JAVA;
+import static com.analyzer.core.inspector.InspectorTags.TAG_LANGUAGE;
+
 /**
  * Abstract base class for collectors that create JavaClassNode objects from
  * Java source files.

@@ -75,7 +75,7 @@ public class MutableServiceInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-                                NodeDecorator projectFileDecorator) {
+                                NodeDecorator<ProjectFile> projectFileDecorator) {
 
         if (!(type instanceof ClassOrInterfaceDeclaration)) {
             return;

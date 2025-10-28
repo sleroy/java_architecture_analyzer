@@ -1,5 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
+import com.analyzer.api.inspector.Inspector;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
@@ -45,7 +46,7 @@ import java.util.Set;
  *            </ul>
  *            </p>
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE, InspectorTags.TAG_APPLICATION_CLASS}, produces = {
         TimerBeanInspector.TAGS.TAG_IS_TIMER_BEAN,
         EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
         EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM
@@ -64,7 +65,7 @@ public class TimerBeanInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-                                NodeDecorator projectFileDecorator) {
+                                NodeDecorator<ProjectFile> projectFileDecorator) {
 
         if (!(type instanceof ClassOrInterfaceDeclaration)) {
             return;

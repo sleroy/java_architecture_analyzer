@@ -16,8 +16,6 @@ public class BinaryClassFileDetector implements FileDetector {
 
     @Override
     public void detect(NodeDecorator<ProjectFile> decorator) {
-        ProjectFile projectFile = decorator.getNode();
-// Set standardized Java language tags using own TAGS constants
         decorator.enableTag(TAG_JAVA_IS_BINARY);
         decorator.enableTag(TAG_JAVA_DETECTED);
         decorator.setProperty(TAG_JAVA_FORMAT, FORMAT_BINARY);

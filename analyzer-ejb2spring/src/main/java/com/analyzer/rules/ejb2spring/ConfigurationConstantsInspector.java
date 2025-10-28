@@ -70,7 +70,7 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-                                NodeDecorator nodeDecorator) {
+                                NodeDecorator<ProjectFile> nodeDecorator) {
 
         if (!(type instanceof ClassOrInterfaceDeclaration)) {
             return;
