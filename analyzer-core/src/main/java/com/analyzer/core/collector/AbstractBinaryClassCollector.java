@@ -3,6 +3,7 @@ package com.analyzer.core.collector;
 import com.analyzer.api.collector.ClassNodeCollector;
 import com.analyzer.api.collector.Collector;
 import com.analyzer.api.graph.JavaClassNode;
+import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.ResourceLocation;
 import com.analyzer.api.resource.ResourceResolver;
