@@ -41,7 +41,9 @@ public class ProjectFile extends BaseGraphNode {
     }
 
     @JsonCreator
-    private ProjectFile(
+    // Public to allow GraphDatabaseLoader (different package) to use it for
+    // deserialization
+    public ProjectFile(
             @JsonProperty("filePath") String filePathStr,
             @JsonProperty("relativePath") String relativePath,
             @JsonProperty("fileName") String fileName,

@@ -2,6 +2,7 @@ package com.analyzer.core.export;
 
 import com.analyzer.api.graph.BaseGraphNode;
 import com.analyzer.api.graph.GraphNode;
+import com.analyzer.core.model.ProjectFile;
 
 import java.util.Arrays;
 import java.util.List;
@@ -57,8 +58,8 @@ public class NodeDecorator<T extends GraphNode> {
     public void setProperty(String propertyName, Object value) {
         if (node instanceof BaseGraphNode) {
             ((BaseGraphNode) node).setProperty(propertyName, value);
-        } else if (node instanceof com.analyzer.core.model.ProjectFile) {
-            ((com.analyzer.core.model.ProjectFile) node).setProperty(propertyName, value);
+        } else if (node instanceof ProjectFile) {
+            ((ProjectFile) node).setProperty(propertyName, value);
         } else {
             throw new UnsupportedOperationException(
                     "Node type " + node.getClass().getName() + " does not support setProperty");
@@ -193,8 +194,8 @@ public class NodeDecorator<T extends GraphNode> {
         if (node instanceof BaseGraphNode) {
             return ((BaseGraphNode) node)
                     .getProperty(propertyName, String.class, defaultValue);
-        } else if (node instanceof com.analyzer.core.model.ProjectFile) {
-            return ((com.analyzer.core.model.ProjectFile) node)
+        } else if (node instanceof ProjectFile) {
+            return ((ProjectFile) node)
                     .getStringProperty(propertyName, defaultValue);
         }
         return defaultValue;
@@ -204,8 +205,8 @@ public class NodeDecorator<T extends GraphNode> {
         if (node instanceof BaseGraphNode) {
             return ((BaseGraphNode) node)
                     .getProperty(propertyName, Integer.class, defaultValue);
-        } else if (node instanceof com.analyzer.core.model.ProjectFile) {
-            return ((com.analyzer.core.model.ProjectFile) node)
+        } else if (node instanceof ProjectFile) {
+            return ((ProjectFile) node)
                     .getIntegerProperty(propertyName, defaultValue);
         }
         return defaultValue;
@@ -215,8 +216,8 @@ public class NodeDecorator<T extends GraphNode> {
         if (node instanceof BaseGraphNode) {
             return ((BaseGraphNode) node)
                     .getProperty(propertyName, Double.class, defaultValue);
-        } else if (node instanceof com.analyzer.core.model.ProjectFile) {
-            return ((com.analyzer.core.model.ProjectFile) node)
+        } else if (node instanceof ProjectFile) {
+            return ((ProjectFile) node)
                     .getDoubleProperty(propertyName, defaultValue);
         }
         return defaultValue;
@@ -226,8 +227,8 @@ public class NodeDecorator<T extends GraphNode> {
         if (node instanceof BaseGraphNode) {
             return ((BaseGraphNode) node)
                     .getProperty(propertyName, Boolean.class, defaultValue);
-        } else if (node instanceof com.analyzer.core.model.ProjectFile) {
-            return ((com.analyzer.core.model.ProjectFile) node)
+        } else if (node instanceof ProjectFile) {
+            return ((ProjectFile) node)
                     .getBooleanProperty(propertyName, defaultValue);
         }
         return defaultValue;

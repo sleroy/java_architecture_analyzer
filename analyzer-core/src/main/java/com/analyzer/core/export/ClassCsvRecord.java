@@ -29,7 +29,7 @@ public class ClassCsvRecord implements CsvRecord {
 
     public ClassCsvRecord(ProjectFile clazz) {
         this(
-                clazz.getStringProperty(InspectorTags.TAG_JAVA_CLASS_NAME, ""),
+                clazz.getStringProperty(InspectorTags.PROP_JAVA_CLASS_NAME, ""),
                 clazz.getStringProperty(InspectorTags.TAG_JAVA_PACKAGE_NAME, ""),
                 clazz.getStringProperty(InspectorTags.TAG_JAVA_CLASS_TYPE, ""),
                 clazz.getFilePath().toString(),

@@ -1,5 +1,6 @@
 package com.analyzer.cli;
 
+import com.analyzer.cli.InspectorDependencyGraphCommand;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;

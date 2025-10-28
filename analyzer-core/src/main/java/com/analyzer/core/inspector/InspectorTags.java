@@ -28,7 +28,7 @@ public final class InspectorTags {
     /**
      * Tag for Java class name (without package)
      */
-    public static final String TAG_JAVA_CLASS_NAME = "java.className";
+    public static final String PROP_JAVA_CLASS_NAME = "java.className";
 
     // ==================== JAVA LANGUAGE TAGS ====================
     /**
@@ -116,6 +116,12 @@ public final class InspectorTags {
     public static final String PROCESSING_ERROR = "processing.error";
 
     // ==================== PROCESSING AND ERROR TAGS ====================
+    /**
+     * Tag indicating this class is part of the application (not library/framework
+     * code)
+     */
+    public static final String TAG_APPLICATION_CLASS = "application.class";
+
     /**
      * Common language value: Java
      */

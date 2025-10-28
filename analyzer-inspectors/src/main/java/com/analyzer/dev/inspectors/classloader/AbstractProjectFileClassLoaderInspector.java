@@ -5,8 +5,8 @@ import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.JARClassLoaderService;
-import com.analyzer.dev.inspectors.core.AbstractProjectFileInspector;
 import com.analyzer.api.resource.ResourceResolver;
+import com.analyzer.dev.inspectors.core.AbstractProjectFileInspector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

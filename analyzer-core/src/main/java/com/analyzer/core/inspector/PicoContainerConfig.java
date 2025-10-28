@@ -5,6 +5,9 @@ import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.core.graph.DelegatingClassNodeRepository;
 import com.analyzer.core.graph.InMemoryProjectFileRepository;
 import com.analyzer.api.graph.ProjectFileRepository;
+import com.analyzer.core.engine.AnalysisEngine;
+import com.analyzer.core.graph.InMemoryGraphRepository;
+import com.analyzer.core.model.ProjectHolder;
 import com.analyzer.core.resource.JARClassLoaderService;
 import com.analyzer.api.resource.ResourceResolver;
 import com.analyzer.api.inspector.Inspector;
@@ -20,13 +23,16 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * Configuration class for setting up hierarchical PicoContainer dependency injection.
+ * Configuration class for setting up hierarchical PicoContainer dependency
+ * injection.
  * <p>
  * Manages two container levels:
  * <ul>
- * <li><b>Application Container</b> (Parent): Long-lived singleton containing core services
+ * <li><b>Application Container</b> (Parent): Long-lived singleton containing
+ * core services
  * like ResourceResolver, JARClassLoaderService, and InspectorRegistry</li>
- * <li><b>Analysis Container</b> (Child): Per-analysis container with fresh instances of
+ * <li><b>Analysis Container</b> (Child): Per-analysis container with fresh
+ * instances of
  * repositories, AnalysisEngine, and all inspectors. Inherits from parent.</li>
  * </ul>
  * <p>
@@ -34,8 +40,10 @@ import java.util.List;
  * <p>
  * Benefits:
  * <ul>
- * <li>Solves circular dependency between InspectorRegistry and AnalysisEngine</li>
- * <li>Ensures clean state for each analysis (fresh repositories/inspectors)</li>
+ * <li>Solves circular dependency between InspectorRegistry and
+ * AnalysisEngine</li>
+ * <li>Ensures clean state for each analysis (fresh
+ * repositories/inspectors)</li>
  * <li>Reuses application-level services (ResourceResolver stays loaded)</li>
  * <li>Better memory management (inspector instances GC'd after analysis)</li>
  * <li>Explicit component registration via @AutoRegister annotation</li>
@@ -57,15 +65,15 @@ public class PicoContainerConfig {
      * @param excludePackages  packages to exclude from scanning
      */
     public PicoContainerConfig(ResourceResolver resourceResolver,
-                               List<String> scanPackages, List<String> excludePackages) {
+            List<String> scanPackages, List<String> excludePackages) {
         this.resourceResolver = resourceResolver;
         this.scanPackages = scanPackages;
         this.excludePackages = excludePackages;
     }
 
-
     /**
-     * Creates the application-level parent container with long-lived singleton services.
+     * Creates the application-level parent container with long-lived singleton
+     * services.
      * This container lives for the entire CLI session and contains:
      * - ResourceResolver
      * - JARClassLoaderService
@@ -81,7 +89,6 @@ public class PicoContainerConfig {
         JavaEE5LifecycleStrategy lifecycleStrategy = new JavaEE5LifecycleStrategy(new LifecycleComponentMonitor());
         MutablePicoContainer container = new DefaultPicoContainer(new Caching(), lifecycleStrategy, null);
 
-
         // Register long-lived application services
         container.addComponent(ResourceResolver.class, resourceResolver);
         container.addComponent(JARClassLoaderService.class);
@@ -94,7 +101,8 @@ public class PicoContainerConfig {
     }
 
     /**
-     * Creates a per-analysis child container with fresh instances for each analysis.
+     * Creates a per-analysis child container with fresh instances for each
+     * analysis.
      * This container inherits from the parent and adds:
      * - Fresh GraphRepository
      * - Fresh ProjectFileRepository
@@ -114,21 +122,22 @@ public class PicoContainerConfig {
 
         // Register per-analysis repositories (fresh instances)
         container.addComponent(GraphRepository.class,
-                com.analyzer.core.graph.InMemoryGraphRepository.class);
+                InMemoryGraphRepository.class);
         container.addComponent(ClassNodeRepository.class, DelegatingClassNodeRepository.class);
         container.addComponent(ProjectFileRepository.class, InMemoryProjectFileRepository.class);
 
         // Register per-analysis services
-        container.addComponent(com.analyzer.core.inspector.InspectorProgressTracker.class);
+        container.addComponent(InspectorProgressTracker.class);
+        container.addComponent(ProjectHolder.class);
 
-        // Register AnalysisEngine - PicoContainer will auto-inject all dependencies from parent + child
-        container.addComponent(com.analyzer.core.engine.AnalysisEngine.class);
+        // Register AnalysisEngine - PicoContainer will auto-inject all dependencies
+        // from parent + child
+        container.addComponent(AnalysisEngine.class);
 
         logger.info("Analysis container created with {} components ({} inspectors)",
                 container.getComponents().size(), container.getComponents(Inspector.class).size());
         return container;
     }
-
 
     /**
      * Gets statistics about the container configuration.

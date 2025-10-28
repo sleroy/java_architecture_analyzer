@@ -171,7 +171,7 @@ public class ProjectSerializer {
         Files.createDirectories(nodeDir);
 
         // Generate safe file name from id
-        String safeId = id.replaceAll("[^a-zA-Z0-9._-]", "_");
+        String safeId = Integer.toString(id.hashCode());
         File nodeFile = nodeDir.resolve("node-" + safeId + ".json").toFile();
         mapper.writeValue(nodeFile, nodeData);
     }

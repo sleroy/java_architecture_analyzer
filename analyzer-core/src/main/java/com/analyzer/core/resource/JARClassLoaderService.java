@@ -206,9 +206,11 @@ public class JARClassLoaderService {
      * This method can be called to refresh the ClassLoader if new JARs are added
      * to the project during runtime.
      *
-     * @param project the Project to scan for JAR files
+     * @param project                     the Project to scan for JAR files
+     * @param includeMavenLocalRepository whether to include JARs from Maven local
+     *                                    repository (.m2) - disabled by default
      */
-    public void scanProjectJars  (Project project) {
+    public void scanProjectJars(Project project, boolean includeMavenLocalRepository) {
         logger.info("Initializing ClassLoader hierarchy from project JARs...");
         try {
             // Collect all JAR URLs
@@ -221,7 +223,7 @@ public class JARClassLoaderService {
             scanDirectoryForJars(project.getProjectPath(), allJars);
 
             // Classify JARs into common and application categories
-            classifyJars(allJars, commonJars, applicationJars);
+            classifyJars(allJars, commonJars, applicationJars, includeMavenLocalRepository);
 
             logger.info("Found {} common JARs (parent ClassLoader)", commonJars.size());
             logger.info("Found {} application JARs (child ClassLoader)", applicationJars.size());
@@ -280,7 +282,7 @@ public class JARClassLoaderService {
     /**
      * Classifies JARs into common (library) JARs and application-specific JARs.
      * Common JARs include:
-     * - JARs from Maven local repository (.m2)
+     * - JARs from Maven local repository (.m2) - optional, disabled by default
      * - JARs from system classpath
      * - Standard library JARs
      * 
@@ -288,16 +290,20 @@ public class JARClassLoaderService {
      * - JARs from project directories (target, lib, libs)
      * - Project-specific build artifacts
      *
-     * @param allJars         all discovered JAR URLs
-     * @param commonJars      set to populate with common JAR URLs
-     * @param applicationJars set to populate with application JAR URLs
+     * @param allJars                     all discovered JAR URLs
+     * @param commonJars                  set to populate with common JAR URLs
+     * @param applicationJars             set to populate with application JAR URLs
+     * @param includeMavenLocalRepository whether to include Maven .m2 JARs as
+     *                                    common JARs
      */
-    private void classifyJars(Set<URL> allJars, Set<URL> commonJars, Set<URL> applicationJars) {
+    private void classifyJars(Set<URL> allJars, Set<URL> commonJars, Set<URL> applicationJars,
+            boolean includeMavenLocalRepository) {
         for (URL jarUrl : allJars) {
             String jarPath = jarUrl.getPath();
 
-            // Check if JAR is from Maven local repository
-            if (jarPath.contains(".m2/repository") || jarPath.contains(".m2\\repository")) {
+            // Check if JAR is from Maven local repository (only if enabled)
+            if (includeMavenLocalRepository
+                    && (jarPath.contains(".m2/repository") || jarPath.contains(".m2\\repository"))) {
                 commonJars.add(jarUrl);
                 logger.trace("Classified as common JAR (Maven): {}", jarPath);
             }
