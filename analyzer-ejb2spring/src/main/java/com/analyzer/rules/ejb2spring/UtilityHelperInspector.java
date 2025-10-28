@@ -59,13 +59,12 @@ public class UtilityHelperInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-                                NodeDecorator projectFileDecorator) {
+                                NodeDecorator<ProjectFile> projectFileDecorator) {
 
-        if (!(type instanceof ClassOrInterfaceDeclaration)) {
+        if (!(type instanceof ClassOrInterfaceDeclaration classDecl)) {
             return;
         }
 
-        ClassOrInterfaceDeclaration classDecl = (ClassOrInterfaceDeclaration) type;
         String className = classDecl.getNameAsString();
 
         // Initial assessment based on class name

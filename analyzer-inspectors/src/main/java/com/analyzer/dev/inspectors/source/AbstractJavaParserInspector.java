@@ -42,7 +42,7 @@ import java.io.IOException;
  * Subclasses must implement getName() and analyzeCompilationUnit() methods.
  * </p>
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED }, produces = {})
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED, InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {})
 public abstract class AbstractJavaParserInspector extends AbstractSourceFileInspector {
 
     private final JavaParser javaParser;

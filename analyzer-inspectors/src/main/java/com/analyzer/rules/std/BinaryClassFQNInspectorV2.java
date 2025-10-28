@@ -4,6 +4,7 @@ import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
+import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.dev.inspectors.binary.AbstractASMClassInspector;
 import com.analyzer.api.resource.ResourceResolver;
 import org.slf4j.Logger;
@@ -40,9 +41,6 @@ public class BinaryClassFQNInspectorV2 extends AbstractASMClassInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(BinaryClassFQNInspectorV2.class);
 
-    // Property keys for JavaClassNode identification
-    public static final String PROP_PACKAGE_NAME = "java.package.name";
-    public static final String PROP_SIMPLE_CLASS_NAME = "java.class.simple_name";
 
     @Inject
     public BinaryClassFQNInspectorV2(ProjectFileRepository projectFileRepository,
@@ -97,8 +95,8 @@ public class BinaryClassFQNInspectorV2 extends AbstractASMClassInspector {
 
                 // Write identification info to JavaClassNode
                 // Note: FQN is already the node ID, but we store components for convenience
-                setProperty(PROP_PACKAGE_NAME, packageName);
-                setProperty(PROP_SIMPLE_CLASS_NAME, className);
+                setProperty(TAG_JAVA_PACKAGE_NAME, packageName);
+                setProperty(PROP_JAVA_CLASS_NAME, className);
                 setProperty(PROP_JAVA_FULLY_QUALIFIED_NAME, fullyQualifiedName);
 
                 // Also enable tags for backward compatibility with dependency system

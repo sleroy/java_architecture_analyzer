@@ -101,6 +101,11 @@ public class LegacyFrameworkDetector implements Inspector<ProjectFile> {
         return "Legacy Framework Detector";
     }
 
+    @Override
+    public boolean supports(ProjectFile objectToAnalyze) {
+        return objectToAnalyze.hasFileExtension("xml") || objectToAnalyze.hasFileExtension("properties") || objectToAnalyze.hasFileExtension("wsdd");
+    }
+
     // Removed supports() method - trust @InspectorDependencies completely
 
     @Override

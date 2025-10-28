@@ -15,22 +15,22 @@ public abstract class AbstractJavaClassInspector extends AbstractJavaParserInspe
     private final ClassNodeRepository classNodeRepository;
 
     @Inject
-    public AbstractJavaClassInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
+    protected AbstractJavaClassInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
         super(resourceResolver);
         this.classNodeRepository = classNodeRepository;
     }
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-                                          NodeDecorator nodeDecorator) {
+                                          NodeDecorator<ProjectFile> decorator) {
         cu.getTypes().forEach(type -> {
             classNodeRepository.getOrCreateClassNode(type).ifPresent(classNode -> {
                 classNode.setProjectFileId(projectFile.getId());
-                analyzeClass(projectFile, classNode, type, nodeDecorator);
+                analyzeClass(projectFile, classNode, type, decorator);
             });
         });
     }
 
     protected abstract void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-                                         NodeDecorator projectFileDecorator);
+                                         NodeDecorator<ProjectFile> projectFileDecorator);
 }

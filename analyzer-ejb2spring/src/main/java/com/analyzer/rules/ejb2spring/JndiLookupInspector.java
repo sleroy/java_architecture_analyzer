@@ -27,7 +27,7 @@ import java.util.Set;
  * Identifies JNDI usage that needs to be replaced with Spring dependency
  * injection.
  */
-@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_DETECTED}, produces = {
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_DETECTED, InspectorTags.TAG_JAVA_IS_SOURCE}, produces = {
         JndiLookupInspector.TAGS.TAG_USES_JNDI,
         JndiLookupInspector.TAGS.TAG_JNDI_COMPLEXITY})
 public class JndiLookupInspector extends AbstractSourceFileInspector {

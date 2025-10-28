@@ -69,13 +69,12 @@ public class FactoryBeanProviderInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-                                NodeDecorator projectFileDecorator) {
+                                NodeDecorator<ProjectFile> projectFileDecorator) {
 
         if (!(type instanceof ClassOrInterfaceDeclaration)) {
             return;
         }
 
-        ClassOrInterfaceDeclaration classDecl = (ClassOrInterfaceDeclaration) type;
         FactoryBeanDetector detector = new FactoryBeanDetector();
         type.accept(detector, null);
 
