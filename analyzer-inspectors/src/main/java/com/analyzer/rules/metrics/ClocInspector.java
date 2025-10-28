@@ -16,7 +16,7 @@ import java.io.IOException;
  * provides
  * basic line counting functionality for source code analysis.
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED }, produces = { ClocInspector.TAG_CLOC })
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED, InspectorTags.TAG_JAVA_IS_SOURCE }, produces = { ClocInspector.TAG_CLOC })
 public class ClocInspector extends AbstractSourceFileInspector {
 
     public static final String TAG_CLOC = "metrics.cloc";

@@ -1,11 +1,14 @@
 package com.analyzer.rules.metrics;
 
+import com.analyzer.api.inspector.Inspector;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.inspector.InspectorDependencies;
 
+import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.bedrock.AbstractBedrockInspectorAbstract;
 import com.analyzer.api.resource.ResourceResolver;
+import javassist.bytecode.CodeAttribute;
 
 /**
  * Concrete implementation of AbstractBedrockInspectorAbstract that uses AI to
@@ -21,7 +24,9 @@ import com.analyzer.api.resource.ResourceResolver;
  * - Code organization and structure
  * - Appropriate use of design patterns
  */
-@InspectorDependencies(produces = { CodeQualityInspector.TAG_CODE_QUALITY_AI })
+@InspectorDependencies(
+        requires = {InspectorTags.TAG_SOURCE_FILE},
+        produces = { CodeQualityInspector.TAG_CODE_QUALITY_AI })
 public class CodeQualityInspector extends AbstractBedrockInspectorAbstract {
 
     public static final String NAME = "Code Quality (AI)";

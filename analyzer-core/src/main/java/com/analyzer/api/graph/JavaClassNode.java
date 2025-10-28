@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.analyzer.core.inspector.InspectorTags.TAG_JAVA_DETECTED;
+
 /**
  * Graph node representing a Java class discovered through source code or
  * bytecode analysis.
@@ -62,7 +64,7 @@ public class JavaClassNode extends BaseGraphNode {
     public JavaClassNode(String fullyQualifiedName) {
         super(fullyQualifiedName, NodeTypeRegistry.getTypeId(JavaClassNode.class));
         setProperty(PROP_FULLY_QUALIFIED_NAME, fullyQualifiedName);
-
+        addTag(TAG_JAVA_DETECTED);
         // Extract and set simple name and package name
         int lastDotIndex = fullyQualifiedName.lastIndexOf('.');
         if (lastDotIndex >= 0) {
