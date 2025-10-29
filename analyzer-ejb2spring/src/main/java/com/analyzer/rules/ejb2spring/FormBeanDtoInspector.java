@@ -43,7 +43,7 @@ import java.util.regex.Pattern;
  * </ul>
  * </p>
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE,InspectorTags.TAG_APPLICATION_CLASS }, produces = {
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
         FormBeanDtoInspector.TAGS.TAG_IS_DTO,
         EjbMigrationTags.MIGRATION_COMPLEXITY_LOW
 })

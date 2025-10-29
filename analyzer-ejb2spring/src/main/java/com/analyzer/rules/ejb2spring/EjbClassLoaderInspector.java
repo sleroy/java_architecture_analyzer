@@ -1,14 +1,11 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
-import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.JARClassLoaderService;
 import com.analyzer.dev.inspectors.classloader.AbstractClassLoaderBasedInspector;
-import com.analyzer.api.resource.ResourceResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,13 +87,9 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
             "javax.ejb.EJBLocalObject",
             "jakarta.ejb.EJBLocalObject");
 
-    private final ClassNodeRepository classNodeRepository;
-
     @Inject
-    public EjbClassLoaderInspector(ResourceResolver resourceResolver, JARClassLoaderService classLoaderService,
-            ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classLoaderService);
-        this.classNodeRepository = classNodeRepository;
+    public EjbClassLoaderInspector(JARClassLoaderService classLoaderService) {
+        super(classLoaderService);
     }
 
     @Override
@@ -104,44 +97,7 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
         return "EJB ClassLoader Inspector";
     }
 
-    @Override
-    protected void analyzeLoadedClass(Class<?> loadedClass, ProjectFile projectFile,
-            NodeDecorator<ProjectFile> projectFileDecorator) {
-        logger.debug("Analyzing loaded class for EJB components: {}", loadedClass.getName());
-
-        JavaClassNode classNode = classNodeRepository.getOrCreateByFqn(loadedClass.getName());
-        classNode.setProjectFileId(projectFile.getId());
-        EjbRuntimeAnalysis analysis = new EjbRuntimeAnalysis(loadedClass);
-
-        // Perform comprehensive runtime analysis
-        boolean isEjbComponent = false;
-
-        // Analyze EJB 3.x annotations with full metadata
-        if (analyzeEjb3Annotations(analysis, classNode, projectFile)) {
-            isEjbComponent = true;
-        }
-
-        // Analyze EJB 2.x interface implementations
-        if (analyzeEjb2Interfaces(analysis, classNode, projectFile)) {
-            isEjbComponent = true;
-        }
-
-        // Analyze EJB standard interfaces
-        if (analyzeEjbStandardInterfaces(analysis, classNode, projectFile)) {
-            isEjbComponent = true;
-        }
-
-        // If EJB component found, perform enhanced analysis
-        if (isEjbComponent) {
-            classNode.addTag(EjbMigrationTags.EJB_BEAN_DETECTED);
-            Map<String, Object> result = performEnhancedAnalysis(analysis, classNode);
-            classNode.setProperty("ejb.runtime.analysis", createAnalysisJson(result));
-            logger.info("EJB component runtime analysis complete: {}", loadedClass.getName());
-        }
-    }
-
-    private boolean analyzeEjb3Annotations(EjbRuntimeAnalysis analysis, JavaClassNode classNode,
-            ProjectFile projectFile) {
+    private boolean analyzeEjb3Annotations(EjbRuntimeAnalysis analysis, JavaClassNode classNode) {
         boolean found = false;
         Class<?> clazz = analysis.getLoadedClass();
 
@@ -153,31 +109,27 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
                 analysis.addEjbAnnotation(annotation);
 
                 switch (annotationName) {
-                    case "javax.ejb.Stateless":
-                    case "jakarta.ejb.Stateless":
+                    case "javax.ejb.Stateless", "jakarta.ejb.Stateless":
                         classNode.addTag(EjbMigrationTags.EJB_STATELESS_SESSION_BEAN);
                         classNode.addTag(EjbMigrationTags.EJB_SESSION_BEAN);
                         extractStatelessAnnotationMetadata(annotation, classNode);
                         found = true;
                         break;
 
-                    case "javax.ejb.Stateful":
-                    case "jakarta.ejb.Stateful":
+                    case "javax.ejb.Stateful", "jakarta.ejb.Stateful":
                         classNode.addTag(EjbMigrationTags.EJB_STATEFUL_SESSION_BEAN);
                         classNode.addTag(EjbMigrationTags.EJB_SESSION_BEAN);
                         extractStatefulAnnotationMetadata(annotation, classNode);
                         found = true;
                         break;
 
-                    case "javax.persistence.Entity":
-                    case "jakarta.persistence.Entity":
+                    case "javax.persistence.Entity", "jakarta.persistence.Entity":
                         classNode.addTag(EjbMigrationTags.EJB_ENTITY_BEAN);
                         extractEntityAnnotationMetadata(annotation, classNode);
                         found = true;
                         break;
 
-                    case "javax.ejb.MessageDriven":
-                    case "jakarta.ejb.MessageDriven":
+                    case "javax.ejb.MessageDriven", "jakarta.ejb.MessageDriven":
                         classNode.addTag(EjbMigrationTags.EJB_MESSAGE_DRIVEN_BEAN);
                         extractMessageDrivenAnnotationMetadata(annotation, classNode);
                         found = true;
@@ -189,8 +141,7 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
         return found;
     }
 
-    private boolean analyzeEjb2Interfaces(EjbRuntimeAnalysis analysis, JavaClassNode classNode,
-            ProjectFile projectFile) {
+    private boolean analyzeEjb2Interfaces(EjbRuntimeAnalysis analysis, JavaClassNode classNode) {
         boolean found = false;
         Class<?> clazz = analysis.getLoadedClass();
 
@@ -205,8 +156,7 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
                 analysis.addEjb2Interface(iface);
 
                 switch (interfaceName) {
-                    case "javax.ejb.SessionBean":
-                    case "jakarta.ejb.SessionBean":
+                    case "javax.ejb.SessionBean", "jakarta.ejb.SessionBean":
                         classNode.addTag(EjbMigrationTags.EJB_SESSION_BEAN);
                         analyzeSessionBeanMethods(clazz, classNode);
                         found = true;
@@ -232,8 +182,7 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
         return found;
     }
 
-    private boolean analyzeEjbStandardInterfaces(EjbRuntimeAnalysis analysis, JavaClassNode classNode,
-            ProjectFile projectFile) {
+    private boolean analyzeEjbStandardInterfaces(EjbRuntimeAnalysis analysis, JavaClassNode classNode) {
         if (!analysis.getLoadedClass().isInterface()) {
             return false; // Only interfaces can be EJB standard interfaces
         }
@@ -589,6 +538,38 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
         }
         json.append("}");
         return json.toString();
+    }
+
+    @Override
+    protected void analyzeLoadedClass(Class<?> loadedClass, JavaClassNode classNode, NodeDecorator<JavaClassNode> decorator) {
+        logger.debug("Analyzing loaded class for EJB components: {}", loadedClass.getName());
+        EjbRuntimeAnalysis analysis = new EjbRuntimeAnalysis(loadedClass);
+
+        // Perform comprehensive runtime analysis
+        boolean isEjbComponent = false;
+
+        // Analyze EJB 3.x annotations with full metadata
+        if (analyzeEjb3Annotations(analysis, classNode)) {
+            isEjbComponent = true;
+        }
+
+        // Analyze EJB 2.x interface implementations
+        if (analyzeEjb2Interfaces(analysis, classNode)) {
+            isEjbComponent = true;
+        }
+
+        // Analyze EJB standard interfaces
+        if (analyzeEjbStandardInterfaces(analysis, classNode)) {
+            isEjbComponent = true;
+        }
+
+        // If EJB component found, perform enhanced analysis
+        if (isEjbComponent) {
+            classNode.addTag(EjbMigrationTags.EJB_BEAN_DETECTED);
+            Map<String, Object> result = performEnhancedAnalysis(analysis, classNode);
+            classNode.setProperty("ejb.runtime.analysis", createAnalysisJson(result));
+            logger.info("EJB component runtime analysis complete: {}", loadedClass.getName());
+        }
     }
 
     /**

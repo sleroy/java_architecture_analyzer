@@ -40,7 +40,7 @@ import java.util.*;
  * </ul>
  * </p>
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE,InspectorTags.TAG_APPLICATION_CLASS }, produces = {
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
         DaoRepositoryInspector.TAGS.TAG_IS_DAO,
         EjbMigrationTags.JPA_REPOSITORY_CONVERSION,
         EjbMigrationTags.DATA_ACCESS_OBJECT_PATTERN,

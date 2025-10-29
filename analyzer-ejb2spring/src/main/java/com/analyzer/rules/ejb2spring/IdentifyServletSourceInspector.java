@@ -15,7 +15,7 @@ import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
 import java.util.Set;
 
-@InspectorDependencies(requires = {InspectorTags.TAG_APPLICATION_CLASS}, produces = {IdentifyServletSourceInspector.TAGS.TAG_IS_SERVLET})
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_IS_SOURCE}, produces = {IdentifyServletSourceInspector.TAGS.TAG_IS_SERVLET})
 public class IdentifyServletSourceInspector extends AbstractJavaParserInspector {
 
     public static class TAGS {

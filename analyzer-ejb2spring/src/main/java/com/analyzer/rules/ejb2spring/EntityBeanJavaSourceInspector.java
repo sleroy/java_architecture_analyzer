@@ -29,7 +29,7 @@ import java.util.Objects;
  * - Requires JAVA tag and JAVA_SOURCE for Java file parsing
  * - Produces Entity Bean detection tags for downstream EJB analysis
  */
-@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_IS_SOURCE,InspectorTags.TAG_APPLICATION_CLASS}, produces = {
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_IS_SOURCE}, produces = {
         EntityBeanJavaSourceInspector.TAGS.TAG_IS_ENTITY_BEAN,
         EntityBeanJavaSourceInspector.TAGS.TAG_BEAN_PERSISTENCE_TYPE
 })

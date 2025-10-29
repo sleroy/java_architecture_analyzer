@@ -48,7 +48,7 @@ import java.util.Set;
  *      "https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#aop">Spring
  *      AOP</a>
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE,InspectorTags.TAG_APPLICATION_CLASS }, produces = {
+@InspectorDependencies(requires = {  }, produces = {
         EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
         EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM,
         EjbMigrationTags.CODE_MODERNIZATION

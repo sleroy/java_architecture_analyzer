@@ -52,7 +52,7 @@ import java.util.List;
  *      "https://docs.spring.io/spring-framework/docs/current/reference/html/integration.html#cache">Spring
  *      Cache</a>
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE,InspectorTags.TAG_APPLICATION_CLASS }, produces = {
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
         EjbMigrationTags.EJB_CACHING_PATTERN,
         EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
         EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM

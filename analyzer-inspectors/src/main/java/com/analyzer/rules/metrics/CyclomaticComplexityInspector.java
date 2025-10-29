@@ -37,19 +37,16 @@ import javax.inject.Inject;
  * - >50: Very high complexity, consider refactoring
  */
 @InspectorDependencies(
-        requires = { InspectorTags.TAG_JAVA_DETECTED, InspectorTags.TAG_APPLICATION_CLASS },
+        requires = { InspectorTags.TAG_JAVA_DETECTED },
         produces = { CyclomaticComplexityInspector.TAG_CYCLOMATIC_COMPLEXITY }
 )
 public class CyclomaticComplexityInspector extends AbstractJavaParserInspector {
 
     public static final String TAG_CYCLOMATIC_COMPLEXITY = "metrics.cyclomatic-complexity";
 
-    private final GraphRepository graphRepository;
-
     @Inject
     public CyclomaticComplexityInspector(ResourceResolver resourceResolver, GraphRepository graphRepository) {
         super(resourceResolver);
-        this.graphRepository = graphRepository;
     }
 
     @Override
