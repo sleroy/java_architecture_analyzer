@@ -30,6 +30,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -529,71 +530,21 @@ public class AnalysisEngine {
         logger.info("Phase 4: Executing {} inspectors on {} class nodes (max passes: {})",
                 inspectors.size(), classNodes.size(), maxPasses);
 
-        // Initialize execution profile for Phase 4 - only track ClassNode inspectors
-        List<String> phase4InspectorNames = inspectors.stream()
-                .map(Inspector::getName)
-                .toList();
-        ExecutionProfile executionProfile = new ExecutionProfile(phase4InspectorNames);
+        // Create multi-pass executor configuration
+        MultiPassExecutor<JavaClassNode> executor = new MultiPassExecutor<>();
+        MultiPassExecutor.ExecutionConfig<JavaClassNode> config = new MultiPassExecutor.ExecutionConfig<>(
+                "Phase 4",
+                maxPasses,
+                ExecutionProfile.ExecutionPhase.PHASE_4_CLASSNODE_ANALYSIS,
+                classNodeRepository::findAll,
+                inspectors,
+                this::analyzeClassNodeWithTracking);
 
-        int pass = 1;
-        boolean hasChanges = true;
+        // Execute multi-pass analysis
+        MultiPassExecutor.ExecutionResult result = executor.execute(config);
 
-        while (hasChanges && pass <= maxPasses) {
-            logger.info("=== Phase 4 Pass {} of {} ===", pass, maxPasses);
-
-            LocalDateTime passStartTime = LocalDateTime.now();
-            int nodesProcessed = 0;
-            int nodesSkipped = 0;
-            Set<String> triggeredInspectors = new HashSet<>();
-
-            try (ProgressBar pb = new ProgressBar("Phase 4 Pass " + pass, classNodes.size())) {
-                for (JavaClassNode classNode : classNodes) {
-                    Set<String> nodeInspectors = analyzeClassNodeWithTracking(classNode, inspectors,
-                            passStartTime, executionProfile, pass);
-                    if (!nodeInspectors.isEmpty()) {
-                        nodesProcessed++;
-                        triggeredInspectors.addAll(nodeInspectors);
-                    } else {
-                        nodesSkipped++;
-                    }
-                    pb.step();
-                }
-            }
-
-            logger.info("Phase 4 Pass {} completed: {} nodes processed, {} nodes skipped (up-to-date)",
-                    pass, nodesProcessed, nodesSkipped);
-
-            // Print triggered inspectors for this pass
-            if (!triggeredInspectors.isEmpty()) {
-                logger.info("Phase 4 Pass {} triggered inspectors: [{}]", pass,
-                        String.join(", ", triggeredInspectors.stream().sorted().toList()));
-            } else {
-                logger.info("Phase 4 Pass {} triggered inspectors: [none]", pass);
-            }
-
-            // Check for convergence - if no nodes were processed, we've converged
-            hasChanges = nodesProcessed > 0;
-
-            if (!hasChanges) {
-                logger.info("Phase 4 convergence achieved after {} passes - no more nodes need processing", pass);
-                break;
-            }
-
-            pass++;
-        }
-
-        if (pass > maxPasses) {
-            logger.warn("Phase 4 reached maximum passes ({}) without full convergence", maxPasses);
-        } else {
-            logger.info("Phase 4 multi-pass analysis completed successfully in {} passes", pass);
-        }
-
-        // Generate and log execution profile report
-        executionProfile.setAnalysisMetrics(pass - 1, classNodes.size());
-        executionProfile.markAnalysisComplete();
-        logger.info("=== Phase 4 Execution Summary ===");
-        executionProfile.logReport();
-        logger.info("=== End Phase 4 Summary ===");
+        logger.info("Phase 4 completed: {} passes executed, converged: {}",
+                result.getPassesExecuted(), result.isConverged());
     }
 
     /**
@@ -620,31 +571,31 @@ public class AnalysisEngine {
             try {
                 String inspectorName = inspector.getName();
 
-                    logger.debug("Inspector '{}' needs to run on class: {}", inspectorName,
+                logger.debug("Inspector '{}' needs to run on class: {}", inspectorName,
+                        classNode.getFullyQualifiedName());
+
+                if (inspector.canProcess(classNode)) {
+                    // Record execution start time for performance tracking
+                    long startTime = System.nanoTime();
+
+                    // Execute inspector
+                    NodeDecorator<JavaClassNode> decorator = new NodeDecorator<>(classNode);
+                    inspector.inspect(classNode, decorator);
+
+                    // Record execution timing in ExecutionProfile with pass number
+                    long executionTimeNanos = System.nanoTime() - startTime;
+                    executionProfile.recordInspectorExecution(inspectorName, phase, pass, executionTimeNanos);
+
+                    logger.debug("Inspector '{}' executed on class: {}", inspectorName,
                             classNode.getFullyQualifiedName());
 
-                    if (inspector.canProcess(classNode)) {
-                        // Record execution start time for performance tracking
-                        long startTime = System.nanoTime();
-
-                        // Execute inspector
-                        NodeDecorator<JavaClassNode> decorator = new NodeDecorator<>(classNode);
-                        inspector.inspect(classNode, decorator);
-
-                        // Record execution timing in ExecutionProfile with pass number
-                        long executionTimeNanos = System.nanoTime() - startTime;
-                        executionProfile.recordInspectorExecution(inspectorName, phase, pass, executionTimeNanos);
-
-                        logger.debug("Inspector '{}' executed on class: {}", inspectorName,
-                                classNode.getFullyQualifiedName());
-
-                        // Mark inspector as executed
-                        classNode.markInspectorExecuted(inspectorName, passStartTime);
-                        triggeredInspectors.add(inspectorName);
-                    } else {
-                        logger.debug("Inspector '{}' not supported for class: {}", inspectorName,
-                                classNode.getFullyQualifiedName());
-                    }
+                    // Mark inspector as executed
+                    classNode.markInspectorExecuted(inspectorName, passStartTime);
+                    triggeredInspectors.add(inspectorName);
+                } else {
+                    logger.debug("Inspector '{}' not supported for class: {}", inspectorName,
+                            classNode.getFullyQualifiedName());
+                }
             } catch (Exception e) {
                 logger.error("Error running inspector '{}' on class '{}': {}",
                         inspector.getName(), classNode.getFullyQualifiedName(), e.getMessage());
@@ -667,96 +618,39 @@ public class AnalysisEngine {
      * reached.
      */
     private void executeMultiPassInspectors(Project project, List<String> requestedInspectors, int maxPasses) {
-        List<Inspector<ProjectFile>> inspectors = getProjectFileInspectors(requestedInspectors);
+        List<Inspector<ProjectFile>> projectFileInspectors = getProjectFileInspectors(requestedInspectors);
 
-        if (inspectors.isEmpty()) {
+        if (projectFileInspectors.isEmpty()) {
             logger.warn("No ProjectFile inspectors found");
             return;
         }
 
         logger.info("Phase 3: Executing {} inspectors on {} project files (max passes: {})",
-                inspectors.size(), project.getProjectFiles().size(), maxPasses);
-
-        // Initialize execution profile for Phase 3 - only track ProjectFile inspectors
-        List<String> phase3InspectorNames = inspectors.stream()
-                .map(Inspector::getName)
-                .toList();
-        ExecutionProfile executionProfile = new ExecutionProfile(phase3InspectorNames);
-
-        // Print list of available inspectors by name during Phase 3
-        logger.info("=== Available Inspectors ===");
-        List<String> allInspectorNames = new ArrayList<>(inspectorRegistry.getInspectorNames());
-        allInspectorNames.sort(String::compareTo); // Sort alphabetically for better readability
-        logger.debug("Total available inspectors ({}): [{}]",
-                allInspectorNames.size(),
-                String.join(", ", allInspectorNames));
+                projectFileInspectors.size(), project.getProjectFiles().size(), maxPasses);
 
         // Print the specific inspectors that will be executed
-        List<String> executingInspectorNames = inspectors.stream()
+        List<String> executingInspectorNames = projectFileInspectors.stream()
                 .map(Inspector::getName)
                 .toList();
         logger.debug("Inspectors selected for execution ({}): [{}]",
                 executingInspectorNames.size(),
                 String.join(", ", executingInspectorNames));
-        logger.info("=== End Inspector List ===");
 
-        int pass = 1;
-        boolean hasChanges = true;
+        // Create multi-pass executor configuration
+        MultiPassExecutor<ProjectFile> executor = new MultiPassExecutor<>();
+        MultiPassExecutor.ExecutionConfig<ProjectFile> config = new MultiPassExecutor.ExecutionConfig<>(
+                "Phase 3",
+                maxPasses,
+                ExecutionProfile.ExecutionPhase.PHASE_3_PROJECTFILE_ANALYSIS,
+                () -> project.getProjectFiles().values(),
+                projectFileInspectors,
+                this::analyzeProjectFileWithTrackingAndCollection);
 
-        while (hasChanges && pass <= maxPasses) {
-            logger.info("=== Pass {} of {} ===", pass, maxPasses);
+        // Execute multi-pass analysis
+        MultiPassExecutor.ExecutionResult result = executor.execute(config);
 
-            LocalDateTime passStartTime = LocalDateTime.now();
-            int filesProcessed = 0;
-            int filesSkipped = 0;
-            Set<String> triggeredInspectors = new HashSet<>();
-
-            try (ProgressBar pb = new ProgressBar("Pass " + pass, project.getProjectFiles().size())) {
-                for (ProjectFile projectFile : project.getProjectFiles().values()) {
-                    Set<String> fileInspectors = analyzeProjectFileWithTrackingAndCollection(projectFile, inspectors,
-                            passStartTime, executionProfile, pass);
-                    if (!fileInspectors.isEmpty()) {
-                        filesProcessed++;
-                        triggeredInspectors.addAll(fileInspectors);
-                    } else {
-                        filesSkipped++;
-                    }
-                    pb.step();
-                }
-            }
-
-            logger.info("Pass {} completed: {} files processed, {} files skipped (up-to-date)",
-                    pass, filesProcessed, filesSkipped);
-
-            // Print triggered inspectors for this pass
-            if (!triggeredInspectors.isEmpty()) {
-                logger.info("Pass {} triggered inspectors: [{}]", pass,
-                        String.join(", ", triggeredInspectors.stream().sorted().toList()));
-            } else {
-                logger.info("Pass {} triggered inspectors: [none]", pass);
-            }
-
-            // Check for convergence - if no files were processed, we've converged
-            hasChanges = filesProcessed > 0;
-
-            if (!hasChanges) {
-                logger.info("Convergence achieved after {} passes - no more files need processing", pass);
-                break;
-            }
-
-            pass++;
-        }
-
-        if (pass > maxPasses) {
-            logger.warn("Reached maximum passes ({}) without full convergence", maxPasses);
-        } else {
-            logger.info("Multi-pass analysis completed successfully in {} passes", pass);
-        }
-
-        // Generate and log execution profile report
-        executionProfile.setAnalysisMetrics(pass - 1, project.getProjectFiles().size());
-        executionProfile.markAnalysisComplete();
-        executionProfile.logReport();
+        logger.info("Phase 3 completed: {} passes executed, converged: {}",
+                result.getPassesExecuted(), result.isConverged());
 
         // Mark progress tracking completed and log comprehensive report
         progressTracker.markTrackingCompleted();
