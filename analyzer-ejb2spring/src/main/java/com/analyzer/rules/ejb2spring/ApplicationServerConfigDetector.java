@@ -18,7 +18,7 @@ import java.util.*;
  * configuration
  * files are not Java classes.
  */
-@InspectorDependencies(requires = {InspectorTags.TAG_SOURCE_FILE, InspectorTags.TAG_APPLICATION_CLASS}, produces = {
+@InspectorDependencies(requires = {InspectorTags.TAG_SOURCE_FILE}, produces = {
         ApplicationServerConfigDetector.TAGS.TAG_APP_SERVER_CONFIG,
         ApplicationServerConfigDetector.TAGS.TAG_FILE_TYPE_SERVER_CONFIG,
         ApplicationServerConfigDetector.TAGS.TAG_APP_SERVER_GENERAL,

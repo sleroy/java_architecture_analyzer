@@ -44,7 +44,7 @@ import java.util.List;
  * @see <a href=
  *      "https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/context/annotation/Bean.html">Spring @Bean</a>
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE,InspectorTags.TAG_APPLICATION_CLASS }, produces = {
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
         EjbMigrationTags.SPRING_CONFIG_CONVERSION,
         EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
         EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM

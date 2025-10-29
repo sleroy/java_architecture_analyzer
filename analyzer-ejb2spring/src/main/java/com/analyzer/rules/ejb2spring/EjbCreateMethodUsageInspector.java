@@ -1,5 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
+import com.analyzer.api.inspector.Inspector;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
@@ -45,7 +46,7 @@ import java.util.stream.Collectors;
  * @since Phase 3 - Systematic Inspector Migration
  * @see EjbCreateMethodUsageInspector Original file-centric version
  */
-@InspectorDependencies(requires = {InspectorTags.TAG_APPLICATION_CLASS}, produces = {
+@InspectorDependencies(requires = { InspectorTags.TAG_APPLICATION_CLASS }, produces = {
         EjbMigrationTags.EJB_CREATE_METHOD,
         EjbMigrationTags.EJB_CREATE_METHOD_USAGE,
         EjbMigrationTags.EJB_HOME_INTERFACE,

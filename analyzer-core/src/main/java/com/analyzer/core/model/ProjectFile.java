@@ -16,17 +16,19 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ProjectFile extends BaseGraphNode {
-    private final Path filePath;
-    private final String relativePath;
-    private final String fileName;
-    private final String fileExtension;
-    private final Date discoveredAt;
 
-    // JAR content support
-    private final String sourceJarPath;
-    private final String jarEntryPath;
-    private final boolean isVirtual;
+    // Property keys for ProjectFile-specific data stored in BaseGraphNode's
+    // property map
+    public static final String PROP_FILE_PATH = "filePath";
+    public static final String PROP_RELATIVE_PATH = "relativePath";
+    public static final String PROP_FILE_NAME = "fileName";
+    public static final String PROP_FILE_EXTENSION = "fileExtension";
+    public static final String PROP_DISCOVERED_AT = "discoveredAt";
+    public static final String PROP_SOURCE_JAR_PATH = "sourceJarPath";
+    public static final String PROP_JAR_ENTRY_PATH = "jarEntryPath";
+    public static final String PROP_IS_VIRTUAL = "isVirtual";
 
+    // Transient runtime state - NOT stored in properties
     @JsonIgnore
     private final Map<String, LocalDateTime> inspectorExecutionTimes = new ConcurrentHashMap<>();
     @JsonIgnore
@@ -56,14 +58,15 @@ public class ProjectFile extends BaseGraphNode {
             @JsonProperty("allProperties") Map<String, Object> allProperties) {
         super(Objects.requireNonNull(filePathStr, "File path cannot be null"), "file");
 
-        this.filePath = Paths.get(filePathStr);
-        this.relativePath = relativePath != null ? relativePath : "";
-        this.fileName = fileName != null ? fileName : "";
-        this.fileExtension = fileExtension != null ? fileExtension : "";
-        this.discoveredAt = discoveredAt != null ? discoveredAt : new Date();
-        this.sourceJarPath = sourceJarPath;
-        this.jarEntryPath = jarEntryPath;
-        this.isVirtual = isVirtual;
+        // Store file metadata in properties
+        setProperty(PROP_FILE_PATH, filePathStr);
+        setProperty(PROP_RELATIVE_PATH, relativePath != null ? relativePath : "");
+        setProperty(PROP_FILE_NAME, fileName != null ? fileName : "");
+        setProperty(PROP_FILE_EXTENSION, fileExtension != null ? fileExtension : "");
+        setProperty(PROP_DISCOVERED_AT, discoveredAt != null ? discoveredAt : new Date());
+        setProperty(PROP_SOURCE_JAR_PATH, sourceJarPath);
+        setProperty(PROP_JAR_ENTRY_PATH, jarEntryPath);
+        setProperty(PROP_IS_VIRTUAL, isVirtual);
 
         // Restore tags from deserialization
         if (tags != null) {
@@ -74,27 +77,42 @@ public class ProjectFile extends BaseGraphNode {
         if (allProperties != null) {
             allProperties.forEach(this::setProperty);
         }
+
+        // Set basic file metadata as additional properties (for backward compatibility)
+        setProperty(InspectorTags.TAG_FILE_NAME, getFileName());
+        setProperty(InspectorTags.TAG_FILE_EXTENSION, getFileExtension());
+        setProperty(InspectorTags.TAG_RELATIVE_PATH, getRelativePath());
+        setProperty(InspectorTags.TAG_ABSOLUTE_PATH, filePathStr);
+
+        if (isVirtual) {
+            setProperty(InspectorTags.TAG_JAR_SOURCE_PATH, sourceJarPath);
+            setProperty(InspectorTags.TAG_JAR_ENTRY_PATH, jarEntryPath);
+            setProperty(InspectorTags.TAG_JAR_IS_VIRTUAL, true);
+        }
     }
 
     private ProjectFile(Path filePath, Path projectRoot, String sourceJarPath, String jarEntryPath, Date discoveredAt) {
         super(Objects.requireNonNull(filePath, "File path cannot be null").toString(), "file");
         Objects.requireNonNull(projectRoot, "Project root cannot be null");
 
-        this.filePath = filePath;
-        this.sourceJarPath = sourceJarPath;
-        this.jarEntryPath = jarEntryPath;
-        this.isVirtual = (sourceJarPath != null);
-
-        this.relativePath = projectRoot.relativize(filePath).toString();
-        this.fileName = filePath.getFileName().toString();
-
+        String relativePath = projectRoot.relativize(filePath).toString();
+        String fileName = filePath.getFileName().toString();
         String name = fileName;
         int lastDot = name.lastIndexOf('.');
-        this.fileExtension = lastDot != -1 ? name.substring(lastDot + 1).toLowerCase() : "";
+        String fileExtension = lastDot != -1 ? name.substring(lastDot + 1).toLowerCase() : "";
+        boolean isVirtual = (sourceJarPath != null);
 
-        this.discoveredAt = discoveredAt;
+        // Store all metadata in properties
+        setProperty(PROP_FILE_PATH, filePath.toString());
+        setProperty(PROP_RELATIVE_PATH, relativePath);
+        setProperty(PROP_FILE_NAME, fileName);
+        setProperty(PROP_FILE_EXTENSION, fileExtension);
+        setProperty(PROP_DISCOVERED_AT, discoveredAt);
+        setProperty(PROP_SOURCE_JAR_PATH, sourceJarPath);
+        setProperty(PROP_JAR_ENTRY_PATH, jarEntryPath);
+        setProperty(PROP_IS_VIRTUAL, isVirtual);
 
-        // Set basic file metadata as properties
+        // Set basic file metadata as additional properties (for backward compatibility)
         setProperty(InspectorTags.TAG_FILE_NAME, fileName);
         setProperty(InspectorTags.TAG_FILE_EXTENSION, fileExtension);
         setProperty(InspectorTags.TAG_RELATIVE_PATH, relativePath);
@@ -108,22 +126,24 @@ public class ProjectFile extends BaseGraphNode {
     }
 
     public Path getFilePath() {
-        return filePath;
+        String filePathStr = getStringProperty(PROP_FILE_PATH, null);
+        return filePathStr != null ? Paths.get(filePathStr) : null;
     }
 
     public String getRelativePath() {
-        return relativePath;
+        return getStringProperty(PROP_RELATIVE_PATH, "");
     }
 
     public String getFileName() {
-        return fileName;
+        return getStringProperty(PROP_FILE_NAME, "");
     }
 
     public String getFileExtension() {
-        return fileExtension;
+        return getStringProperty(PROP_FILE_EXTENSION, "");
     }
 
     public boolean hasFileExtension(String extension) {
+        String fileExtension = getFileExtension();
         if (extension == null) {
             return fileExtension.isEmpty();
         }
@@ -131,24 +151,28 @@ public class ProjectFile extends BaseGraphNode {
     }
 
     public Date getDiscoveredAt() {
-        return new Date(discoveredAt.getTime());
+        Object value = getProperty(PROP_DISCOVERED_AT);
+        if (value instanceof Date) {
+            return new Date(((Date) value).getTime());
+        }
+        return new Date();
     }
 
     public boolean isVirtual() {
-        return isVirtual;
+        return getBooleanProperty(PROP_IS_VIRTUAL, false);
     }
 
     public String getSourceJarPath() {
-        return sourceJarPath;
+        return getStringProperty(PROP_SOURCE_JAR_PATH, null);
     }
 
     public String getJarEntryPath() {
-        return jarEntryPath;
+        return getStringProperty(PROP_JAR_ENTRY_PATH, null);
     }
 
     @JsonIgnore
     public boolean isJarInternal() {
-        return isVirtual;
+        return isVirtual();
     }
 
     // ==================== Property Methods ====================
@@ -334,10 +358,15 @@ public class ProjectFile extends BaseGraphNode {
     public LocalDateTime getFileModificationTime() {
         if (cachedFileModificationTime == null) {
             try {
-                cachedFileModificationTime = Files.getLastModifiedTime(filePath)
-                        .toInstant()
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDateTime();
+                Path path = getFilePath();
+                if (path != null) {
+                    cachedFileModificationTime = Files.getLastModifiedTime(path)
+                            .toInstant()
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDateTime();
+                } else {
+                    cachedFileModificationTime = LocalDateTime.now();
+                }
             } catch (IOException e) {
                 cachedFileModificationTime = LocalDateTime.now();
             }
@@ -375,19 +404,39 @@ public class ProjectFile extends BaseGraphNode {
         if (fqn != null) {
             return fqn;
         }
+        String relativePath = getRelativePath();
+        String fileName = getFileName();
         return relativePath.length() < 50 ? relativePath : fileName;
     }
 
     // ==================== Object Methods ====================
-    // equals(), hashCode() inherited from BaseGraphNode (based on ID)
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null || getClass() != obj.getClass())
+            return false;
+
+        ProjectFile that = (ProjectFile) obj;
+        return Objects.equals(getId(), that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getId());
+    }
 
     @Override
     public String toString() {
-        return "ProjectFile{" +
-                "relativePath='" + relativePath + '\'' +
-                ", properties=" + getNodeProperties().size() +
-                ", tags=" + getTags().size() +
-                '}';
+        return String.format("ProjectFile{relativePath='%s', fileName='%s', extension='%s', " +
+                "virtual=%b, properties=%d, tags=%d}",
+                getRelativePath(),
+                getFileName(),
+                getFileExtension(),
+                isVirtual(),
+                getNodeProperties().size(),
+                getTags().size());
     }
 
     public void setFullQualifiedName(String packageName, String className) {

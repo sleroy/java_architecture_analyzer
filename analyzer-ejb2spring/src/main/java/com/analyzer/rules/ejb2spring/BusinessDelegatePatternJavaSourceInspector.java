@@ -33,7 +33,7 @@ import java.util.Set;
  * <p>
  * Phase 1 - Core EJB Migration Analysis
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE,InspectorTags.TAG_APPLICATION_CLASS }, need = {
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, need = {
         EntityBeanJavaSourceInspector.class }, produces = {
                 EjbMigrationTags.EJB_BUSINESS_DELEGATE,
                 EjbMigrationTags.EJB_SERVICE_LOCATOR,

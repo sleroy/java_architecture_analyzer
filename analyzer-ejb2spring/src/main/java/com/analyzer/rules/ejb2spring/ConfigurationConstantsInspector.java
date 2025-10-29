@@ -42,7 +42,7 @@ import java.util.List;
  * "https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.external-config">Spring
  * Boot External Configuration</a>
  */
-@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_IS_SOURCE, InspectorTags.TAG_APPLICATION_CLASS}, produces = {
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_IS_SOURCE}, produces = {
         EjbMigrationTags.SPRING_CONFIG_CONVERSION,
         EjbMigrationTags.CODE_MODERNIZATION,
         EjbMigrationTags.MIGRATION_COMPLEXITY_LOW

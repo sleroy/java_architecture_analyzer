@@ -150,7 +150,7 @@ public class ExecutionProfile {
             // Table structure
             int[] columnWidths = { nameWidth + 2, 10, 13, 15, 13, 17 };
             String border = buildTableBorder(columnWidths);
-            String titleFormat = "| %-" + nameWidth + "s | %-8s | %-11s | %-13s | %-11s | %-15s |";
+            String titleFormat = "| %-" + nameWidth + "s | %-8s | %-11s | %-13s | %-11s | %-18s |";
 
             logger.info(border);
             logger.info(String.format(titleFormat, "Inspector Name", "Status", "Executions",
@@ -188,7 +188,7 @@ public class ExecutionProfile {
                     String.format("%,d", inspectorExecutions.size()),
                     String.format("%.1f", avgTime),
                     String.format("%,d", totalTime),
-                    truncate(formatInspectorPhases(inspectorExecutions), 15)));
+                    truncate(formatInspectorPhases(inspectorExecutions), 18)));
         }
 
         private void logPerformanceAnalysis() {

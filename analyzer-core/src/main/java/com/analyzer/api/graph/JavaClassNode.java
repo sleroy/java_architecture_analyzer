@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -373,5 +374,37 @@ public class JavaClassNode extends BaseGraphNode {
             node.setSourceFilePath(sourceFilePath);
         }
         return node;
+    }
+
+    // ==================== Object Methods ====================
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null || getClass() != obj.getClass())
+            return false;
+
+        JavaClassNode that = (JavaClassNode) obj;
+        return Objects.equals(getId(), that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getId());
+    }
+
+    @Override
+    public String toString() {
+        return String.format("JavaClassNode{fqn='%s', type='%s', sourceType='%s', projectFileId='%s', " +
+                "methodCount=%d, fieldCount=%d, properties=%d, tags=%d}",
+                getFullyQualifiedName(),
+                getClassType(),
+                getSourceType(),
+                getProjectFileId(),
+                getMethodCount(),
+                getFieldCount(),
+                getNodeProperties().size(),
+                getTags().size());
     }
 }

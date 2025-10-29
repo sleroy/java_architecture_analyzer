@@ -46,7 +46,7 @@ import java.util.Set;
  *            </ul>
  *            </p>
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE, InspectorTags.TAG_APPLICATION_CLASS}, produces = {
+@InspectorDependencies(produces = {
         TimerBeanInspector.TAGS.TAG_IS_TIMER_BEAN,
         EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
         EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM

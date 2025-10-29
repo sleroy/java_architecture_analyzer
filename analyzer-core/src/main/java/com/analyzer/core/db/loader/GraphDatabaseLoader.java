@@ -6,12 +6,10 @@ import com.analyzer.core.db.entity.GraphEdgeEntity;
 import com.analyzer.core.db.entity.GraphNodeEntity;
 import com.analyzer.core.db.repository.H2GraphStorageRepository;
 import com.analyzer.core.graph.InMemoryGraphRepository;
-import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.serialization.JsonSerializationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -149,8 +147,8 @@ public class GraphDatabaseLoader {
     }
 
     /**
-     * Converts node entities to ProjectFile objects and adds them to the
-     * repository.
+     * Converts node entities to GraphNode objects and adds them to the repository.
+     * Uses the NodeTypeRegistry factory pattern to support all GraphNode types.
      * Returns a map of node IDs to GraphNode objects for edge creation.
      */
     private static Map<String, GraphNode> convertAndAddNodes(
@@ -163,86 +161,20 @@ public class GraphDatabaseLoader {
 
         for (GraphNodeEntity entity : nodeEntities) {
             try {
-                // Deserialize properties from JSON
-                Map<String, Object> properties = jsonSerializer.deserializeProperties(entity.getProperties());
-
-                // Load metrics from database and add with "metrics." prefix
-                String metricsMapStr = entity.getMetricsMap();
-                if (metricsMapStr != null && !metricsMapStr.isEmpty()) {
-                    Map<String, Object> metrics = jsonSerializer.deserializeProperties(metricsMapStr);
-                    // Add metrics back with prefix
-                    for (Map.Entry<String, Object> entry : metrics.entrySet()) {
-                        properties.put("metrics." + entry.getKey(), entry.getValue());
-                    }
-                }
-
-                // Create ProjectFile from entity data
-                // Check if this is a JAR-internal file by looking for JAR properties
-                String sourceJarPath = (String) properties.get("source_jar_path");
-                String jarEntryPath = (String) properties.get("jar_entry_path");
-
-                ProjectFile projectFile;
-                java.nio.file.Path filePath = Paths.get(entity.getId());
-
-                // Check if paths are from different filesystem types
-                boolean isDifferentFilesystem = !filePath.getFileSystem().equals(projectRoot.getFileSystem());
-
-                if (isDifferentFilesystem || sourceJarPath != null) {
-                    // For JAR-internal files or different filesystems, use alternative construction
-                    projectFile = createProjectFileFromProperties(entity.getId(), projectRoot, properties);
-                } else {
-                    // Regular filesystem path - use standard constructor
-                    projectFile = new ProjectFile(filePath, projectRoot, sourceJarPath, jarEntryPath);
-                }
-
-                // Set properties
-                for (Map.Entry<String, Object> entry : properties.entrySet()) {
-                    projectFile.setProperty(entry.getKey(), entry.getValue());
-                }
+                // Use NodeTypeRegistry factory to create the appropriate node type
+                GraphNode node = com.analyzer.core.graph.NodeTypeRegistry.createFromEntity(
+                        entity, jsonSerializer, projectRoot);
 
                 // Add to repository
-                targetRepo.addNode(projectFile);
-                nodeMap.put(entity.getId(), projectFile);
+                targetRepo.addNode(node);
+                nodeMap.put(entity.getId(), node);
 
             } catch (Exception e) {
-                logger.warn("Failed to load node {}: {}", entity.getId(), e.getMessage());
+                logger.warn("Failed to load node {}: {}", entity.getId(), e.getMessage(), e);
             }
         }
 
         return nodeMap;
-    }
-
-    /**
-     * Creates a ProjectFile from stored properties when direct Path construction
-     * fails.
-     * This handles cases like JAR-internal files or paths from different
-     * filesystems.
-     */
-    private static ProjectFile createProjectFileFromProperties(
-            String nodeId,
-            java.nio.file.Path projectRoot,
-            Map<String, Object> properties) {
-
-        // Extract key properties that were stored
-        String relativePath = (String) properties.get("relative_path");
-        String fileName = (String) properties.get("file_name");
-        String fileExtension = (String) properties.get("file_extension");
-        String sourceJarPath = (String) properties.get("source_jar_path");
-        String jarEntryPath = (String) properties.get("jar_entry_path");
-
-        // Use the JSON creator constructor which doesn't call relativize()
-        return new ProjectFile(
-                nodeId,
-                relativePath != null ? relativePath : nodeId,
-                fileName != null ? fileName : new java.io.File(nodeId).getName(),
-                fileExtension != null ? fileExtension : "",
-                new java.util.Date(),
-                sourceJarPath,
-                jarEntryPath,
-                sourceJarPath != null,
-                new java.util.HashSet<>(), // tags will be set separately
-                new java.util.HashMap<>() // properties will be set separately
-        );
     }
 
     /**
