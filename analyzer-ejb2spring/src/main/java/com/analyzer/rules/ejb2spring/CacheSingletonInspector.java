@@ -95,7 +95,7 @@ public class CacheSingletonInspector extends AbstractJavaClassInspector {
             classNode.setProperty("cache.singleton.analysis", info);
 
             // Set analysis statistics
-            projectFileDecorator.setProperty("cache.singleton.static_fields", info.staticFieldCount);
+            projectFileDecorator.setMetric("cache.singleton.static_fields", info.staticFieldCount);
             projectFileDecorator.setProperty("cache.singleton.has_dcl", info.hasDoubleCheckedLocking);
 
             // Set target Spring pattern depending on detected pattern
