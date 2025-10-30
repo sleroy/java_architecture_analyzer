@@ -77,6 +77,13 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
             "java.util.TreeSet", "java.util.HashMap", "java.util.TreeMap",
             "java.util.concurrent.ConcurrentHashMap", "java.util.concurrent.CopyOnWriteArrayList");
 
+    /**
+     * Context for type analysis to properly categorize generic type arguments.
+     */
+    private enum TypeContext {
+        FIELD, PARAMETER, RETURN, OTHER
+    }
+
     private final GraphRepository graphRepository;
 
     /**
@@ -166,13 +173,15 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
             Class<?> fieldType = field.getType();
             metrics.addFieldType(fieldType);
 
-            // Handle generic types with recursion protection
+            // Handle generic types with recursion protection, passing FIELD context
             Type genericType = field.getGenericType();
             Set<Type> visitedTypes = new HashSet<>();
             if (genericType instanceof ParameterizedType) {
-                analyzeParameterizedTypeSafe((ParameterizedType) genericType, metrics, visitedTypes, 0);
+                analyzeParameterizedTypeSafe((ParameterizedType) genericType, metrics, visitedTypes, 0,
+                        TypeContext.FIELD);
             } else if (genericType instanceof GenericArrayType) {
-                analyzeGenericArrayTypeSafe((GenericArrayType) genericType, metrics, visitedTypes, 0);
+                analyzeGenericArrayTypeSafe((GenericArrayType) genericType, metrics, visitedTypes, 0,
+                        TypeContext.FIELD);
             }
         }
     }
@@ -187,11 +196,12 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
             if (!returnType.equals(void.class)) {
                 metrics.addReturnType(returnType);
 
-                // Handle generic return types with recursion protection
+                // Handle generic return types with recursion protection, passing RETURN context
                 Type genericReturnType = method.getGenericReturnType();
                 Set<Type> visitedTypes = new HashSet<>();
                 if (genericReturnType instanceof ParameterizedType) {
-                    analyzeParameterizedTypeSafe((ParameterizedType) genericReturnType, metrics, visitedTypes, 0);
+                    analyzeParameterizedTypeSafe((ParameterizedType) genericReturnType, metrics, visitedTypes, 0,
+                            TypeContext.RETURN);
                 }
             }
 
@@ -202,12 +212,13 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
             for (int i = 0; i < parameterTypes.length; i++) {
                 metrics.addParameterType(parameterTypes[i]);
 
-                // Handle generic parameter types with recursion protection
+                // Handle generic parameter types with recursion protection, passing PARAMETER
+                // context
                 if (i < genericParameterTypes.length &&
                         genericParameterTypes[i] instanceof ParameterizedType) {
                     Set<Type> visitedTypes = new HashSet<>();
                     analyzeParameterizedTypeSafe((ParameterizedType) genericParameterTypes[i], metrics, visitedTypes,
-                            0);
+                            0, TypeContext.PARAMETER);
                 }
             }
 
@@ -219,7 +230,7 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
             // Type variables from generic methods (with recursion protection)
             Set<Type> visitedTypes = new HashSet<>();
             for (TypeVariable<?> typeVar : method.getTypeParameters()) {
-                analyzeTypeVariableSafe(typeVar, metrics, visitedTypes, 0);
+                analyzeTypeVariableSafe(typeVar, metrics, visitedTypes, 0, TypeContext.OTHER);
             }
         }
     }
@@ -235,12 +246,13 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
             for (int i = 0; i < parameterTypes.length; i++) {
                 metrics.addParameterType(parameterTypes[i]);
 
-                // Handle generic parameter types with recursion protection
+                // Handle generic parameter types with recursion protection, passing PARAMETER
+                // context
                 if (i < genericParameterTypes.length &&
                         genericParameterTypes[i] instanceof ParameterizedType) {
                     Set<Type> visitedTypes = new HashSet<>();
                     analyzeParameterizedTypeSafe((ParameterizedType) genericParameterTypes[i], metrics, visitedTypes,
-                            0);
+                            0, TypeContext.PARAMETER);
                 }
             }
 
@@ -297,33 +309,37 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
     }
 
     /**
-     * Analyzes parameterized types with recursion protection.
+     * Analyzes parameterized types with recursion protection and proper context
+     * tracking.
      */
     private void analyzeParameterizedTypeSafe(ParameterizedType paramType, TypeUsageMetrics metrics,
-            Set<Type> visitedTypes, int depth) {
+            Set<Type> visitedTypes, int depth, TypeContext context) {
         // Prevent infinite recursion
         if (depth > 10 || visitedTypes.contains(paramType)) {
             return;
         }
         visitedTypes.add(paramType);
 
-        // Add raw type
+        // Add raw type to both genericTypes and context-specific set
         Type rawType = paramType.getRawType();
         if (rawType instanceof Class<?>) {
-            metrics.addGenericType((Class<?>) rawType);
+            Class<?> rawClass = (Class<?>) rawType;
+            metrics.addGenericType(rawClass);
+            addTypeToContext(rawClass, metrics, context);
         }
 
-        // Analyze type arguments recursively with depth tracking
+        // Analyze type arguments recursively with depth tracking and context
         for (Type typeArg : paramType.getActualTypeArguments()) {
-            analyzeGenericTypeArgumentSafe(typeArg, metrics, visitedTypes, depth + 1);
+            analyzeGenericTypeArgumentSafe(typeArg, metrics, visitedTypes, depth + 1, context);
         }
     }
 
     /**
-     * Analyzes generic array types with recursion protection.
+     * Analyzes generic array types with recursion protection and proper context
+     * tracking.
      */
     private void analyzeGenericArrayTypeSafe(GenericArrayType arrayType, TypeUsageMetrics metrics,
-            Set<Type> visitedTypes, int depth) {
+            Set<Type> visitedTypes, int depth, TypeContext context) {
         // Prevent infinite recursion
         if (depth > 10 || visitedTypes.contains(arrayType)) {
             return;
@@ -331,14 +347,15 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
         visitedTypes.add(arrayType);
 
         Type componentType = arrayType.getGenericComponentType();
-        analyzeGenericTypeArgumentSafe(componentType, metrics, visitedTypes, depth + 1);
+        analyzeGenericTypeArgumentSafe(componentType, metrics, visitedTypes, depth + 1, context);
     }
 
     /**
-     * Analyzes type variables and their bounds with recursion protection.
+     * Analyzes type variables and their bounds with recursion protection and proper
+     * context tracking.
      */
     private void analyzeTypeVariableSafe(TypeVariable<?> typeVar, TypeUsageMetrics metrics,
-            Set<Type> visitedTypes, int depth) {
+            Set<Type> visitedTypes, int depth, TypeContext context) {
         // Prevent infinite recursion
         if (depth > 10 || visitedTypes.contains(typeVar)) {
             return;
@@ -346,38 +363,61 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
         visitedTypes.add(typeVar);
 
         for (Type bound : typeVar.getBounds()) {
-            analyzeGenericTypeArgumentSafe(bound, metrics, visitedTypes, depth + 1);
+            analyzeGenericTypeArgumentSafe(bound, metrics, visitedTypes, depth + 1, context);
         }
     }
 
     /**
      * Analyzes generic type arguments recursively with proper termination
-     * conditions.
+     * conditions and context tracking.
      */
     private void analyzeGenericTypeArgumentSafe(Type type, TypeUsageMetrics metrics,
-            Set<Type> visitedTypes, int depth) {
+            Set<Type> visitedTypes, int depth, TypeContext context) {
         // Prevent infinite recursion
         if (depth > 10 || visitedTypes.contains(type)) {
             return;
         }
 
         if (type instanceof Class<?>) {
-            metrics.addGenericType((Class<?>) type);
+            Class<?> typeClass = (Class<?>) type;
+            metrics.addGenericType(typeClass);
+            addTypeToContext(typeClass, metrics, context);
         } else if (type instanceof ParameterizedType) {
-            analyzeParameterizedTypeSafe((ParameterizedType) type, metrics, visitedTypes, depth + 1);
+            analyzeParameterizedTypeSafe((ParameterizedType) type, metrics, visitedTypes, depth + 1, context);
         } else if (type instanceof WildcardType) {
             WildcardType wildcardType = (WildcardType) type;
             visitedTypes.add(type);
             for (Type upperBound : wildcardType.getUpperBounds()) {
-                analyzeGenericTypeArgumentSafe(upperBound, metrics, visitedTypes, depth + 1);
+                analyzeGenericTypeArgumentSafe(upperBound, metrics, visitedTypes, depth + 1, context);
             }
             for (Type lowerBound : wildcardType.getLowerBounds()) {
-                analyzeGenericTypeArgumentSafe(lowerBound, metrics, visitedTypes, depth + 1);
+                analyzeGenericTypeArgumentSafe(lowerBound, metrics, visitedTypes, depth + 1, context);
             }
         } else if (type instanceof TypeVariable<?>) {
-            analyzeTypeVariableSafe((TypeVariable<?>) type, metrics, visitedTypes, depth + 1);
+            analyzeTypeVariableSafe((TypeVariable<?>) type, metrics, visitedTypes, depth + 1, context);
         } else if (type instanceof GenericArrayType) {
-            analyzeGenericArrayTypeSafe((GenericArrayType) type, metrics, visitedTypes, depth + 1);
+            analyzeGenericArrayTypeSafe((GenericArrayType) type, metrics, visitedTypes, depth + 1, context);
+        }
+    }
+
+    /**
+     * Adds a type to the appropriate context-specific set in addition to
+     * genericTypes.
+     */
+    private void addTypeToContext(Class<?> type, TypeUsageMetrics metrics, TypeContext context) {
+        switch (context) {
+            case FIELD:
+                metrics.addFieldType(type);
+                break;
+            case PARAMETER:
+                metrics.addParameterType(type);
+                break;
+            case RETURN:
+                metrics.addReturnType(type);
+                break;
+            case OTHER:
+                // No additional categorization needed
+                break;
         }
     }
 

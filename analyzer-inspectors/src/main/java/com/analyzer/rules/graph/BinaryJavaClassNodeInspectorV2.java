@@ -38,9 +38,7 @@ import javax.inject.Inject;
  * @since Phase 3 - Systematic Inspector Migration
  */
 @InspectorDependencies(need = {ApplicationPackageTagInspector.class},
-        produces = {
-                BinaryJavaClassNodeInspectorV2.TAGS.TAG_JAVA_CLASS_NODE_BINARY
-        })
+        produces = {BinaryJavaClassNodeInspectorV2.TAGS.TAG_JAVA_CLASS_NODE_BINARY})
 public class BinaryJavaClassNodeInspectorV2 extends AbstractASMClassInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(BinaryJavaClassNodeInspectorV2.class);

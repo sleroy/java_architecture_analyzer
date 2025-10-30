@@ -30,7 +30,6 @@ import java.util.regex.Pattern;
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
         JavaImportGraphInspector.TAGS.METRIC_IMPORT_DEPENDENCIES_PROCESSED})
 public class JavaImportGraphInspector extends AbstractProjectFileInspector {
-
     private static final Logger logger = LoggerFactory.getLogger(JavaImportGraphInspector.class);
 
     // Pattern to match import statements
