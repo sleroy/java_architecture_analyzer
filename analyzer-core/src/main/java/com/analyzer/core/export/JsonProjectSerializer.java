@@ -16,13 +16,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class ProjectSerializer {
+public class JsonProjectSerializer {
 
     private final ObjectMapper mapper;
     private final File outputDir;
     private final GraphRepository graphRepository;
 
-    public ProjectSerializer(File outputDir, GraphRepository graphRepository) {
+    public JsonProjectSerializer(File outputDir, GraphRepository graphRepository) {
         this.outputDir = outputDir;
         this.graphRepository = Objects.requireNonNull(graphRepository, "GraphRepository cannot be null");
         this.mapper = new ObjectMapper();

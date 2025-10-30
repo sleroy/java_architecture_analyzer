@@ -1,6 +1,7 @@
 package com.analyzer.rules.std;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -36,7 +37,7 @@ import javax.inject.Inject;
  * @author Phase 3 - Class-Centric Architecture Migration
  * @since Phase 3 - Systematic Inspector Migration
  */
-@InspectorDependencies(requires = {  InspectorTags.TAG_APPLICATION_CLASS}, produces = {})
+@InspectorDependencies(requires = { InspectorTags.TAG_APPLICATION_CLASS }, produces = {})
 public class TypeInspectorASMInspectorV2 extends AbstractASMClassInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(TypeInspectorASMInspectorV2.class);
@@ -53,8 +54,9 @@ public class TypeInspectorASMInspectorV2 extends AbstractASMClassInspector {
 
     @Inject
     public TypeInspectorASMInspectorV2(ProjectFileRepository projectFileRepository,
-            ResourceResolver resourceResolver) {
-        super(projectFileRepository, resourceResolver);
+            ResourceResolver resourceResolver,
+            LocalCache localCache) {
+        super(projectFileRepository, resourceResolver, localCache);
     }
 
     @Override

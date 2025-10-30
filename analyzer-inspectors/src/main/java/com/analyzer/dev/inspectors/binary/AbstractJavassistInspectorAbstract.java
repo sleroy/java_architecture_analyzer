@@ -1,8 +1,11 @@
 package com.analyzer.dev.inspectors.binary;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.resource.ResourceResolver;
 import javassist.ClassPool;
 import javassist.CtClass;
@@ -31,8 +34,8 @@ public abstract class AbstractJavassistInspectorAbstract extends AbstractBinaryC
      * 
      * @param resourceResolver the resolver for accessing class file resources
      */
-    protected AbstractJavassistInspectorAbstract(ResourceResolver resourceResolver) {
-        super(resourceResolver);
+    protected AbstractJavassistInspectorAbstract(ResourceResolver resourceResolver, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.classPool = ClassPool.getDefault();
     }
 
@@ -43,8 +46,8 @@ public abstract class AbstractJavassistInspectorAbstract extends AbstractBinaryC
      * @param resourceResolver the resolver for accessing class file resources
      * @param customClassPool the customized ClassPool instance to use
      */
-    protected AbstractJavassistInspectorAbstract(ResourceResolver resourceResolver, ClassPool customClassPool) {
-        super(resourceResolver);
+    protected AbstractJavassistInspectorAbstract(ResourceResolver resourceResolver, ClassPool customClassPool, LocalCache localCache) {
+        super(resourceResolver, localCache);
         if (customClassPool == null) {
             throw new IllegalArgumentException("ClassPool cannot be null");
         }

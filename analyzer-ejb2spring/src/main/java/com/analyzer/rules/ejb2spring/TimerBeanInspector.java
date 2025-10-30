@@ -1,11 +1,10 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.api.inspector.Inspector;
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
-import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractJavaClassInspector;
 import com.analyzer.api.resource.ResourceResolver;
@@ -48,14 +47,13 @@ import java.util.Set;
  */
 @InspectorDependencies(produces = {
         TimerBeanInspector.TAGS.TAG_IS_TIMER_BEAN,
-        EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM
+        EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION,
 })
 public class TimerBeanInspector extends AbstractJavaClassInspector {
 
     @Inject
-    public TimerBeanInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public TimerBeanInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
@@ -95,25 +93,25 @@ public class TimerBeanInspector extends AbstractJavaClassInspector {
             info.hasTimerName = hasTimerName;
 
             // Set tags according to the produces contract
-            projectFileDecorator.setProperty(TAGS.TAG_IS_TIMER_BEAN, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+            projectFileDecorator.enableTag(TAGS.TAG_IS_TIMER_BEAN);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
 
             // Set property on class node for detailed analysis
-            classNode.setProperty("timer.analysis", info.toString());
+            classNode.setProperty("timer.analysis", info);
 
             // Set analysis statistics
-            projectFileDecorator.setProperty("timer.timer_service_references", info.timerServiceReferences);
-            projectFileDecorator.setProperty("timer.create_timer_calls", info.createTimerCalls.size());
+            projectFileDecorator.setMetric("timer.timer_service_references", info.timerServiceReferences);
+            projectFileDecorator.setMetric("timer.create_timer_calls", info.createTimerCalls.size());
 
             // Set Spring Boot migration target
             projectFileDecorator.setProperty("spring.conversion.target", "@Component+@Scheduled");
 
             // If calendar-based timers are used, migration is more complex
             if (info.usesCalendarBasedTimer) {
-                projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
                 // Override medium complexity
-                projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, false);
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
             }
         }
     }

@@ -70,7 +70,7 @@ public class ProjectFile extends BaseGraphNode {
 
         // Restore tags from deserialization
         if (tags != null) {
-            tags.forEach(this::addTag);
+            tags.forEach(this::enableTag);
         }
 
         // Restore properties from deserialization

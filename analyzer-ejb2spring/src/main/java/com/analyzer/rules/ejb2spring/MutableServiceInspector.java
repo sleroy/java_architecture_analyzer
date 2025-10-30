@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -53,9 +54,8 @@ import java.util.Set;
  *      Bean Scopes</a>
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
-        EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM,
-        EjbMigrationTags.CODE_MODERNIZATION,
-        EjbMigrationTags.SPRING_COMPONENT_CONVERSION
+        EjbMigrationTags.TAG_CODE_MODERNIZATION,
+        EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION
 })
 public class MutableServiceInspector extends AbstractJavaClassInspector {
 
@@ -64,8 +64,8 @@ public class MutableServiceInspector extends AbstractJavaClassInspector {
             "Provider", "Coordinator", "Orchestrator", "Dispatcher", "Mediator");
 
     @Inject
-    public MutableServiceInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public MutableServiceInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
@@ -81,7 +81,6 @@ public class MutableServiceInspector extends AbstractJavaClassInspector {
             return;
         }
 
-        ClassOrInterfaceDeclaration classDecl = (ClassOrInterfaceDeclaration) type;
         MutableServiceDetector detector = new MutableServiceDetector();
         type.accept(detector, null);
 
@@ -89,9 +88,9 @@ public class MutableServiceInspector extends AbstractJavaClassInspector {
             MutableServiceInfo info = detector.getMutableServiceInfo();
 
             // Set tags according to the produces contract
-            projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.CODE_MODERNIZATION, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_CODE_MODERNIZATION);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
 
             // Set custom tags for more detailed analysis
             projectFileDecorator.setProperty("mutable.service.detected", true);
@@ -109,11 +108,11 @@ public class MutableServiceInspector extends AbstractJavaClassInspector {
             }
 
             // Set property on class node for detailed analysis
-            classNode.setProperty("mutable.service.analysis", info.toString());
+            classNode.setProperty("mutable.service.analysis", info);
 
             // Set analysis statistics
-            projectFileDecorator.setProperty("mutable.field.count", info.mutableFieldCount);
-            projectFileDecorator.setProperty("mutable.methods.count", info.methodsWithFieldMutations.size());
+            projectFileDecorator.setMetric("mutable.field.count", info.mutableFieldCount);
+            projectFileDecorator.setMetric("mutable.methods.count", info.methodsWithFieldMutations.size());
         }
     }
 

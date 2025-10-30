@@ -1,6 +1,7 @@
 package com.analyzer.rules.graph;
 
 import com.analyzer.api.graph.BaseGraphNode;
+import com.analyzer.api.graph.ImportedClassGraphNode;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.GraphNode;
 import com.analyzer.api.graph.GraphRepository;
@@ -27,7 +28,7 @@ import java.util.regex.Pattern;
  * analyzing import statements and creating edges between files.
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
-        JavaImportGraphInspector.TAGS.TAG_IMPORT_DEPENDENCIES_PROCESSED })
+        JavaImportGraphInspector.TAGS.METRIC_IMPORT_DEPENDENCIES_PROCESSED})
 public class JavaImportGraphInspector extends AbstractProjectFileInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(JavaImportGraphInspector.class);
@@ -45,7 +46,7 @@ public class JavaImportGraphInspector extends AbstractProjectFileInspector {
     private final GraphRepository graphRepository;
 
     public static class TAGS {
-        public static final String TAG_IMPORT_DEPENDENCIES_PROCESSED = "java.import.dependencies.processed";
+        public static final String METRIC_IMPORT_DEPENDENCIES_PROCESSED = "java.import.dependencies.processed";
         public static final String TAG_GRAPH_PROCESSING_ERROR = "java.graph.processing.error";
     }
 
@@ -90,7 +91,7 @@ public class JavaImportGraphInspector extends AbstractProjectFileInspector {
                 processImportDependency(fileNode, importedClass, currentPackage, file);
             }
 
-            decorator.setProperty(TAGS.TAG_IMPORT_DEPENDENCIES_PROCESSED, String.valueOf(imports.size()));
+            decorator.setMetric(TAGS.METRIC_IMPORT_DEPENDENCIES_PROCESSED, imports.size());
 
         } catch (Exception e) {
             logger.warn("Error processing Java import graph for file {}: {}", file.getRelativePath(), e.getMessage());
@@ -149,22 +150,11 @@ public class JavaImportGraphInspector extends AbstractProjectFileInspector {
     private GraphNode createJavaFileNode(ProjectFile file) {
         JavaFileGraphNode node = new JavaFileGraphNode(file.getId(), file);
 
-        // Set properties
-        node.setProperty("file_name", file.getFileName());
-        node.setProperty("relative_path", file.getRelativePath());
-        node.setProperty("absolute_path", file.getId());
-
         // Try to get file size from filesystem
         try {
-            node.setProperty("file_size", Files.size(file.getFilePath()));
+            node.getMetrics().setMetric("file_size", Files.size(file.getFilePath()));
         } catch (IOException e) {
-            node.setProperty("file_size", -1);
-        }
-
-        // Add existing tags from the ProjectFile
-        java.util.Map<String, Object> existingTags = file.getAllProperties();
-        if (existingTags != null && !existingTags.isEmpty()) {
-            node.setProperty("project_file_tags", existingTags);
+            node.getMetrics().setMetric("file_size", -1);
         }
 
         return node;
@@ -191,55 +181,16 @@ public class JavaImportGraphInspector extends AbstractProjectFileInspector {
         ImportedClassGraphNode node = new ImportedClassGraphNode(fullyQualifiedClassName);
 
         // Set properties
-        node.setProperty("fully_qualified_name", fullyQualifiedClassName);
-        node.setProperty("simple_name", getSimpleName(fullyQualifiedClassName));
-        node.setProperty("package", getPackageName(fullyQualifiedClassName));
+        node.setProperty("java.fully_qualified_name", fullyQualifiedClassName);
+        node.setProperty("java.simple_name", getSimpleName(fullyQualifiedClassName));
+        node.setProperty("java.package", getPackageName(fullyQualifiedClassName));
 
         // Add classification based on package
-        node.setProperty("is_jdk_class", fullyQualifiedClassName.startsWith("java.") ||
+        node.setProperty("java.is_jdk_class", fullyQualifiedClassName.startsWith("java.") ||
                 fullyQualifiedClassName.startsWith("javax."));
-        node.setProperty("is_third_party", !fullyQualifiedClassName.startsWith("com.analyzer.") &&
-                !fullyQualifiedClassName.startsWith("java.") &&
-                !fullyQualifiedClassName.startsWith("javax."));
+
 
         return node;
-    }
-
-    /**
-     * Concrete GraphNode implementation for imported class nodes in the import
-     * graph.
-     */
-    private static class ImportedClassGraphNode extends BaseGraphNode {
-        private final String fullyQualifiedClassName;
-
-        public ImportedClassGraphNode(String fullyQualifiedClassName) {
-            super(fullyQualifiedClassName, determineNodeType(fullyQualifiedClassName));
-            this.fullyQualifiedClassName = fullyQualifiedClassName;
-        }
-
-        private static String determineNodeType(String fqn) {
-            if (fqn.startsWith("java.")) {
-                return "java_class";
-            } else if (fqn.startsWith("javax.")) {
-                return "java_class";
-            } else if (fqn.startsWith("org.springframework.")) {
-                return "java_class";
-            } else if (fqn.startsWith("com.analyzer.")) {
-                return "java_class";
-            } else {
-                return "java_class";
-            }
-        }
-
-        @Override
-        public String getDisplayLabel() {
-            String simpleName = fullyQualifiedClassName;
-            int lastDot = fullyQualifiedClassName.lastIndexOf('.');
-            if (lastDot >= 0) {
-                simpleName = fullyQualifiedClassName.substring(lastDot + 1);
-            }
-            return simpleName + " (Class)";
-        }
     }
 
     private String getSimpleName(String fullyQualifiedName) {

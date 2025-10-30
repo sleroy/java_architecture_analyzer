@@ -1,6 +1,7 @@
 package com.analyzer.rules.graph;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
@@ -43,23 +44,24 @@ import java.util.Set;
  * @author Java Architecture Analyzer
  * @since Class-Centric Architecture - Graph Phase
  */
-@InspectorDependencies(need = {ApplicationPackageTagInspector.class} ,produces = {
-        BinaryClassCouplingGraphInspector.TAGS.TAG_CLASS_COUPLING_EDGES_CREATED })
+@InspectorDependencies(need = { ApplicationPackageTagInspector.class }, produces = {
+        BinaryClassCouplingGraphInspector.TAGS.METRIC_CLASS_COUPLING_EDGES_CREATED})
 public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(BinaryClassCouplingGraphInspector.class);
     private final GraphRepository graphRepository;
 
     public static class TAGS {
-        public static final String TAG_CLASS_COUPLING_EDGES_CREATED = "java.class.coupling.edges.created";
+        public static final String METRIC_CLASS_COUPLING_EDGES_CREATED = "java.class.coupling.edges.created";
     }
 
     @Inject
     public BinaryClassCouplingGraphInspector(
             ProjectFileRepository projectFileRepository,
             ResourceResolver resourceResolver,
-            GraphRepository graphRepository) {
-        super(projectFileRepository, resourceResolver);
+            GraphRepository graphRepository,
+            LocalCache localCache) {
+        super(projectFileRepository, resourceResolver, localCache);
         this.graphRepository = graphRepository;
     }
 
@@ -148,7 +150,7 @@ public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector
         @Override
         public void visitEnd() {
             // Record the number of edges created
-            setProperty(TAGS.TAG_CLASS_COUPLING_EDGES_CREATED, edgeCount);
+            setMetric(TAGS.METRIC_CLASS_COUPLING_EDGES_CREATED, edgeCount);
 
             logger.debug("Created {} coupling edges for class: {}",
                     edgeCount, sourceNode.getFullyQualifiedName());

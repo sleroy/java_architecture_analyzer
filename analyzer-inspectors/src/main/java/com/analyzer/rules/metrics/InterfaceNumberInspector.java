@@ -53,12 +53,12 @@ public class InterfaceNumberInspector extends AbstractClassLoaderBasedInspector 
 
     private static final Logger logger = LoggerFactory.getLogger(InterfaceNumberInspector.class);
 
-    // Property keys for JavaClassNode metrics
-    public static final String PROP_INTERFACES_TOTAL_COUNT = "interfaces.total_count";
-    public static final String PROP_INTERFACES_DIRECT_COUNT = "interfaces.direct_count";
-    public static final String PROP_INTERFACES_INHERITED_COUNT = "interfaces.inherited_count";
-    public static final String PROP_INTERFACES_COMPLEXITY_SCORE = "interfaces.complexity_score";
-    public static final String PROP_INTERFACES_HAS_FRAMEWORK = "interfaces.has_framework";
+    // Metrics and tags for JavaClassNode interface analysis
+    public static final String METRIC_INTERFACES_TOTAL_COUNT = "interfaces.total_count";
+    public static final String METRIC_INTERFACES_DIRECT_COUNT = "interfaces.direct_count";
+    public static final String METRIC_INTERFACES_INHERITED_COUNT = "interfaces.inherited_count";
+    public static final String METRIC_INTERFACES_COMPLEXITY_SCORE = "interfaces.complexity_score";
+    public static final String TAG_INTERFACES_HAS_FRAMEWORK = "interfaces.has_framework";
     public static final String PROP_INTERFACES_FRAMEWORK_TYPES = "interfaces.framework_types";
 
     // Analysis thresholds and weights
@@ -129,11 +129,14 @@ public class InterfaceNumberInspector extends AbstractClassLoaderBasedInspector 
             metrics.complexityScore = calculateComplexityScore(metrics);
 
             // Attach metrics to JavaClassNode
-            decorator.setProperty(PROP_INTERFACES_TOTAL_COUNT, metrics.totalCount);
-            decorator.setProperty(PROP_INTERFACES_DIRECT_COUNT, metrics.directCount);
-            decorator.setProperty(PROP_INTERFACES_INHERITED_COUNT, metrics.inheritedCount);
-            decorator.setProperty(PROP_INTERFACES_COMPLEXITY_SCORE, metrics.complexityScore);
-            decorator.setProperty(PROP_INTERFACES_HAS_FRAMEWORK, metrics.hasFrameworkInterfaces);
+            decorator.setMetric(METRIC_INTERFACES_TOTAL_COUNT, metrics.totalCount);
+            decorator.setMetric(METRIC_INTERFACES_DIRECT_COUNT, metrics.directCount);
+            decorator.setMetric(METRIC_INTERFACES_INHERITED_COUNT, metrics.inheritedCount);
+            decorator.setMetric(METRIC_INTERFACES_COMPLEXITY_SCORE, metrics.complexityScore);
+
+            if (metrics.hasFrameworkInterfaces) {
+                decorator.enableTag(TAG_INTERFACES_HAS_FRAMEWORK);
+            }
 
             if (!metrics.frameworkTypes.isEmpty()) {
                 decorator.setProperty(PROP_INTERFACES_FRAMEWORK_TYPES, String.join(",", metrics.frameworkTypes));

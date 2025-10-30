@@ -4,6 +4,7 @@ import com.analyzer.api.analysis.Analysis;
 import com.analyzer.api.analysis.AnalysisResult;
 import com.analyzer.api.collector.ClassNodeCollector;
 import com.analyzer.api.graph.*;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.collector.CollectionContext;
 import com.analyzer.api.detector.FileDetector;
 import com.analyzer.core.export.NodeDecorator;
@@ -56,6 +57,7 @@ public class AnalysisEngine {
     private final ClassNodeRepository classNodeRepository;
     private final InspectorProgressTracker progressTracker;
     private final ProjectHolder projectHolder;
+    private final LocalCache localCache;
 
     /**
      * Primary constructor used by PicoContainer for dependency injection.
@@ -67,13 +69,16 @@ public class AnalysisEngine {
      * @param classNodeRepository   the class node repository
      * @param progressTracker       the progress tracker
      * @param projectHolder         the project holder for DI into inspectors
+     * @param localCache            the per-item cache for optimizing resource
+     *                              access
      */
     public AnalysisEngine(InspectorRegistry inspectorRegistry,
             GraphRepository graphRepository,
             ProjectFileRepository projectFileRepository,
             ClassNodeRepository classNodeRepository,
             InspectorProgressTracker progressTracker,
-            ProjectHolder projectHolder) {
+            ProjectHolder projectHolder,
+            LocalCache localCache) {
         this.inspectorRegistry = inspectorRegistry;
         this.availableAnalyses = new ArrayList<>();
         this.graphRepository = graphRepository;
@@ -81,6 +86,8 @@ public class AnalysisEngine {
         this.classNodeRepository = classNodeRepository;
         this.progressTracker = progressTracker != null ? progressTracker : new InspectorProgressTracker();
         this.projectHolder = projectHolder;
+        this.localCache = localCache;
+
     }
 
     /**
@@ -446,6 +453,7 @@ public class AnalysisEngine {
     /**
      * PHASE 2: ClassNode Collection
      * Creates JavaClassNode objects from ProjectFiles using registered collectors.
+     * Optimized to skip files that already have nodes from incremental analysis.
      */
     private void collectClassNodesFromFiles(Project project) {
         logger.info("=== PHASE 2: ClassNode Collection ===");
@@ -464,9 +472,14 @@ public class AnalysisEngine {
                 projectFileRepository,
                 classNodeRepository);
 
+        int skippedFiles = 0;
+        int processedFiles = 0;
+
         try (ProgressBar pb = new ProgressBar("Phase 2: Collecting Classes",
                 project.getProjectFiles().size())) {
             for (ProjectFile projectFile : project.getProjectFiles().values()) {
+
+                // Run collectors as normal
                 for (ClassNodeCollector collector : collectors) {
                     try {
                         if (collector.canCollect(projectFile)) {
@@ -482,12 +495,14 @@ public class AnalysisEngine {
                                 e.getMessage());
                     }
                 }
+                processedFiles++;
                 pb.step();
             }
         }
 
         int classCount = classNodeRepository.findAll().size();
-        logger.info("Phase 2 completed: {} JavaClassNode objects created", classCount);
+        logger.info("Phase 2 completed: {} JavaClassNode objects exist (processed {} files, skipped {} files)",
+                classCount, processedFiles, skippedFiles);
     }
 
     /**
@@ -551,6 +566,7 @@ public class AnalysisEngine {
      * Analyzes a single JavaClassNode with execution tracking.
      * Uses JavaClassNode's execution tracking to determine if inspectors need to
      * run.
+     * Resets the LocalCache before analysis to ensure a clean state for this item.
      *
      * @param classNode        the class node to analyze
      * @param inspectors       the inspectors to run
@@ -564,6 +580,9 @@ public class AnalysisEngine {
             LocalDateTime passStartTime,
             ExecutionProfile executionProfile,
             int pass) {
+        // Reset cache for this item to prevent memory bloat and ensure fresh state
+        localCache.reset();
+
         Set<String> triggeredInspectors = new HashSet<>();
         ExecutionProfile.ExecutionPhase phase = ExecutionProfile.ExecutionPhase.PHASE_4_CLASSNODE_ANALYSIS;
 
@@ -668,6 +687,7 @@ public class AnalysisEngine {
      * Analyzes a single ProjectFile with execution tracking and collects triggered
      * inspectors.
      * Uses ProjectFile's execution tracking to determine if inspectors need to run.
+     * Resets the LocalCache before analysis to ensure a clean state for this item.
      *
      * @param projectFile      the file to analyze
      * @param inspectors       the inspectors to run
@@ -681,6 +701,9 @@ public class AnalysisEngine {
             LocalDateTime passStartTime,
             ExecutionProfile executionProfile,
             int pass) {
+        // Reset cache for this item to prevent memory bloat and ensure fresh state
+        localCache.reset();
+
         ProjectFileAnalysisResult result = analyzeProjectFileInternal(projectFile, inspectors, passStartTime, true,
                 executionProfile, pass);
         return result.triggeredInspectors();

@@ -2,14 +2,12 @@ package com.analyzer.core.engine;
 
 import com.analyzer.api.graph.GraphNode;
 import com.analyzer.api.inspector.Inspector;
-import com.analyzer.core.export.NodeDecorator;
 import me.tongfei.progressbar.ProgressBar;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 /**
@@ -200,6 +198,7 @@ public class MultiPassExecutor<T extends GraphNode> {
             if (!triggeredInspectors.isEmpty()) {
                 logger.info("{} Pass {} triggered inspectors: [{}]", config.getPhaseName(), pass,
                         String.join(", ", triggeredInspectors.stream().sorted().toList()));
+                inspectors = inspectors.stream().filter(i -> !triggeredInspectors.contains(i.getName())).toList();
             } else {
                 logger.info("{} Pass {} triggered inspectors: [none]", config.getPhaseName(), pass);
             }

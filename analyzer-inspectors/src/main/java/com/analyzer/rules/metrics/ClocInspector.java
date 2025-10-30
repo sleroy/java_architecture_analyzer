@@ -1,11 +1,15 @@
 package com.analyzer.rules.metrics;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.dev.inspectors.source.AbstractSourceFileInspector;
 import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.resource.ResourceResolver;
 
 import java.io.IOException;
@@ -26,8 +30,8 @@ public class ClocInspector extends AbstractSourceFileInspector {
      *
      * @param resourceResolver the resolver for accessing source file resources
      */
-    public ClocInspector(ResourceResolver resourceResolver) {
-        super(resourceResolver);
+    public ClocInspector(ResourceResolver resourceResolver, LocalCache localCache) {
+        super(resourceResolver, localCache);
     }
 
     @Override
@@ -44,7 +48,7 @@ public class ClocInspector extends AbstractSourceFileInspector {
             NodeDecorator<ProjectFile> decorator) throws IOException {
         try {
             long lineCount = countLines(sourceLocation);
-            decorator.setProperty(getColumnName(), lineCount);
+            decorator.setMetric(getColumnName(), lineCount);
         } catch (IOException e) {
             decorator.error("Error counting lines: " + e.getMessage());
         }

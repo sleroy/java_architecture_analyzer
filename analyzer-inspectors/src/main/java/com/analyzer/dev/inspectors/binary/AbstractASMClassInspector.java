@@ -1,5 +1,6 @@
 package com.analyzer.dev.inspectors.binary;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
@@ -18,8 +19,10 @@ import java.io.InputStream;
 import java.util.Optional;
 
 /**
- * Abstract base class for inspectors that analyze JavaClassNode objects using ASM bytecode analysis.
- * This is the class-centric equivalent of AbstractASMInspector, but writes results to JavaClassNode
+ * Abstract base class for inspectors that analyze JavaClassNode objects using
+ * ASM bytecode analysis.
+ * This is the class-centric equivalent of AbstractASMInspector, but writes
+ * results to JavaClassNode
  * instead of ProjectFile.
  * <p>
  * This class bridges the gap between:
@@ -33,49 +36,54 @@ import java.util.Optional;
  * 3. Reads bytecode using ASM
  * 4. Writes analysis results to JavaClassNode
  * <p>
- * Subclasses must implement createClassVisitor() to provide their specific ASM analysis logic.
+ * Subclasses must implement createClassVisitor() to provide their specific ASM
+ * analysis logic.
  *
  * @since Phase 2 - Class-Centric Architecture Refactoring
  */
 public abstract class AbstractASMClassInspector extends AbstractJavaClassInspector {
 
     protected final ResourceResolver resourceResolver;
+    protected final LocalCache localCache;
 
     /**
      * Constructor with required dependencies.
      *
      * @param projectFileRepository repository for finding ProjectFile instances
      * @param resourceResolver      resolver for accessing bytecode resources
+     * @param localCache            per-item cache for optimizing bytecode access
      */
     @Inject
-    protected AbstractASMClassInspector(ProjectFileRepository projectFileRepository, 
-                                       ResourceResolver resourceResolver) {
+    protected AbstractASMClassInspector(ProjectFileRepository projectFileRepository,
+            ResourceResolver resourceResolver,
+            LocalCache localCache) {
         super(projectFileRepository);
         this.resourceResolver = resourceResolver;
+        this.localCache = localCache;
     }
 
     @Override
     protected final void analyzeClass(JavaClassNode classNode, NodeDecorator<JavaClassNode> decorator) {
         // Find the ProjectFile containing the bytecode for this class
         Optional<ProjectFile> projectFileOpt = findProjectFile(classNode);
-        
+
         if (projectFileOpt.isEmpty()) {
             decorator.error("Cannot find ProjectFile for class: " + classNode.getFullyQualifiedName());
             return;
         }
-        
+
         ProjectFile projectFile = projectFileOpt.get();
-        
+
         // Verify this is a binary class file
         if (!projectFile.hasTag(InspectorTags.TAG_JAVA_IS_BINARY)) {
             decorator.error("ProjectFile is not a binary class file: " + projectFile.getFilePath());
             return;
         }
-        
+
         // Get the binary location and analyze with ASM
         try {
             ResourceLocation binaryLocation = new ResourceLocation(projectFile.getFilePath().toUri());
-            
+
             try (InputStream classInputStream = resourceResolver.openStream(binaryLocation)) {
                 if (classInputStream == null) {
                     decorator.error("Could not open binary class stream for: " + projectFile.getFilePath());
@@ -92,14 +100,15 @@ public abstract class AbstractASMClassInspector extends AbstractJavaClassInspect
 
     /**
      * Analyzes the class bytecode using ASM.
+     * Uses LocalCache to avoid re-reading bytecode and re-creating ClassReader.
      *
-     * @param classNode       the class node to analyze
+     * @param classNode        the class node to analyze
      * @param classInputStream input stream containing .class bytecode
-     * @param decorator       decorator for writing results to the class node
+     * @param decorator        decorator for writing results to the class node
      * @throws IOException if bytecode cannot be read
      */
     protected void analyzeClassWithASM(JavaClassNode classNode, InputStream classInputStream,
-                                      NodeDecorator<JavaClassNode> decorator) throws IOException {
+            NodeDecorator<JavaClassNode> decorator) throws IOException {
         try {
             // Validate input stream
             if (classInputStream == null) {
@@ -107,8 +116,14 @@ public abstract class AbstractASMClassInspector extends AbstractJavaClassInspect
                 return;
             }
 
-            // Read all bytes first to validate content
-            byte[] classBytes = classInputStream.readAllBytes();
+            // Use LocalCache to read bytes only once per item
+            byte[] classBytes = localCache.getOrLoadClassBytes(() -> {
+                try {
+                    return classInputStream.readAllBytes();
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to read class bytes", e);
+                }
+            });
 
             // Check for empty class files
             if (classBytes.length == 0) {
@@ -122,8 +137,8 @@ public abstract class AbstractASMClassInspector extends AbstractJavaClassInspect
                 return;
             }
 
-            // Create ClassReader from validated bytes
-            ClassReader classReader = new ClassReader(classBytes);
+            // Use LocalCache to create ClassReader only once per item
+            ClassReader classReader = localCache.getOrCreateClassReader(() -> new ClassReader(classBytes));
 
             // Create the analysis visitor
             ASMClassNodeVisitor visitor = createClassVisitor(classNode, decorator);
@@ -131,8 +146,6 @@ public abstract class AbstractASMClassInspector extends AbstractJavaClassInspect
             // Perform the analysis
             classReader.accept(visitor, 0);
 
-        } catch (IOException e) {
-            decorator.error("Error reading class file: " + e.getMessage());
         } catch (IllegalArgumentException e) {
             // ASM ClassReader throws IllegalArgumentException for invalid bytecode
             decorator.error("Invalid bytecode format: " + e.getMessage());
@@ -143,17 +156,19 @@ public abstract class AbstractASMClassInspector extends AbstractJavaClassInspect
 
     /**
      * Creates a class visitor for analyzing the bytecode.
-     * Subclasses must implement this method to provide their specific analysis logic.
+     * Subclasses must implement this method to provide their specific analysis
+     * logic.
      *
      * @param classNode the class node being analyzed
      * @param decorator decorator for writing results to the class node
      * @return an ASMClassNodeVisitor that will perform the analysis
      */
-    protected abstract ASMClassNodeVisitor createClassVisitor(JavaClassNode classNode, 
-                                                             NodeDecorator<JavaClassNode> decorator);
+    protected abstract ASMClassNodeVisitor createClassVisitor(JavaClassNode classNode,
+            NodeDecorator<JavaClassNode> decorator);
 
     /**
-     * Base class for ASM class visitors that write analysis results to JavaClassNode.
+     * Base class for ASM class visitors that write analysis results to
+     * JavaClassNode.
      * Subclasses should extend this class and implement their analysis logic
      * in the various visit methods.
      */
@@ -182,6 +197,18 @@ public abstract class AbstractASMClassInspector extends AbstractJavaClassInspect
          */
         protected void setProperty(String propertyName, Object value) {
             decorator.setProperty(propertyName, value);
+        }
+
+        /**
+         * Sets a metric on the class node.
+         * Metrics should be used for numerical measurements like counts, complexity,
+         * etc.
+         *
+         * @param metricName the metric name
+         * @param value      the metric value
+         */
+        protected void setMetric(String metricName, Number value) {
+            decorator.setMetric(metricName, value);
         }
 
         /**

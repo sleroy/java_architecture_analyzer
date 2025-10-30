@@ -67,7 +67,7 @@ public abstract class AbstractClassLoaderBasedInspector implements Inspector<Jav
 
             // SUCCESS: Class loaded successfully, delegate to concrete implementation
             logger.debug("Successfully loaded class: {}", fullyQualifiedName);
-            nodeDecorator.setProperty(InspectorTags.TAG_JAVA_CLASSLOADER, true);
+            nodeDecorator.enableTag(InspectorTags.TAG_JAVA_CLASSLOADER);
             analyzeLoadedClass(loadedClass, classNode, nodeDecorator);
 
         } catch (ClassNotFoundException e) {

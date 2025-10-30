@@ -1,11 +1,10 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
-import com.analyzer.core.inspector.InspectorTags;
-import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractJavaClassInspector;
 import com.analyzer.api.resource.ResourceResolver;
@@ -49,9 +48,8 @@ import java.util.Set;
  *      AOP</a>
  */
 @InspectorDependencies(requires = {  }, produces = {
-        EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM,
-        EjbMigrationTags.CODE_MODERNIZATION
+        EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION,
+        EjbMigrationTags.TAG_CODE_MODERNIZATION
 })
 public class InterceptorAopInspector extends AbstractJavaClassInspector {
 
@@ -78,8 +76,8 @@ public class InterceptorAopInspector extends AbstractJavaClassInspector {
             "org.jboss.aspects", "weblogic.ejb.interceptor", "com.ibm.websphere.ejbcontainer.interceptor"));
 
     @Inject
-    public InterceptorAopInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public InterceptorAopInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
@@ -111,9 +109,8 @@ public class InterceptorAopInspector extends AbstractJavaClassInspector {
             InterceptorInfo info = detector.getInterceptorInfo();
 
             // Set tags according to the produces contract
-            projectFileDecorator.setProperty(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.CODE_MODERNIZATION, true);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_CODE_MODERNIZATION);
 
             // Set custom tags for more detailed analysis
             projectFileDecorator.setProperty("aop.interceptor.detected", true);

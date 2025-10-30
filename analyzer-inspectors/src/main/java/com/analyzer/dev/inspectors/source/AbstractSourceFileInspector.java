@@ -1,5 +1,6 @@
 package com.analyzer.dev.inspectors.source;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.inspector.Inspector;
 import com.analyzer.core.model.ProjectFile;
@@ -25,16 +26,19 @@ import java.nio.charset.StandardCharsets;
 public abstract class AbstractSourceFileInspector implements Inspector<ProjectFile> {
 
     private final ResourceResolver resourceResolver;
+    protected final LocalCache localCache;
 
-    protected AbstractSourceFileInspector(ResourceResolver resourceResolver) {
+    protected AbstractSourceFileInspector(ResourceResolver resourceResolver, LocalCache localCache) {
         this.resourceResolver = resourceResolver;
+        this.localCache = localCache;
     }
 
     @Override
     public final void inspect(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator) {
         try {
-            // Create ResourceLocation from the project file path
-            ResourceLocation sourceLocation = new ResourceLocation(projectFile.getFilePath().toUri());
+            // Use LocalCache to avoid repeated ResourceLocation creation
+            ResourceLocation sourceLocation = (ResourceLocation) localCache
+                    .getOrResolveLocation(() -> new ResourceLocation(projectFile.getFilePath().toUri()));
 
             if (!resourceResolver.exists(sourceLocation)) {
                 decorator.error("Source file not found: " + sourceLocation);
@@ -67,23 +71,28 @@ public abstract class AbstractSourceFileInspector implements Inspector<ProjectFi
 
     /**
      * Reads the entire content of the source file as a string using UTF-8 encoding.
+     * Uses LocalCache to avoid repeated file reading.
      *
      * @param sourceLocation the ResourceLocation of the source file
      * @return the content of the file
      * @throws IOException if there's an error reading the file
      */
     protected String readFileContent(ResourceLocation sourceLocation) throws IOException {
-        try (InputStream inputStream = resourceResolver.openStream(sourceLocation)) {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            byte[] buffer = new byte[8192];
-            int bytesRead;
+        return localCache.getOrLoadSourceContent(() -> {
+            try (InputStream inputStream = resourceResolver.openStream(sourceLocation)) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] buffer = new byte[8192];
+                int bytesRead;
 
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                baos.write(buffer, 0, bytesRead);
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    baos.write(buffer, 0, bytesRead);
+                }
+
+                return new String(baos.toByteArray(), StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to read file content", e);
             }
-
-            return new String(baos.toByteArray(), StandardCharsets.UTF_8);
-        }
+        });
     }
 
     /**

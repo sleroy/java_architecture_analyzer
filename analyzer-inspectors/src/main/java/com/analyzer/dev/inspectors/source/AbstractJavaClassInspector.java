@@ -1,5 +1,6 @@
 package com.analyzer.dev.inspectors.source;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
@@ -15,8 +16,8 @@ public abstract class AbstractJavaClassInspector extends AbstractJavaParserInspe
     private final ClassNodeRepository classNodeRepository;
 
     @Inject
-    protected AbstractJavaClassInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
+    protected AbstractJavaClassInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.classNodeRepository = classNodeRepository;
     }
 

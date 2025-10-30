@@ -61,9 +61,9 @@ public class ThreadLocalUsageInspector extends AbstractClassLoaderBasedInspector
 
     private static final Logger logger = LoggerFactory.getLogger(ThreadLocalUsageInspector.class);
 
-    // Property keys for JavaClassNode metrics
-    public static final String PROP_THREADLOCAL_DETECTED = "threadlocal.detected";
-    public static final String PROP_THREADLOCAL_COUNT = "threadlocal.count";
+    // Tags and metrics for JavaClassNode
+    public static final String TAG_THREADLOCAL_DETECTED = "threadlocal.detected";
+    public static final String METRIC_THREADLOCAL_COUNT = "threadlocal.count";
     public static final String PROP_THREADLOCAL_FIELDS = "threadlocal.fields";
     public static final String TAG_USES_THREADLOCAL = "uses.threadlocal";
 
@@ -102,8 +102,8 @@ public class ThreadLocalUsageInspector extends AbstractClassLoaderBasedInspector
                 logger.info("ThreadLocal usage detected in class: {} - {} field(s) found",
                         loadedClass.getName(), metrics.getThreadLocalCount());
 
-                decorator.setProperty(PROP_THREADLOCAL_DETECTED, true);
-                decorator.setProperty(PROP_THREADLOCAL_COUNT, metrics.getThreadLocalCount());
+                decorator.enableTag(TAG_THREADLOCAL_DETECTED);
+                decorator.setMetric(METRIC_THREADLOCAL_COUNT, metrics.getThreadLocalCount());
                 decorator.setProperty(PROP_THREADLOCAL_FIELDS, String.join(", ", metrics.getFieldNames()));
                 decorator.enableTag(TAG_USES_THREADLOCAL);
 

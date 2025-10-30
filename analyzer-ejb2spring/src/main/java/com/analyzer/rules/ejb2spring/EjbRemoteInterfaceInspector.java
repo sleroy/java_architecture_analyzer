@@ -1,5 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -12,6 +13,7 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
+import org.apache.tomcat.jni.Local;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,13 +30,14 @@ import java.util.List;
 public class EjbRemoteInterfaceInspector extends AbstractJavaParserInspector {
 
     public static class TAGS {
-        public static final String TAG_IS_REMOTE_INTERFACE = "ejb_remote_interface_inspector.is_remote_interface";
+        public static final String TAG_IS_REMOTE_INTERFACE = "ejb.remote_interface_inspector.is_remote_interface";
+        public static final String PROP_IS_REMOTE_INTERFACE = "ejb.remote_interface";
     }
 
     private final ClassNodeRepository classNodeRepository;
 
-    public EjbRemoteInterfaceInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
+    public EjbRemoteInterfaceInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.classNodeRepository = classNodeRepository;
     }
 
@@ -54,11 +57,12 @@ public class EjbRemoteInterfaceInspector extends AbstractJavaParserInspector {
 
             if (detector.isEjbRemoteInterface()) {
                 EjbRemoteInterfaceInfo info = detector.getEjbRemoteInterfaceInfo();
-                projectFileDecorator.setProperty(TAGS.TAG_IS_REMOTE_INTERFACE, info);
+                projectFileDecorator.setProperty(TAGS.PROP_IS_REMOTE_INTERFACE, info);
+                projectFileDecorator.enableTag(TAGS.TAG_IS_REMOTE_INTERFACE);
                 return;
             }
 
-            projectFileDecorator.setProperty(TAGS.TAG_IS_REMOTE_INTERFACE, false);
+            projectFileDecorator.disableTag(TAGS.TAG_IS_REMOTE_INTERFACE);
         });
     }
 

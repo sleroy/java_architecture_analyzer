@@ -69,7 +69,7 @@ public class AnnotationCountInspector extends AbstractClassLoaderBasedInspector 
 
             logger.debug("Found {} annotations on class {}", annotationCount, loadedClass.getName());
 
-            decorator.setProperty(getColumnName(), annotationCount);
+            decorator.setMetric(getColumnName(), annotationCount);
 
         } catch (Exception e) {
             logger.warn("Error analyzing annotations for class {}: {}",

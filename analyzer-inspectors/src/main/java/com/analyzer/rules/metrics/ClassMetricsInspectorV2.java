@@ -1,6 +1,7 @@
 package com.analyzer.rules.metrics;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -17,15 +18,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-
-
-
 /**
- * Class-centric metrics inspector that analyzes JavaClassNode using ASM bytecode analysis.
- * This is the Phase 2 proof-of-concept migration demonstrating the new architecture.
+ * Class-centric metrics inspector that analyzes JavaClassNode using ASM
+ * bytecode analysis.
+ * This is the Phase 2 proof-of-concept migration demonstrating the new
+ * architecture.
  * <p>
  * Key Differences from ClassMetricsInspector:
- * - Extends AbstractASMClassInspector (class-centric) instead of AbstractASMInspector (file-centric)
+ * - Extends AbstractASMClassInspector (class-centric) instead of
+ * AbstractASMInspector (file-centric)
  * - Receives JavaClassNode as input instead of ProjectFile
  * - Writes metrics directly to JavaClassNode properties
  * - Uses NodeDecorator<JavaClassNode> for property aggregation
@@ -39,16 +40,16 @@ import java.util.Set;
  *
  * @since Phase 2 - Class-Centric Architecture Refactoring
  */
-@InspectorDependencies(
-        requires = {InspectorTags.TAG_APPLICATION_CLASS},  // Will be populated based on dependencies
-        produces = {}   // Produces properties on JavaClassNode, not tags
+@InspectorDependencies(requires = { InspectorTags.TAG_APPLICATION_CLASS }, // Will be populated based on dependencies
+        produces = {} // Produces properties on JavaClassNode, not tags
 )
 public class ClassMetricsInspectorV2 extends AbstractASMClassInspector {
 
     @Inject
     public ClassMetricsInspectorV2(ProjectFileRepository projectFileRepository,
-                                   ResourceResolver resourceResolver) {
-        super(projectFileRepository, resourceResolver);
+            ResourceResolver resourceResolver,
+            LocalCache localCache) {
+        super(projectFileRepository, resourceResolver, localCache);
     }
 
     @Override
@@ -58,7 +59,7 @@ public class ClassMetricsInspectorV2 extends AbstractASMClassInspector {
 
     @Override
     protected ASMClassNodeVisitor createClassVisitor(JavaClassNode classNode,
-                                                     NodeDecorator<JavaClassNode> decorator) {
+            NodeDecorator<JavaClassNode> decorator) {
         return new ClassMetricsVisitor(classNode, decorator);
     }
 
@@ -79,7 +80,7 @@ public class ClassMetricsInspectorV2 extends AbstractASMClassInspector {
 
         @Override
         public void visit(int version, int access, String name, String signature,
-                          String superName, String[] interfaces) {
+                String superName, String[] interfaces) {
             this.className = name.replace('/', '.');
 
             // Track coupling to superclass
@@ -99,7 +100,7 @@ public class ClassMetricsInspectorV2 extends AbstractASMClassInspector {
 
         @Override
         public org.objectweb.asm.FieldVisitor visitField(int access, String name, String descriptor,
-                                                         String signature, Object value) {
+                String signature, Object value) {
             fieldCount++;
 
             // Track coupling from field type
@@ -110,13 +111,12 @@ public class ClassMetricsInspectorV2 extends AbstractASMClassInspector {
 
         @Override
         public MethodVisitor visitMethod(int access, String name, String descriptor,
-                                         String signature, String[] exceptions) {
+                String signature, String[] exceptions) {
             methodCount++;
             MethodVisitor mv = super.visitMethod(access, name, descriptor, signature, exceptions);
 
             // Create complexity visitor and store for later aggregation
-            CyclomaticComplexityMethodVisitor complexityVisitor =
-                    new CyclomaticComplexityMethodVisitor(mv);
+            CyclomaticComplexityMethodVisitor complexityVisitor = new CyclomaticComplexityMethodVisitor(mv);
             methodVisitors.add(complexityVisitor);
 
             // Track coupling from method signature
@@ -139,17 +139,18 @@ public class ClassMetricsInspectorV2 extends AbstractASMClassInspector {
 
             // Write metrics to JavaClassNode using decorator
             // This is the KEY DIFFERENCE: metrics go to JavaClassNode, not ProjectFile
-            setProperty(JavaClassNode.PROP_METHOD_COUNT, methodCount);
-            setProperty(JavaClassNode.PROP_FIELD_COUNT, fieldCount);
-            setProperty(JavaClassNode.PROP_CYCLOMATIC_COMPLEXITY, weightedMethodsPerClass);
-            setProperty(JavaClassNode.PROP_WEIGHTED_METHODS, weightedMethodsPerClass);
-            setProperty(JavaClassNode.PROP_EFFERENT_COUPLING, efferentCouplings.size());
+            setMetric(JavaClassNode.METRIC_METHOD_COUNT, methodCount);
+            setMetric(JavaClassNode.METRIC_FIELD_COUNT, fieldCount);
+            setMetric(JavaClassNode.METRIC_CYCLOMATIC_COMPLEXITY, weightedMethodsPerClass);
+            setMetric(JavaClassNode.METRIC_WEIGHTED_METHODS, weightedMethodsPerClass);
+            setMetric(JavaClassNode.METRIC_EFFERENT_COUPLING, efferentCouplings.size());
 
             super.visitEnd();
         }
 
         /**
-         * Adds a coupling to another class, filtering out java.* packages and self-references.
+         * Adds a coupling to another class, filtering out java.* packages and
+         * self-references.
          */
         private void addCoupling(String className) {
             if (className != null &&
@@ -162,10 +163,11 @@ public class ClassMetricsInspectorV2 extends AbstractASMClassInspector {
 
     /**
      * Method visitor that calculates cyclomatic complexity for a single method.
-     * Complexity is calculated by counting decision points (if, switch, loops, etc.).
+     * Complexity is calculated by counting decision points (if, switch, loops,
+     * etc.).
      */
     private static class CyclomaticComplexityMethodVisitor extends MethodVisitor {
-        private int complexity = 1;  // Base complexity is 1
+        private int complexity = 1; // Base complexity is 1
 
         public CyclomaticComplexityMethodVisitor(MethodVisitor methodVisitor) {
             super(Opcodes.ASM9, methodVisitor);
@@ -189,7 +191,7 @@ public class ClassMetricsInspectorV2 extends AbstractASMClassInspector {
 
         @Override
         public void visitTableSwitchInsn(int min, int max, org.objectweb.asm.Label dflt,
-                                         org.objectweb.asm.Label... labels) {
+                org.objectweb.asm.Label... labels) {
             // Each case in a switch adds to complexity
             complexity += labels.length;
             super.visitTableSwitchInsn(min, max, dflt, labels);
@@ -197,7 +199,7 @@ public class ClassMetricsInspectorV2 extends AbstractASMClassInspector {
 
         @Override
         public void visitLookupSwitchInsn(org.objectweb.asm.Label dflt, int[] keys,
-                                          org.objectweb.asm.Label[] labels) {
+                org.objectweb.asm.Label[] labels) {
             // Each case in a switch adds to complexity
             complexity += labels.length;
             super.visitLookupSwitchInsn(dflt, keys, labels);

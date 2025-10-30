@@ -57,7 +57,7 @@ public interface GraphNode {
      *
      * @param tag the tag to add
      */
-    void addTag(String tag);
+    void enableTag(String tag);
 
     /**
      * Checks if this node has a specific tag.

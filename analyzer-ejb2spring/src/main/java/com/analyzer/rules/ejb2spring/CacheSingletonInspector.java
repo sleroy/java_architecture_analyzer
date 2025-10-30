@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -54,8 +55,7 @@ import java.util.List;
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
         EjbMigrationTags.EJB_CACHING_PATTERN,
-        EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM
+        EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION,
 })
 public class CacheSingletonInspector extends AbstractJavaClassInspector {
 
@@ -63,8 +63,8 @@ public class CacheSingletonInspector extends AbstractJavaClassInspector {
             "Cache", "Singleton", "Registry", "Manager", "Store", "Pool", "Buffer", "Holder");
 
     @Inject
-    public CacheSingletonInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public CacheSingletonInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
@@ -89,11 +89,10 @@ public class CacheSingletonInspector extends AbstractJavaClassInspector {
 
             // Set tags according to the produces contract
             projectFileDecorator.setProperty(EjbMigrationTags.EJB_CACHING_PATTERN, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+            projectFileDecorator.setProperty(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION, true);
 
             // Set property on class node for detailed analysis
-            classNode.setProperty("cache.singleton.analysis", info.toString());
+            classNode.setProperty("cache.singleton.analysis", info);
 
             // Set analysis statistics
             projectFileDecorator.setProperty("cache.singleton.static_fields", info.staticFieldCount);

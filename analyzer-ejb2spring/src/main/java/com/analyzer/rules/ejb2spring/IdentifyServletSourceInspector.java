@@ -1,9 +1,11 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractJavaParserInspector;
 import com.analyzer.api.resource.ResourceResolver;
@@ -15,7 +17,8 @@ import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
 import java.util.Set;
 
-@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_IS_SOURCE}, produces = {IdentifyServletSourceInspector.TAGS.TAG_IS_SERVLET})
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
+        IdentifyServletSourceInspector.TAGS.TAG_IS_SERVLET })
 public class IdentifyServletSourceInspector extends AbstractJavaParserInspector {
 
     public static class TAGS {
@@ -23,34 +26,34 @@ public class IdentifyServletSourceInspector extends AbstractJavaParserInspector 
     }
 
     private static final Set<String> SERVLET_ANNOTATIONS = Set.of(
-            "WebServlet", "javax.servlet.annotation.WebServlet"
-    );
+            "WebServlet", "javax.servlet.annotation.WebServlet");
 
     private static final Set<String> SERVLET_SUPERCLASSES = Set.of(
-            "HttpServlet", "javax.servlet.http.HttpServlet"
-    );
+            "HttpServlet", "javax.servlet.http.HttpServlet");
 
     private static final Set<String> SERVLET_INTERFACES = Set.of(
-            "Servlet", "javax.servlet.Servlet"
-    );
+            "Servlet", "javax.servlet.Servlet");
 
     private final ClassNodeRepository classNodeRepository;
 
-    public IdentifyServletSourceInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
+    public IdentifyServletSourceInspector(ResourceResolver resourceResolver,
+            ClassNodeRepository classNodeRepository,
+            LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.classNodeRepository = classNodeRepository;
     }
 
     @Override
-    protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile, NodeDecorator projectFileDecorator) {
+    protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
+            NodeDecorator<ProjectFile> projectFileDecorator) {
         ServletDetector detector = new ServletDetector();
         cu.accept(detector, null);
-        
+
         boolean isServlet = detector.isServlet();
-        
+
         // Honor produces contract - always set tag on ProjectFile
         projectFileDecorator.setProperty(TAGS.TAG_IS_SERVLET, isServlet);
-        
+
         // Also set property on ClassNode for analysis data if available
         classNodeRepository.getOrCreateClassNode(cu).ifPresent(classNode -> {
             classNode.setProjectFileId(projectFile.getId());

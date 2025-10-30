@@ -56,14 +56,39 @@ public class NodeDecorator<T extends GraphNode> {
      * @param value        the property value
      */
     public void setProperty(String propertyName, Object value) {
-        if (node instanceof BaseGraphNode) {
-            ((BaseGraphNode) node).setProperty(propertyName, value);
-        } else if (node instanceof ProjectFile) {
-            ((ProjectFile) node).setProperty(propertyName, value);
-        } else {
-            throw new UnsupportedOperationException(
-                    "Node type " + node.getClass().getName() + " does not support setProperty");
-        }
+        ((BaseGraphNode) node).setProperty(propertyName, value);
+    }
+
+    /**
+     * Set a metric value on the node.
+     * Metrics should be used for numerical measurements like counts, complexity,
+     * etc.
+     *
+     * @param metricName the metric name
+     * @param value      the metric value
+     */
+    public void setMetric(String metricName, Number value) {
+        ((BaseGraphNode) node).getMetrics().setMetric(metricName, value);
+    }
+
+    /**
+     * Set a metric value to the maximum of current and new value.
+     * Only updates if the new value is greater than the current value.
+     *
+     * @param metricName the metric name
+     * @param value      the new value to compare
+     */
+    public void setMaxMetric(String metricName, Number value) {
+        ((BaseGraphNode) node).getMetrics().setMaxMetric(metricName, value);
+    }
+
+    /**
+     * Get the metrics interface for direct access to all metric operations.
+     *
+     * @return the metrics interface
+     */
+    public com.analyzer.api.metrics.Metrics getMetrics() {
+        return ((BaseGraphNode) node).getMetrics();
     }
 
     /**
@@ -136,7 +161,7 @@ public class NodeDecorator<T extends GraphNode> {
      * @param tagName the tag to enable
      */
     public void enableTag(String tagName) {
-        node.addTag(tagName);
+        node.enableTag(tagName);
     }
 
     /**
@@ -191,47 +216,19 @@ public class NodeDecorator<T extends GraphNode> {
     // ========== HELPER METHODS ==========
 
     private String getStringProperty(String propertyName, String defaultValue) {
-        if (node instanceof BaseGraphNode) {
-            return ((BaseGraphNode) node)
-                    .getProperty(propertyName, String.class, defaultValue);
-        } else if (node instanceof ProjectFile) {
-            return ((ProjectFile) node)
-                    .getStringProperty(propertyName, defaultValue);
-        }
-        return defaultValue;
+        return ((BaseGraphNode) node).getProperty(propertyName, String.class, defaultValue);
     }
 
     private Integer getIntProperty(String propertyName, Integer defaultValue) {
-        if (node instanceof BaseGraphNode) {
-            return ((BaseGraphNode) node)
-                    .getProperty(propertyName, Integer.class, defaultValue);
-        } else if (node instanceof ProjectFile) {
-            return ((ProjectFile) node)
-                    .getIntegerProperty(propertyName, defaultValue);
-        }
-        return defaultValue;
+        return ((BaseGraphNode) node).getProperty(propertyName, Integer.class, defaultValue);
     }
 
     private Double getDoubleProperty(String propertyName, Double defaultValue) {
-        if (node instanceof BaseGraphNode) {
-            return ((BaseGraphNode) node)
-                    .getProperty(propertyName, Double.class, defaultValue);
-        } else if (node instanceof ProjectFile) {
-            return ((ProjectFile) node)
-                    .getDoubleProperty(propertyName, defaultValue);
-        }
-        return defaultValue;
+        return ((BaseGraphNode) node).getProperty(propertyName, Double.class, defaultValue);
     }
 
     private Boolean getBooleanProperty(String propertyName, Boolean defaultValue) {
-        if (node instanceof BaseGraphNode) {
-            return ((BaseGraphNode) node)
-                    .getProperty(propertyName, Boolean.class, defaultValue);
-        } else if (node instanceof ProjectFile) {
-            return ((ProjectFile) node)
-                    .getBooleanProperty(propertyName, defaultValue);
-        }
-        return defaultValue;
+        return ((BaseGraphNode) node).getProperty(propertyName, Boolean.class, defaultValue);
     }
 
     /**

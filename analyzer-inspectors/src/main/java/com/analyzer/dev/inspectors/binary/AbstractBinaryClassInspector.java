@@ -1,5 +1,6 @@
 package com.analyzer.dev.inspectors.binary;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.inspector.Inspector;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -8,6 +9,7 @@ import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.ResourceLocation;
 import com.analyzer.api.resource.ResourceResolver;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -22,27 +24,31 @@ import java.io.InputStream;
  * identified as Java binary class files.
  * </p>
  */
-@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_DETECTED}, produces = { InspectorTags.TAG_JAVA_IS_BINARY })
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED }, produces = { InspectorTags.TAG_JAVA_IS_BINARY })
 public abstract class AbstractBinaryClassInspector implements Inspector<ProjectFile> {
 
     private final ResourceResolver resourceResolver;
+    protected final LocalCache localCache;
 
     /**
      * Creates a new AbstractBinaryClassInspector with the specified
-     * ResourceResolver.
+     * ResourceResolver and LocalCache.
      *
      * @param resourceResolver the resolver for accessing class file resources
+     * @param localCache       per-item cache for optimizing binary file access
      */
-    protected AbstractBinaryClassInspector(ResourceResolver resourceResolver) {
+    protected AbstractBinaryClassInspector(ResourceResolver resourceResolver, LocalCache localCache) {
         this.resourceResolver = resourceResolver;
+        this.localCache = localCache;
     }
 
     @Override
     public final void inspect(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator) {
 
         try {
-            // For ProjectFile, create ResourceLocation from the file path
-            ResourceLocation binaryLocation = new ResourceLocation(projectFile.getFilePath().toUri());
+            // Use LocalCache to avoid repeated ResourceLocation creation
+            ResourceLocation binaryLocation = (ResourceLocation) localCache
+                    .getOrResolveLocation(() -> new ResourceLocation(projectFile.getFilePath().toUri()));
 
             analyzeBinaryClass(projectFile, binaryLocation, decorator);
 
@@ -61,6 +67,7 @@ public abstract class AbstractBinaryClassInspector implements Inspector<ProjectF
 
     /**
      * Analyzes a binary class using the ResourceResolver.
+     * Uses LocalCache to avoid re-reading the same binary file multiple times.
      */
     private void analyzeBinaryClass(ProjectFile projectFile, ResourceLocation binaryLocation,
             NodeDecorator<ProjectFile> decorator) {
@@ -72,33 +79,32 @@ public abstract class AbstractBinaryClassInspector implements Inspector<ProjectF
             return;
         }
 
-        try (InputStream classStream = resourceResolver.openStream(binaryLocation)) {
-            if (classStream == null) {
-                decorator.error(
-                        "Could not open binary class stream: " + binaryLocation);
+        try {
+            // Use LocalCache to read binary bytes only once per item
+            byte[] classBytes = localCache.getOrLoadClassBytes(() -> {
+                try (InputStream classStream = resourceResolver.openStream(binaryLocation)) {
+                    if (classStream == null) {
+                        throw new RuntimeException("Could not open binary class stream: " + binaryLocation);
+                    }
+                    return classStream.readAllBytes();
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to read class bytes", e);
+                }
+            });
+
+            // Check for empty class files
+            if (classBytes.length == 0) {
+                decorator.error("Empty class file stream: " + binaryLocation);
                 return;
             }
 
-            // Additional validation: check if stream is immediately at end
-            if (!classStream.markSupported()) {
-                // If mark not supported, we can't pre-check, so proceed to analyzeClassFile
-                // which will handle empty streams
-                analyzeClassFile(projectFile, binaryLocation, classStream, decorator);
-                return;
-            }
-
-            // Mark current position and try to read one byte to check if stream has content
-            classStream.mark(1);
-            int firstByte = classStream.read();
-            classStream.reset();
-
-            if (firstByte == -1) {
-                decorator.error(
-                        "Empty class file stream: " + binaryLocation);
-                return;
-            }
+            // Mark as binary class
             decorator.enableTag(InspectorTags.TAG_JAVA_IS_BINARY);
-            analyzeClassFile(projectFile, binaryLocation, classStream, decorator);
+
+            // Create a new InputStream from cached bytes for analysis
+            try (InputStream classStream = new ByteArrayInputStream(classBytes)) {
+                analyzeClassFile(projectFile, binaryLocation, classStream, decorator);
+            }
 
         } catch (IOException e) {
             decorator.error(

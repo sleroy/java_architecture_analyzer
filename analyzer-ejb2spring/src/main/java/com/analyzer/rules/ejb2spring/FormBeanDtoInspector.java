@@ -1,11 +1,11 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
-import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractJavaClassInspector;
 import com.analyzer.api.resource.ResourceResolver;
@@ -45,13 +45,12 @@ import java.util.regex.Pattern;
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
         FormBeanDtoInspector.TAGS.TAG_IS_DTO,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_LOW
 })
 public class FormBeanDtoInspector extends AbstractJavaClassInspector {
 
     @Inject
-    public FormBeanDtoInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public FormBeanDtoInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
@@ -114,7 +113,7 @@ public class FormBeanDtoInspector extends AbstractJavaClassInspector {
 
             // Set tags according to the produces contract
             projectFileDecorator.enableTag(TAGS.TAG_IS_DTO);
-            projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW);
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
 
             // Set appropriate Spring Boot migration target
             if (info.isMutable) {
@@ -124,11 +123,11 @@ public class FormBeanDtoInspector extends AbstractJavaClassInspector {
             }
 
             // Set property on class node for detailed analysis
-            classNode.setProperty("dto.analysis", info.toString());
+            classNode.setProperty("dto.analysis", info);
 
             // Set analysis statistics
-            projectFileDecorator.setProperty("dto.property_count", info.propertyCount);
-            projectFileDecorator.setProperty("dto.getter_setter_ratio",
+            projectFileDecorator.setMetric("dto.property_count", info.propertyCount);
+            projectFileDecorator.setMetric("dto.getter_setter_ratio",
                     info.getterCount > 0 ? (double) info.setterCount / info.getterCount : 0);
             projectFileDecorator.setProperty("dto.serializable", info.isSerializable);
         }

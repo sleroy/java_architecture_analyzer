@@ -16,7 +16,7 @@ This naming collision made the code confusing and unclear about which component 
 
 Renamed the database repository class to `H2GraphStorageRepository` to clearly indicate its purpose:
 - **Old name**: `com.analyzer.core.db.repository.GraphRepository`
-- **New name**: `com.analyzer.core.db.repository.H2GraphStorageRepository`
+- **New name**: `com.analyzer.core.db.H2GraphStorageRepository`
 
 ## Files Changed
 
@@ -46,7 +46,7 @@ public class H2GraphStorageRepository {
 **InventoryCommand.java**:
 ```java
 // Import
-import com.analyzer.core.db.repository.H2GraphStorageRepository;
+import com.analyzer.core.db.H2GraphStorageRepository;
 
 // Usage
 H2GraphStorageRepository dbRepository = new H2GraphStorageRepository(dbConfig);
@@ -61,11 +61,11 @@ H2GraphStorageRepository repo = new H2GraphStorageRepository(dbConfig);
 **JsonExportCommand.java**:
 ```java
 // Usage
-var dbRepository = new com.analyzer.core.db.repository.H2GraphStorageRepository(dbConfig);
+var dbRepository = new com.analyzer.core.db.H2GraphStorageRepository(dbConfig);
 
 // Method signature
 private GraphRepository loadDataFromDatabase(
-    com.analyzer.core.db.repository.H2GraphStorageRepository dbRepo,
+    com.analyzer.core.db.H2GraphStorageRepository dbRepo,
     Path projectRoot,
     List<String> nodeTypeFilters,
     List<String> edgeTypeFilters)
@@ -74,12 +74,12 @@ private GraphRepository loadDataFromDatabase(
 **CsvExportCommand.java**:
 ```java
 // Usage
-com.analyzer.core.db.repository.H2GraphStorageRepository dbRepository = 
-    new com.analyzer.core.db.repository.H2GraphStorageRepository(dbConfig);
+com.analyzer.core.db.H2GraphStorageRepository dbRepository = 
+    new com.analyzer.core.db.H2GraphStorageRepository(dbConfig);
 
 // Method signature
 private GraphRepository loadDataFromDatabase(
-    com.analyzer.core.db.repository.H2GraphStorageRepository dbRepo)
+    com.analyzer.core.db.H2GraphStorageRepository dbRepo)
 ```
 
 ## Benefits

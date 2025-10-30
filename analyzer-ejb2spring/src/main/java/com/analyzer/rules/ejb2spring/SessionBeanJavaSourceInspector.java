@@ -1,10 +1,10 @@
 package com.analyzer.rules.ejb2spring;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
-import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractJavaClassInspector;
 import com.analyzer.api.resource.ResourceResolver;
@@ -36,8 +36,8 @@ import javax.inject.Inject;
 public class SessionBeanJavaSourceInspector extends AbstractJavaClassInspector {
 
     @Inject
-    public SessionBeanJavaSourceInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public SessionBeanJavaSourceInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     // No need for empty supports() method - @InspectorDependencies handles
@@ -53,9 +53,10 @@ public class SessionBeanJavaSourceInspector extends AbstractJavaClassInspector {
             if (detector.isSessionBean()) {
                 SessionBeanInfo info = detector.getSessionBeanInfo();
                 // Honor produces contract: set tag on ProjectFile for dependency chains
-                projectFileDecorator.setProperty(TAGS.TAG_IS_SESSION_BEAN, true);
+                projectFileDecorator.enableTag(TAGS.TAG_IS_SESSION_BEAN);
+                classNode.enableTag(TAGS.TAG_IS_SESSION_BEAN);
                 // Set analysis data as property on ClassNode for export
-                classNode.setProperty(TAGS.TAG_IS_SESSION_BEAN, info);
+                classNode.setProperty(TAGS.PROP_SESSION_BEAN, info);
             }
         }
     }
@@ -67,6 +68,7 @@ public class SessionBeanJavaSourceInspector extends AbstractJavaClassInspector {
 
     public static class TAGS {
         public static final String TAG_IS_SESSION_BEAN = "ejb.is_session_bean";
+        public static final String PROP_SESSION_BEAN = "ejb.session_bean";
     }
 
     /**

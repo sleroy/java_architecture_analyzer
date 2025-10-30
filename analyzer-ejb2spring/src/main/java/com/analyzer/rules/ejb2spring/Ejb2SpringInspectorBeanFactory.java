@@ -1,4 +1,5 @@
 package com.analyzer.rules.ejb2spring;
+import com.analyzer.core.cache.LocalCache;
 
 import com.analyzer.api.inspector.BeanFactory;
 import org.picocontainer.MutablePicoContainer;

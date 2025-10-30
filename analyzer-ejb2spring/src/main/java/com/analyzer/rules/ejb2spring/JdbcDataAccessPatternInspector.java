@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -43,9 +44,6 @@ import java.util.Set;
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_APPLICATION_CLASS }, produces = {
         EjbMigrationTags.DATA_ACCESS_LAYER,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_LOW,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH
 })
 public class JdbcDataAccessPatternInspector extends AbstractASMClassInspector {
 
@@ -65,8 +63,8 @@ public class JdbcDataAccessPatternInspector extends AbstractASMClassInspector {
 
     @Inject
     public JdbcDataAccessPatternInspector(ProjectFileRepository projectFileRepository,
-            ResourceResolver resourceResolver) {
-        super(projectFileRepository, resourceResolver);
+            ResourceResolver resourceResolver, LocalCache localCache) {
+        super(projectFileRepository, resourceResolver, localCache);
     }
 
     @Override
@@ -236,13 +234,13 @@ public class JdbcDataAccessPatternInspector extends AbstractASMClassInspector {
             String complexity = assessMigrationComplexity(metadata);
             switch (complexity) {
                 case "LOW":
-                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW);
+                    decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
                     break;
                 case "MEDIUM":
-                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+                    decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
                     break;
                 case "HIGH":
-                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
+                    decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
                     break;
             }
 

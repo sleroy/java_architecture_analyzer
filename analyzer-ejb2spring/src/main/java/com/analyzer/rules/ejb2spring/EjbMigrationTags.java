@@ -1,4 +1,5 @@
 package com.analyzer.rules.ejb2spring;
+import com.analyzer.core.cache.LocalCache;
 
 /**
  * EJB-specific tags for migration analysis.
@@ -145,7 +146,7 @@ public final class EjbMigrationTags {
     /**
      * Tag for programmatic transaction usage
      */
-    public static final String EJB_PROGRAMMATIC_TRANSACTION = "ejb.transaction.programmatic";
+    public static final String TAG_EJB_PROGRAMMATIC_TRANSACTION = "ejb.transaction.programmatic";
 
     /**
      * Tag for declarative transaction attributes
@@ -160,7 +161,7 @@ public final class EjbMigrationTags {
     /**
      * Tag for bean-managed transactions
      */
-    public static final String EJB_BEAN_MANAGED_TRANSACTION = "ejb.transaction.beanManaged";
+    public static final String TAG_EJB_BEAN_MANAGED_TRANSACTION = "ejb.transaction.beanManaged";
 
     /**
      * Tag for transaction boundary analysis
@@ -290,52 +291,38 @@ public final class EjbMigrationTags {
      */
     public static final String VENDOR_SPECIFIC_ORACLE = "ejb.vendor.oracle";
 
-    // ==================== MIGRATION COMPLEXITY TAGS ====================
+    // ==================== MIGRATION COMPLEXITY AND PRIORITY METRICS
+    // ====================
 
     /**
-     * Tag for simple migration scenarios
+     * Metric name for migration complexity score.
+     * Values: 3.0 (LOW), 6.0 (MEDIUM), 9.0 (HIGH)
      */
-    public static final String MIGRATION_COMPLEXITY_LOW = "migration.complexity.low";
+    public static final String METRIC_MIGRATION_COMPLEXITY = "migration.complexity";
 
     /**
-     * Tag for moderate migration scenarios
+     * Metric name for migration priority score.
+     * Values: 3.0 (LOW), 6.0 (MEDIUM), 9.0 (HIGH)
      */
-    public static final String MIGRATION_COMPLEXITY_MEDIUM = "migration.complexity.medium";
+    public static final String METRIC_MIGRATION_PRIORITY = "migration.priority";
 
-    /**
-     * Tag for complex migration scenarios
-     */
-    public static final String MIGRATION_COMPLEXITY_HIGH = "migration.complexity.high";
+    /** Migration complexity score: LOW */
+    public static final double COMPLEXITY_LOW = 3.0;
 
-    /**
-     * Tag for migration blockers or very complex scenarios
-     */
-    public static final String MIGRATION_COMPLEXITY_CRITICAL = "migration.complexity.critical";
+    /** Migration complexity score: MEDIUM */
+    public static final double COMPLEXITY_MEDIUM = 6.0;
 
-    /**
-     * Tag for high-priority migration targets
-     */
-    public static final String EJB_MIGRATION_HIGH_PRIORITY = "ejb.migration.highPriority";
+    /** Migration complexity score: HIGH */
+    public static final double COMPLEXITY_HIGH = 9.0;
 
-    /**
-     * Tag for medium-priority migration targets
-     */
-    public static final String EJB_MIGRATION_MEDIUM_PRIORITY = "ejb.migration.mediumPriority";
+    /** Migration priority score: LOW */
+    public static final double PRIORITY_LOW = 3.0;
 
-    /**
-     * Tag for simple migration patterns
-     */
-    public static final String EJB_MIGRATION_SIMPLE = "ejb.migration.simple";
+    /** Migration priority score: MEDIUM */
+    public static final double PRIORITY_MEDIUM = 6.0;
 
-    /**
-     * Tag for medium complexity migration patterns
-     */
-    public static final String EJB_MIGRATION_MEDIUM = "ejb.migration.medium";
-
-    /**
-     * Tag for complex migration patterns
-     */
-    public static final String EJB_MIGRATION_COMPLEX = "ejb.migration.complex";
+    /** Migration priority score: HIGH */
+    public static final double PRIORITY_HIGH = 9.0;
 
     // ==================== JPA CONVERSION TAGS ====================
 
@@ -359,22 +346,22 @@ public final class EjbMigrationTags {
     /**
      * Tag for Spring service conversion targets
      */
-    public static final String SPRING_SERVICE_CONVERSION = "spring.conversion.service";
+    public static final String TAG_SPRING_SERVICE_CONVERSION = "spring.conversion.service";
 
     /**
      * Tag for Spring component conversion targets
      */
-    public static final String SPRING_COMPONENT_CONVERSION = "spring.conversion.component";
+    public static final String TAG_SPRING_COMPONENT_CONVERSION = "spring.conversion.component";
 
     /**
      * Tag for Spring transaction conversion targets
      */
-    public static final String SPRING_TRANSACTION_CONVERSION = "spring.conversion.transaction";
+    public static final String TAG_SPRING_TRANSACTION_CONVERSION = "spring.conversion.transaction";
 
     /**
      * Tag for Spring configuration conversion targets
      */
-    public static final String SPRING_CONFIG_CONVERSION = "spring.conversion.configuration";
+    public static final String TAG_SPRING_CONFIG_CONVERSION = "spring.conversion.configuration";
 
     /**
      * Tag for Spring scope migration targets
@@ -391,7 +378,7 @@ public final class EjbMigrationTags {
     /**
      * Tag for code modernization opportunities
      */
-    public static final String CODE_MODERNIZATION = "refactoring.modernization";
+    public static final String TAG_CODE_MODERNIZATION = "refactoring.modernization";
 
     /**
      * Tag for architecture improvement opportunities

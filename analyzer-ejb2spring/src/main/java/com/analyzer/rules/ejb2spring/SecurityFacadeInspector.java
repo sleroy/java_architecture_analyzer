@@ -1,11 +1,11 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
-import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractJavaClassInspector;
 import com.analyzer.api.resource.ResourceResolver;
@@ -47,14 +47,13 @@ import java.util.Set;
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
         SecurityFacadeInspector.TAGS.TAG_IS_SECURITY_FACADE,
-        EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM
+        EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION,
 })
 public class SecurityFacadeInspector extends AbstractJavaClassInspector {
 
     @Inject
-    public SecurityFacadeInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public SecurityFacadeInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
@@ -98,25 +97,25 @@ public class SecurityFacadeInspector extends AbstractJavaClassInspector {
 
             // Set tags according to the produces contract
             projectFileDecorator.enableTag(TAGS.TAG_IS_SECURITY_FACADE);
-            projectFileDecorator.enableTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION);
-            projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
 
             // Set property on class node for detailed analysis
-            classNode.setProperty("security.analysis", info.toString());
+            classNode.setProperty("security.analysis", info);
 
             // Set analysis statistics
-            projectFileDecorator.setProperty("security.principal_calls", info.principalCalls.size());
-            projectFileDecorator.setProperty("security.role_checks", info.roleCheckCalls.size());
-            projectFileDecorator.setProperty("security.security_method_count", info.securityMethodCount);
+            projectFileDecorator.setMetric("security.principal_calls", info.principalCalls.size());
+            projectFileDecorator.setMetric("security.role_checks", info.roleCheckCalls.size());
+            projectFileDecorator.setMetric("security.security_method_count", info.securityMethodCount);
 
             // Set Spring Boot migration target
             projectFileDecorator.setProperty("spring.conversion.target", "@Service+Spring Security");
 
             // If custom security implementations are used, migration is more complex
             if (info.hasCustomSecurityLogic) {
-                projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
                 // Override medium complexity
-                projectFileDecorator.enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
             }
         }
     }

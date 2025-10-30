@@ -123,7 +123,7 @@ Keep both but rename to avoid confusion:
 com.analyzer.core.db.repository.GraphRepository
 
 // Rename to:
-com.analyzer.core.db.repository.H2GraphStorageRepository
+com.analyzer.core.db.H2GraphStorageRepository
 // or
 com.analyzer.core.db.persistence.GraphPersistenceRepository
 ```

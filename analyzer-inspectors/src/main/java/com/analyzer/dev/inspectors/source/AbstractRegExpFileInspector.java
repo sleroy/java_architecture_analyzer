@@ -1,8 +1,11 @@
 package com.analyzer.dev.inspectors.source;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.resource.ResourceResolver;
 
 import java.io.IOException;
@@ -32,8 +35,8 @@ public abstract class AbstractRegExpFileInspector extends AbstractSourceFileInsp
      *                         matching
      * @throws IllegalArgumentException if regexPattern is null or invalid
      */
-    protected AbstractRegExpFileInspector(ResourceResolver resourceResolver, String regexPattern) {
-        super(resourceResolver);
+    protected AbstractRegExpFileInspector(ResourceResolver resourceResolver, String regexPattern, LocalCache localCache) {
+        super(resourceResolver, localCache);
         if (regexPattern == null || regexPattern.trim().isEmpty()) {
             throw new IllegalArgumentException("Regex pattern cannot be null or empty");
         }
@@ -47,8 +50,8 @@ public abstract class AbstractRegExpFileInspector extends AbstractSourceFileInsp
      * @param pattern          the compiled Pattern to use for matching
      * @throws IllegalArgumentException if pattern is null
      */
-    protected AbstractRegExpFileInspector(ResourceResolver resourceResolver, Pattern pattern) {
-        super(resourceResolver);
+    protected AbstractRegExpFileInspector(ResourceResolver resourceResolver, Pattern pattern, LocalCache localCache) {
+        super(resourceResolver, localCache);
         if (pattern == null) {
             throw new IllegalArgumentException("Pattern cannot be null");
         }

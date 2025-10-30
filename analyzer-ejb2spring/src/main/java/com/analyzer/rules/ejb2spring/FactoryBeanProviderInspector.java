@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -42,12 +43,11 @@ import java.util.List;
  * </p>
  *
  * @see <a href=
- *      "https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/context/annotation/Bean.html">Spring @Bean</a>
+ * "https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/context/annotation/Bean.html">Spring @Bean</a>
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
-        EjbMigrationTags.SPRING_CONFIG_CONVERSION,
-        EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM
+@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_IS_SOURCE}, produces = {
+        EjbMigrationTags.TAG_SPRING_CONFIG_CONVERSION,
+        EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION,
 })
 public class FactoryBeanProviderInspector extends AbstractJavaClassInspector {
 
@@ -58,8 +58,8 @@ public class FactoryBeanProviderInspector extends AbstractJavaClassInspector {
             "create", "get", "build", "make", "new", "obtain", "provide");
 
     @Inject
-    public FactoryBeanProviderInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public FactoryBeanProviderInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
@@ -82,16 +82,15 @@ public class FactoryBeanProviderInspector extends AbstractJavaClassInspector {
             FactoryBeanInfo info = detector.getFactoryBeanInfo();
 
             // Set tags according to the produces contract
-            projectFileDecorator.setProperty(EjbMigrationTags.SPRING_CONFIG_CONVERSION, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+            projectFileDecorator.setProperty(EjbMigrationTags.TAG_SPRING_CONFIG_CONVERSION, true);
+            projectFileDecorator.setProperty(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION, true);
 
             // Set property on class node for detailed analysis
-            classNode.setProperty("factory.bean.analysis", info.toString());
+            classNode.setProperty("factory.bean.analysis", info);
 
             // Set analysis statistics
-            projectFileDecorator.setProperty("factory.bean.factory_methods", info.factoryMethodCount);
-            projectFileDecorator.setProperty("factory.bean.object_creations", info.objectCreationCount);
+            projectFileDecorator.setMetric("factory.bean.factory_methods", info.factoryMethodCount);
+            projectFileDecorator.setMetric("factory.bean.object_creations", info.objectCreationCount);
         }
     }
 

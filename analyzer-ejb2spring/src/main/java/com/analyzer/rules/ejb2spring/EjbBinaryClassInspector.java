@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -63,7 +64,7 @@ import java.util.*;
  * @since Phase 3 - Systematic Inspector Migration (Replaced with class-centric
  *        architecture)
  */
-@InspectorDependencies(requires = {InspectorTags.TAG_APPLICATION_CLASS}, produces = {
+@InspectorDependencies(requires = { InspectorTags.TAG_APPLICATION_CLASS }, produces = {
         EjbMigrationTags.EJB_BEAN_DETECTED,
         EjbMigrationTags.EJB_SESSION_BEAN,
         EjbMigrationTags.EJB_STATELESS_SESSION_BEAN,
@@ -77,13 +78,10 @@ import java.util.*;
         EjbMigrationTags.EJB_LOCAL_INTERFACE,
         EjbMigrationTags.EJB_LOCAL_HOME_INTERFACE,
         EjbMigrationTags.EJB_PRIMARY_KEY_CLASS,
-        EjbMigrationTags.SPRING_SERVICE_CONVERSION,
-        EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
+        EjbMigrationTags.TAG_SPRING_SERVICE_CONVERSION,
+        EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION,
         EjbMigrationTags.JPA_ENTITY_CONVERSION,
-        EjbMigrationTags.JPA_REPOSITORY_CONVERSION,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_LOW,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH
+        EjbMigrationTags.JPA_REPOSITORY_CONVERSION
 })
 public class EjbBinaryClassInspector extends AbstractASMClassInspector {
 
@@ -91,8 +89,8 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
 
     @Inject
     public EjbBinaryClassInspector(ProjectFileRepository projectFileRepository,
-            ResourceResolver resourceResolver) {
-        super(projectFileRepository, resourceResolver);
+            ResourceResolver resourceResolver, LocalCache localCache) {
+        super(projectFileRepository, resourceResolver, localCache);
     }
 
     @Override
@@ -275,8 +273,9 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
                         setProperty("ejb.migration.complexity", "LOW");
                         enableTag(EjbMigrationTags.EJB_STATELESS_SESSION_BEAN);
                         enableTag(EjbMigrationTags.EJB_SESSION_BEAN);
-                        enableTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION);
-                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW);
+                        enableTag(EjbMigrationTags.TAG_SPRING_SERVICE_CONVERSION);
+                        classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY,
+                                EjbMigrationTags.COMPLEXITY_LOW);
                         logger.debug("Detected Stateless Session Bean: {}", className);
                         found = true;
                         break;
@@ -291,8 +290,8 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
                         setProperty("ejb.migration.complexity", "MEDIUM");
                         enableTag(EjbMigrationTags.EJB_STATEFUL_SESSION_BEAN);
                         enableTag(EjbMigrationTags.EJB_SESSION_BEAN);
-                        enableTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION);
-                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+                        enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
+                        classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
                         logger.debug("Detected Stateful Session Bean: {}", className);
                         found = true;
                         break;
@@ -308,7 +307,7 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
                         enableTag(EjbMigrationTags.EJB_ENTITY_BEAN);
                         enableTag(EjbMigrationTags.EJB_CMP_ENTITY);
                         enableTag(EjbMigrationTags.JPA_ENTITY_CONVERSION);
-                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW);
+                        classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
                         logger.debug("Detected JPA Entity: {}", className);
                         found = true;
                         break;
@@ -321,8 +320,8 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
                         setProperty("ejb.migration.spring.recommendation", "Spring @Component with JMS listener");
                         setProperty("ejb.migration.complexity", "MEDIUM");
                         enableTag(EjbMigrationTags.EJB_MESSAGE_DRIVEN_BEAN);
-                        enableTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION);
-                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+                        enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
+                        classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
                         logger.debug("Detected Message-Driven Bean: {}", className);
                         found = true;
                         break;
@@ -352,8 +351,8 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
                         setProperty("ejb.migration.complexity", "HIGH");
                         setProperty("ejb.migration.notes", "EJB 2.x requires callback method migration");
                         enableTag(EjbMigrationTags.EJB_SESSION_BEAN);
-                        enableTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION);
-                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
+                        enableTag(EjbMigrationTags.TAG_SPRING_SERVICE_CONVERSION);
+                        classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
                         logger.debug("Detected EJB 2.x Session Bean: {}", className);
                         found = true;
                         break;
@@ -370,7 +369,7 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
                         enableTag(EjbMigrationTags.EJB_ENTITY_BEAN);
                         enableTag(EjbMigrationTags.EJB_BMP_ENTITY);
                         enableTag(EjbMigrationTags.JPA_REPOSITORY_CONVERSION);
-                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
+                        classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
                         logger.debug("Detected EJB 2.x Entity Bean: {}", className);
                         found = true;
                         break;
@@ -384,8 +383,8 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
                         setProperty("ejb.migration.complexity", "HIGH");
                         setProperty("ejb.migration.notes", "EJB 2.x MDB requires JMS configuration migration");
                         enableTag(EjbMigrationTags.EJB_MESSAGE_DRIVEN_BEAN);
-                        enableTag(EjbMigrationTags.SPRING_COMPONENT_CONVERSION);
-                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
+                        enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
+                        classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
                         logger.debug("Detected EJB 2.x Message-Driven Bean: {}", className);
                         found = true;
                         break;
@@ -418,7 +417,7 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
                         setProperty("ejb.migration.complexity", "HIGH");
                         setProperty("ejb.migration.notes", "Home interfaces are EJB-specific, remove in Spring");
                         enableTag(EjbMigrationTags.EJB_HOME_INTERFACE);
-                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
+                        classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
                         logger.debug("Detected EJB Home Interface: {}", className);
                         found = true;
                         break;
@@ -431,8 +430,8 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
                         setProperty("ejb.migration.complexity", "MEDIUM");
                         setProperty("ejb.migration.notes", "Business methods can be retained");
                         enableTag(EjbMigrationTags.EJB_REMOTE_INTERFACE);
-                        enableTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION);
-                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+                        enableTag(EjbMigrationTags.TAG_SPRING_SERVICE_CONVERSION);
+                        classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
                         logger.debug("Detected EJB Remote Interface: {}", className);
                         found = true;
                         break;
@@ -445,7 +444,7 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
                         setProperty("ejb.migration.complexity", "HIGH");
                         setProperty("ejb.migration.notes", "Local home interfaces are EJB-specific, remove in Spring");
                         enableTag(EjbMigrationTags.EJB_LOCAL_HOME_INTERFACE);
-                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
+                        classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
                         logger.debug("Detected EJB Local Home Interface: {}", className);
                         found = true;
                         break;
@@ -458,8 +457,8 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
                         setProperty("ejb.migration.complexity", "MEDIUM");
                         setProperty("ejb.migration.notes", "Business methods can be retained");
                         enableTag(EjbMigrationTags.EJB_LOCAL_INTERFACE);
-                        enableTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION);
-                        enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+                        enableTag(EjbMigrationTags.TAG_SPRING_SERVICE_CONVERSION);
+                        classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
                         logger.debug("Detected EJB Local Interface: {}", className);
                         found = true;
                         break;
@@ -489,30 +488,30 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
                 case "jakarta/ejb/EJBHome":
                     setProperty("ejb.home.interface.inheritance", "Extends EJB Home Interface");
                     enableTag(EjbMigrationTags.EJB_HOME_INTERFACE);
-                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
+                    classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
                     break;
 
                 case "javax/ejb/EJBObject":
                 case "jakarta/ejb/EJBObject":
                     setProperty("ejb.remote.interface.inheritance", "Extends EJB Remote Interface");
                     enableTag(EjbMigrationTags.EJB_REMOTE_INTERFACE);
-                    enableTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION);
-                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+                    enableTag(EjbMigrationTags.TAG_SPRING_SERVICE_CONVERSION);
+                    classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
                     break;
 
                 case "javax/ejb/EJBLocalHome":
                 case "jakarta/ejb/EJBLocalHome":
                     setProperty("ejb.localhome.interface.inheritance", "Extends EJB Local Home Interface");
                     enableTag(EjbMigrationTags.EJB_LOCAL_HOME_INTERFACE);
-                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
+                    classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
                     break;
 
                 case "javax/ejb/EJBLocalObject":
                 case "jakarta/ejb/EJBLocalObject":
                     setProperty("ejb.local.interface.inheritance", "Extends EJB Local Interface");
                     enableTag(EjbMigrationTags.EJB_LOCAL_INTERFACE);
-                    enableTag(EjbMigrationTags.SPRING_SERVICE_CONVERSION);
-                    enableTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
+                    enableTag(EjbMigrationTags.TAG_SPRING_SERVICE_CONVERSION);
+                    classNode.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
                     break;
             }
         }

@@ -2,6 +2,7 @@ package com.analyzer.core.inspector;
 
 import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.api.graph.ClassNodeRepository;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.graph.DelegatingClassNodeRepository;
 import com.analyzer.core.graph.InMemoryProjectFileRepository;
 import com.analyzer.api.graph.ProjectFileRepository;
@@ -129,6 +130,12 @@ public class PicoContainerConfig {
         // Register per-analysis services
         container.addComponent(InspectorProgressTracker.class);
         container.addComponent(ProjectHolder.class);
+
+        // Register LocalCache with configuration
+        boolean cacheEnabled = Boolean.parseBoolean(
+                System.getProperty("analyzer.cache.enabled", "true"));
+        container.addComponent(LocalCache.class, new LocalCache(cacheEnabled));
+        logger.info("LocalCache registered (enabled: {})", cacheEnabled);
 
         // Register AnalysisEngine - PicoContainer will auto-inject all dependencies
         // from parent + child

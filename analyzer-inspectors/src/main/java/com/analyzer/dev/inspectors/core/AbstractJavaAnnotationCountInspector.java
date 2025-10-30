@@ -77,7 +77,7 @@ public class AbstractJavaAnnotationCountInspector extends AbstractProjectFileCla
             logger.debug("Found {} annotations on class {} (ProjectFile: {})",
                     annotationCount, loadedClass.getName(), projectFile.getRelativePath());
 
-            projectFileDecorator.setProperty(getColumnName(), annotationCount);
+            projectFileDecorator.setMetric(getColumnName(), annotationCount);
 
         } catch (Exception e) {
             logger.warn("Error analyzing annotations for class {} (ProjectFile: {}): {}",

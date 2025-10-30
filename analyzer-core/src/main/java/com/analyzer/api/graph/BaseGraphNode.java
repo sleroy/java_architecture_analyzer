@@ -178,7 +178,7 @@ public abstract class BaseGraphNode implements GraphNode {
     }
 
     @Override
-    public void addTag(String tag) {
+    public void enableTag(String tag) {
         this.tags.add(tag);
     }
 
@@ -213,7 +213,7 @@ public abstract class BaseGraphNode implements GraphNode {
         return new Metrics() {
             @Override
             public Number getMetric(String metricName) {
-                return metrics.get(metricName);
+                return metrics.getOrDefault(metricName, 0.0d);
             }
 
             @Override
@@ -222,6 +222,17 @@ public abstract class BaseGraphNode implements GraphNode {
                     metrics.remove(metricName);
                 } else {
                     metrics.put(metricName, value.doubleValue());
+                }
+            }
+
+            @Override
+            public void setMaxMetric(String metricName, Number value) {
+                if (value != null) {
+                    double newValue = value.doubleValue();
+                    double currentValue = metrics.getOrDefault(metricName, 0.0);
+                    if (newValue > currentValue) {
+                        metrics.put(metricName, newValue);
+                    }
                 }
             }
 

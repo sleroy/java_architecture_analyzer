@@ -42,23 +42,23 @@ public class StubProjectFile extends ProjectFile {
         }
 
         setProperty(InspectorTags.TAG_LANGUAGE, InspectorTags.LANGUAGE_JAVA);
-        addTag(InspectorTags.TAG_JAVA_DETECTED);
+        enableTag(InspectorTags.TAG_JAVA_DETECTED);
 
         if (classType == ClassType.BINARY_ONLY || binaryLocation != null) {
-            addTag(InspectorTags.TAG_JAVA_IS_BINARY);
+            enableTag(InspectorTags.TAG_JAVA_IS_BINARY);
             setProperty(InspectorTags.JAVA_FORMAT, InspectorTags.FORMAT_BINARY);
-            addTag(InspectorTags.RESOURCE_HAS_JAVA_BINARY);
-            addTag("resource.hasBinary");
+            enableTag(InspectorTags.RESOURCE_HAS_JAVA_BINARY);
+            enableTag("resource.hasBinary");
         } else {
-            addTag(InspectorTags.TAG_JAVA_IS_SOURCE);
+            enableTag(InspectorTags.TAG_JAVA_IS_SOURCE);
             setProperty(InspectorTags.JAVA_FORMAT, InspectorTags.FORMAT_SOURCE);
-            addTag(InspectorTags.TAG_SOURCE_FILE);
-            addTag("resource.hasSource");
+            enableTag(InspectorTags.TAG_SOURCE_FILE);
+            enableTag("resource.hasSource");
         }
 
         if (binaryLocation != null) {
             setProperty("resource.binaryLocation", binaryLocation.toString());
-            addTag(InspectorTags.RESOURCE_HAS_JAVA_BINARY);
+            enableTag(InspectorTags.RESOURCE_HAS_JAVA_BINARY);
         }
     }
 
@@ -90,15 +90,15 @@ public class StubProjectFile extends ProjectFile {
 
     public void setHasSourceCode(boolean hasSourceCode) {
         if (hasSourceCode) {
-            addTag("resource.hasSource");
-            addTag(InspectorTags.TAG_JAVA_IS_SOURCE);
+            enableTag("resource.hasSource");
+            enableTag(InspectorTags.TAG_JAVA_IS_SOURCE);
         }
     }
 
     public void setHasBinaryCode(boolean hasBinaryCode) {
         if (hasBinaryCode) {
-            addTag("resource.hasBinary");
-            addTag(InspectorTags.RESOURCE_HAS_JAVA_BINARY);
+            enableTag("resource.hasBinary");
+            enableTag(InspectorTags.RESOURCE_HAS_JAVA_BINARY);
         }
     }
 

@@ -1,9 +1,13 @@
 package com.analyzer.dev.inspectors.source;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.inspector.InspectorResult;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.resource.ResourceResolver;
 
 import java.io.IOException;
@@ -37,8 +41,8 @@ public abstract class AbstractSonarParserInspector extends AbstractSourceFileIns
      *
      * @param resourceResolver the resolver for accessing source file resources
      */
-    protected AbstractSonarParserInspector(ResourceResolver resourceResolver) {
-        super(resourceResolver);
+    protected AbstractSonarParserInspector(ResourceResolver resourceResolver, LocalCache localCache) {
+        super(resourceResolver, localCache);
     }
 
     @Override

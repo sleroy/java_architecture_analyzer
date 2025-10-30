@@ -2,13 +2,19 @@ package com.analyzer.rules.metrics;
 
 import com.analyzer.api.inspector.Inspector;
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.inspector.InspectorDependencies;
 
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.dev.inspectors.bedrock.AbstractBedrockInspectorAbstract;
 import com.analyzer.api.resource.ResourceResolver;
 import javassist.bytecode.CodeAttribute;
+import org.apache.tomcat.jni.Local;
+
+import javax.inject.Inject;
 
 /**
  * Concrete implementation of AbstractBedrockInspectorAbstract that uses AI to
@@ -38,8 +44,9 @@ public class CodeQualityInspector extends AbstractBedrockInspectorAbstract {
      *
      * @param resourceResolver the resolver for accessing source file resources
      */
-    public CodeQualityInspector(ResourceResolver resourceResolver) {
-        super(resourceResolver);
+    @Inject
+    public CodeQualityInspector(ResourceResolver resourceResolver, LocalCache localCache) {
+        super(resourceResolver, localCache);
     }
 
     @Override
@@ -94,7 +101,7 @@ public class CodeQualityInspector extends AbstractBedrockInspectorAbstract {
         logger.debug("Code quality assessment for {}: {}/10",
                 clazz.getProperty("fullyQualifiedName"), roundedScore);
 
-        projectFileDecorator.setProperty(getColumnName(), roundedScore);
+        projectFileDecorator.setMetric(getColumnName(), roundedScore);
     }
 
     @Override

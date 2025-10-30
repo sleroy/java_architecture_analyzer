@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -71,8 +72,8 @@ public class StatefulSessionStateInspector extends AbstractASMClassInspector {
 
     @Inject
     public StatefulSessionStateInspector(ProjectFileRepository projectFileRepository,
-            ResourceResolver resourceResolver) {
-        super(projectFileRepository, resourceResolver);
+            ResourceResolver resourceResolver, LocalCache localCache) {
+        super(projectFileRepository, resourceResolver, localCache);
     }
 
     @Override
@@ -336,7 +337,7 @@ public class StatefulSessionStateInspector extends AbstractASMClassInspector {
             }
 
             // Add summary properties for quick access
-            setProperty("stateful_state.field_count", stateFieldCount);
+            setMetric("stateful_state.field_count", stateFieldCount);
             setProperty("stateful_state.complexity", complexity);
             setProperty("stateful_state.migration_strategy", migrationStrategy);
         }
