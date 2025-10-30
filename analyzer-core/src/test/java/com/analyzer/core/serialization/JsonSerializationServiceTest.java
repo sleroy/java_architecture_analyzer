@@ -123,7 +123,7 @@ class JsonSerializationServiceTest {
         Path filePath = Paths.get("/project/src/Main.java");
         ProjectFile projectFile = new ProjectFile(filePath, projectRoot);
         projectFile.setProperty("test.property", "test-value");
-        projectFile.addTag("java");
+        projectFile.enableTag("java");
 
         String json = service.serializeNode(projectFile);
 
@@ -146,7 +146,7 @@ class JsonSerializationServiceTest {
         Path filePath = Paths.get("/project/src/Test.java");
         ProjectFile original = new ProjectFile(filePath, projectRoot);
         original.setProperty("language", "java");
-        original.addTag("source");
+        original.enableTag("source");
 
         String json = service.serializeNode(original);
 
@@ -263,8 +263,8 @@ class JsonSerializationServiceTest {
         original.setProperty("language", "java");
         original.setProperty("complexity", 15);
         original.setProperty("linesOfCode", 250);
-        original.addTag("service");
-        original.addTag("business-logic");
+        original.enableTag("service");
+        original.enableTag("business-logic");
 
         // Serialize
         String json = service.serializeNode(original);

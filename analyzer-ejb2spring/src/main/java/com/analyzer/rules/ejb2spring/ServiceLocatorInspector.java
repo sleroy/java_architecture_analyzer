@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -41,14 +42,15 @@ import java.util.Set;
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
         EjbMigrationTags.EJB_SERVICE_LOCATOR,
-        EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM
+        EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION,
 })
 public class ServiceLocatorInspector extends AbstractJavaClassInspector {
 
     @Inject
-    public ServiceLocatorInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public ServiceLocatorInspector(ResourceResolver resourceResolver,
+            ClassNodeRepository classNodeRepository,
+            LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
@@ -58,7 +60,7 @@ public class ServiceLocatorInspector extends AbstractJavaClassInspector {
 
     @Override
     protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-                                NodeDecorator<ProjectFile> projectFileDecorator) {
+            NodeDecorator<ProjectFile> projectFileDecorator) {
 
         ServiceLocatorDetector detector = new ServiceLocatorDetector();
         type.accept(detector, null);
@@ -67,16 +69,16 @@ public class ServiceLocatorInspector extends AbstractJavaClassInspector {
             ServiceLocatorInfo info = detector.getServiceLocatorInfo();
 
             // Set tags according to the produces contract
-            projectFileDecorator.setProperty(EjbMigrationTags.EJB_SERVICE_LOCATOR, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+            projectFileDecorator.enableTag(EjbMigrationTags.EJB_SERVICE_LOCATOR);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
 
             // Set property on class node for detailed analysis
-            classNode.setProperty("service.locator.analysis", info.toString());
+            classNode.setProperty("service.locator.analysis", info);
 
             // Set analysis statistics
-            projectFileDecorator.setProperty("service.locator.jndi_calls", info.jndiLookupCount);
-            projectFileDecorator.setProperty("service.locator.factory_methods", info.factoryMethodCount);
+            projectFileDecorator.setMetric("service.locator.jndi_calls", info.jndiLookupCount);
+            projectFileDecorator.setMetric("service.locator.factory_methods", info.factoryMethodCount);
         }
     }
 

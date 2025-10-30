@@ -2,11 +2,15 @@ package com.analyzer.rules.ejb2spring;
 
 import ch.qos.logback.classic.Logger;
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.dev.inspectors.source.AbstractSourceFileInspector;
 import com.analyzer.api.resource.ResourceResolver;
 import com.github.javaparser.ast.CompilationUnit;
@@ -35,8 +39,8 @@ public class JndiLookupInspector extends AbstractSourceFileInspector {
     private static final Logger logger = (Logger) org.slf4j.LoggerFactory.getLogger(JndiLookupInspector.class);
     private final ClassNodeRepository classNodeRepository;
 
-    public JndiLookupInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
+    public JndiLookupInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.classNodeRepository = classNodeRepository;
     }
 
@@ -101,7 +105,7 @@ public class JndiLookupInspector extends AbstractSourceFileInspector {
      */
     private void setProducedTags(NodeDecorator<ProjectFile> projectFileDecorator, JndiLookupInfo info) {
         // Set the main produced tags on ProjectFile (dependency chain)
-        projectFileDecorator.setProperty(TAGS.TAG_USES_JNDI, true);
+        projectFileDecorator.enableTag(TAGS.TAG_USES_JNDI);
         projectFileDecorator.setProperty(TAGS.TAG_JNDI_COMPLEXITY, info.getMigrationComplexity());
     }
 

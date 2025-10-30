@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -39,9 +40,6 @@ import java.util.concurrent.ConcurrentHashMap;
                 EjbMigrationTags.EJB_CMP_FIELD,
                 EjbMigrationTags.EJB_CMR_RELATIONSHIP,
                 EjbMigrationTags.EJB_PRIMARY_KEY_CLASS,
-                EjbMigrationTags.MIGRATION_COMPLEXITY_LOW,
-                EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM,
-                EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH,
                 EjbMigrationTags.JPA_CONVERSION_CANDIDATE
         })
 public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeInspector {
@@ -54,8 +52,8 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
 
     @Inject
     public CmpFieldMappingJavaBinaryInspector(ResourceResolver resourceResolver,
-            ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+            ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
         this.cmpEntityCache = new ConcurrentHashMap<>();
     }
 
@@ -171,16 +169,10 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
             String complexity = assessMigrationComplexity(metadata);
             switch (complexity) {
                 case "LOW":
-                    setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW, true);
-                    setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW, true);
                     break;
                 case "MEDIUM":
-                    setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
-                    setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
                     break;
                 case "HIGH":
-                    setTag(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
-                    setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
                     break;
             }
 

@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -36,14 +37,13 @@ import java.util.*;
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
         ServletInspector.TAGS.TAG_IS_SERVLET,
-        EjbMigrationTags.SPRING_COMPONENT_CONVERSION,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM
+        EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION,
 })
 public class ServletInspector extends AbstractJavaClassInspector {
 
     @Inject
-    public ServletInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public ServletInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
@@ -64,15 +64,15 @@ public class ServletInspector extends AbstractJavaClassInspector {
                 ServletInfo info = detector.getServletInfo();
 
                 // Set tags according to the produces contract
-                projectFileDecorator.setProperty(TAGS.TAG_IS_SERVLET, true);
-                projectFileDecorator.setProperty(EjbMigrationTags.SPRING_COMPONENT_CONVERSION, true);
-                projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+                projectFileDecorator.enableTag(TAGS.TAG_IS_SERVLET);
+                projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
 
                 // Set property on class node for detailed analysis
-                classNode.setProperty("servlet.analysis", info.toString());
+                classNode.setProperty("servlet.analysis", info);
 
                 // Set analysis statistics
-                projectFileDecorator.setProperty("servlet.http_methods", info.httpMethodCount);
+                projectFileDecorator.setMetric("servlet.http_methods", info.httpMethodCount);
 
                 // Set Spring Boot migration target based on servlet type
                 if (info.isRestServlet) {

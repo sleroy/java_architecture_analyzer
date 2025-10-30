@@ -49,19 +49,19 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(TypeUsageInspector.class);
 
-    // Property keys for JavaClassNode metrics
-    public static final String PROP_TYPES_TOTAL_UNIQUE = "types.total_unique";
-    public static final String PROP_TYPES_FIELD_COUNT = "types.field_count";
-    public static final String PROP_TYPES_PARAMETER_COUNT = "types.parameter_count";
-    public static final String PROP_TYPES_RETURN_COUNT = "types.return_count";
-    public static final String PROP_TYPES_EXCEPTION_COUNT = "types.exception_count";
-    public static final String PROP_TYPES_ANNOTATION_COUNT = "types.annotation_count";
-    public static final String PROP_TYPES_PRIMITIVE_COUNT = "types.primitive_count";
-    public static final String PROP_TYPES_REFERENCE_COUNT = "types.reference_count";
-    public static final String PROP_TYPES_COLLECTION_COUNT = "types.collection_count";
-    public static final String PROP_TYPES_FRAMEWORK_COUNT = "types.framework_count";
-    public static final String PROP_TYPES_COMPLEXITY_SCORE = "types.complexity_score";
-    public static final String PROP_TYPES_GENERIC_COUNT = "types.generic_count";
+    // Metrics for JavaClassNode type usage analysis
+    public static final String METRIC_TYPES_TOTAL_UNIQUE = "types.total_unique";
+    public static final String METRIC_TYPES_FIELD_COUNT = "types.field_count";
+    public static final String METRIC_TYPES_PARAMETER_COUNT = "types.parameter_count";
+    public static final String METRIC_TYPES_RETURN_COUNT = "types.return_count";
+    public static final String METRIC_TYPES_EXCEPTION_COUNT = "types.exception_count";
+    public static final String METRIC_TYPES_ANNOTATION_COUNT = "types.annotation_count";
+    public static final String METRIC_TYPES_PRIMITIVE_COUNT = "types.primitive_count";
+    public static final String METRIC_TYPES_REFERENCE_COUNT = "types.reference_count";
+    public static final String METRIC_TYPES_COLLECTION_COUNT = "types.collection_count";
+    public static final String METRIC_TYPES_FRAMEWORK_COUNT = "types.framework_count";
+    public static final String METRIC_TYPES_COMPLEXITY_SCORE = "types.complexity_score";
+    public static final String METRIC_TYPES_GENERIC_COUNT = "types.generic_count";
 
     // Framework packages for classification
     private static final Set<String> FRAMEWORK_PACKAGES = Set.of(
@@ -107,18 +107,18 @@ public class TypeUsageInspector extends AbstractClassLoaderBasedInspector {
             TypeUsageMetrics metrics = analyzeTypeUsage(loadedClass);
 
             // Attach metrics to JavaClassNode
-            decorator.setProperty(PROP_TYPES_TOTAL_UNIQUE, metrics.getTotalUniqueTypes());
-            decorator.setProperty(PROP_TYPES_FIELD_COUNT, metrics.getFieldTypeCount());
-            decorator.setProperty(PROP_TYPES_PARAMETER_COUNT, metrics.getParameterTypeCount());
-            decorator.setProperty(PROP_TYPES_RETURN_COUNT, metrics.getReturnTypeCount());
-            decorator.setProperty(PROP_TYPES_EXCEPTION_COUNT, metrics.getExceptionTypeCount());
-            decorator.setProperty(PROP_TYPES_ANNOTATION_COUNT, metrics.getAnnotationTypeCount());
-            decorator.setProperty(PROP_TYPES_PRIMITIVE_COUNT, metrics.getPrimitiveTypeCount());
-            decorator.setProperty(PROP_TYPES_REFERENCE_COUNT, metrics.getReferenceTypeCount());
-            decorator.setProperty(PROP_TYPES_COLLECTION_COUNT, metrics.getCollectionTypeCount());
-            decorator.setProperty(PROP_TYPES_FRAMEWORK_COUNT, metrics.getFrameworkTypeCount());
-            decorator.setProperty(PROP_TYPES_COMPLEXITY_SCORE, metrics.getComplexityScore());
-            decorator.setProperty(PROP_TYPES_GENERIC_COUNT, metrics.getGenericTypeCount());
+            decorator.setMetric(METRIC_TYPES_TOTAL_UNIQUE, metrics.getTotalUniqueTypes());
+            decorator.setMetric(METRIC_TYPES_FIELD_COUNT, metrics.getFieldTypeCount());
+            decorator.setMetric(METRIC_TYPES_PARAMETER_COUNT, metrics.getParameterTypeCount());
+            decorator.setMetric(METRIC_TYPES_RETURN_COUNT, metrics.getReturnTypeCount());
+            decorator.setMetric(METRIC_TYPES_EXCEPTION_COUNT, metrics.getExceptionTypeCount());
+            decorator.setMetric(METRIC_TYPES_ANNOTATION_COUNT, metrics.getAnnotationTypeCount());
+            decorator.setMetric(METRIC_TYPES_PRIMITIVE_COUNT, metrics.getPrimitiveTypeCount());
+            decorator.setMetric(METRIC_TYPES_REFERENCE_COUNT, metrics.getReferenceTypeCount());
+            decorator.setMetric(METRIC_TYPES_COLLECTION_COUNT, metrics.getCollectionTypeCount());
+            decorator.setMetric(METRIC_TYPES_FRAMEWORK_COUNT, metrics.getFrameworkTypeCount());
+            decorator.setMetric(METRIC_TYPES_COMPLEXITY_SCORE, metrics.getComplexityScore());
+            decorator.setMetric(METRIC_TYPES_GENERIC_COUNT, metrics.getGenericTypeCount());
 
             decorator.enableTag("type_usage.analyzed");
             decorator.setProperty("type_usage.complexity_level",

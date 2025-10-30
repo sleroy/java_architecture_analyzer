@@ -1,5 +1,6 @@
 package com.analyzer.dev.inspectors.source;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
@@ -46,16 +47,19 @@ import java.io.IOException;
 public abstract class AbstractJavaParserInspector extends AbstractSourceFileInspector {
 
     private final JavaParser javaParser;
+    protected final LocalCache localCache;
 
     /**
      * Creates a AbstractJavaParserInspector with a default JavaParser
      * configuration.
      * 
      * @param resourceResolver the resolver for accessing source file resources
+     * @param localCache       the per-item cache for optimizing repeated parsing
      */
-    protected AbstractJavaParserInspector(ResourceResolver resourceResolver) {
-        super(resourceResolver);
+    protected AbstractJavaParserInspector(ResourceResolver resourceResolver, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.javaParser = new JavaParser();
+        this.localCache = localCache;
     }
 
     /**
@@ -63,14 +67,17 @@ public abstract class AbstractJavaParserInspector extends AbstractSourceFileInsp
      * This allows subclasses to customize parsing behavior, symbol resolution, etc.
      * 
      * @param resourceResolver the resolver for accessing source file resources
+     * @param localCache       the per-item cache for optimizing repeated parsing
      * @param customParser     the customized JavaParser instance to use
      */
-    protected AbstractJavaParserInspector(ResourceResolver resourceResolver, JavaParser customParser) {
-        super(resourceResolver);
+    protected AbstractJavaParserInspector(ResourceResolver resourceResolver, LocalCache localCache,
+            JavaParser customParser) {
+        super(resourceResolver, localCache);
         if (customParser == null) {
             throw new IllegalArgumentException("JavaParser cannot be null");
         }
         this.javaParser = customParser;
+        this.localCache = localCache;
     }
 
     @Override
@@ -78,18 +85,30 @@ public abstract class AbstractJavaParserInspector extends AbstractSourceFileInsp
             NodeDecorator<ProjectFile> decorator)
             throws IOException {
         try {
-            String content = readFileContent(sourceLocation);
-            ParseResult<CompilationUnit> parseResult = javaParser.parse(content);
+            // Use LocalCache to avoid re-parsing the same file multiple times
+            CompilationUnit cu = localCache.getOrParseCompilationUnit(() -> {
+                try {
+                    String content = readFileContent(sourceLocation);
+                    ParseResult<CompilationUnit> parseResult = javaParser.parse(content);
 
-            // Check for parse errors
-            if (!parseResult.isSuccessful()) {
-                String problems = parseResult.getProblems().toString();
-                decorator.error("Parse errors: " + problems);
-                return;
-            }
+                    // Check for parse errors
+                    if (!parseResult.isSuccessful()) {
+                        String problems = parseResult.getProblems().toString();
+                        decorator.error("Parse errors: " + problems);
+                        return null;
+                    }
 
-            // Get the parsed compilation unit
-            CompilationUnit cu = parseResult.getResult().orElse(null);
+                    // Get the parsed compilation unit
+                    return parseResult.getResult().orElse(null);
+                } catch (IOException e) {
+                    decorator.error("Error reading source file: " + e.getMessage());
+                    return null;
+                } catch (Exception e) {
+                    decorator.error("JavaParser error: " + e.getMessage());
+                    return null;
+                }
+            });
+
             if (cu == null) {
                 decorator.error("Failed to parse compilation unit");
                 return;
@@ -97,10 +116,8 @@ public abstract class AbstractJavaParserInspector extends AbstractSourceFileInsp
 
             analyzeCompilationUnit(cu, clazz, decorator);
 
-        } catch (IOException e) {
-            decorator.error("Error reading source file: " + e.getMessage());
         } catch (Exception e) {
-            decorator.error("JavaParser error: " + e.getMessage());
+            decorator.error("Unexpected error in JavaParser analysis: " + e.getMessage());
         }
     }
 

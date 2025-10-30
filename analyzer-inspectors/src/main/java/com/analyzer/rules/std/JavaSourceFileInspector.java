@@ -1,9 +1,12 @@
 package com.analyzer.rules.std;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.model.ClassType;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.dev.inspectors.source.AbstractJavaParserInspector;
 import com.analyzer.api.resource.ResourceResolver;
 import com.github.javaparser.ast.CompilationUnit;
@@ -37,8 +40,8 @@ public class JavaSourceFileInspector extends AbstractJavaParserInspector {
     private static final Logger logger = LoggerFactory.getLogger(JavaSourceFileInspector.class);
 
     @Inject
-    public JavaSourceFileInspector(ResourceResolver resourceResolver) {
-        super(resourceResolver);
+    public JavaSourceFileInspector(ResourceResolver resourceResolver, LocalCache localCache) {
+        super(resourceResolver, localCache);
     }
 
     @Override

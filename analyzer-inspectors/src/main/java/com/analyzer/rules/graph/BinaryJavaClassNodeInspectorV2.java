@@ -1,6 +1,7 @@
 package com.analyzer.rules.graph;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -53,8 +54,8 @@ public class BinaryJavaClassNodeInspectorV2 extends AbstractASMClassInspector {
 
     @Inject
     public BinaryJavaClassNodeInspectorV2(ProjectFileRepository projectFileRepository,
-                                          ResourceResolver resourceResolver) {
-        super(projectFileRepository, resourceResolver);
+                                          ResourceResolver resourceResolver, LocalCache localCache) {
+        super(projectFileRepository, resourceResolver, localCache);
     }
 
     @Override

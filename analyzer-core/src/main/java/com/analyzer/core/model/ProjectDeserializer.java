@@ -159,7 +159,7 @@ public class ProjectDeserializer {
 
                     Object tagValue = jsonSerializer.convertValue(tagValueNode, Object.class);
                     if (tagValue instanceof Boolean && (Boolean) tagValue) {
-                        projectFile.addTag(tagName);
+                        projectFile.enableTag(tagName);
                     } else {
                         projectFile.setProperty(tagName, tagValue);
                     }

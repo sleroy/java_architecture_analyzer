@@ -48,9 +48,9 @@ public class InheritanceDepthInspector extends AbstractClassLoaderBasedInspector
 
     private static final Logger logger = LoggerFactory.getLogger(InheritanceDepthInspector.class);
 
-    // Property keys for JavaClassNode metrics
-    public static final String PROP_INHERITANCE_DEPTH = "inheritance.depth";
-    public static final String PROP_INHERITANCE_IS_DEEP = "inheritance.is_deep";
+    // Metrics and tags for JavaClassNode inheritance analysis
+    public static final String METRIC_INHERITANCE_DEPTH = "inheritance.depth";
+    public static final String TAG_INHERITANCE_IS_DEEP = "inheritance.is_deep";
     public static final String PROP_INHERITANCE_SUPERCLASS_FQN = "inheritance.superclass_fqn";
     public static final String PROP_INHERITANCE_ROOT_CLASS = "inheritance.root_class";
 
@@ -87,8 +87,10 @@ public class InheritanceDepthInspector extends AbstractClassLoaderBasedInspector
             InheritanceMetrics metrics = calculateInheritanceMetrics(loadedClass);
 
             // Attach metrics to JavaClassNode
-            decorator.setProperty(PROP_INHERITANCE_DEPTH, metrics.depth);
-            decorator.setProperty(PROP_INHERITANCE_IS_DEEP, metrics.isDeep);
+            decorator.setMetric(METRIC_INHERITANCE_DEPTH, metrics.depth);
+            if (metrics.isDeep) {
+                decorator.enableTag(TAG_INHERITANCE_IS_DEEP);
+            }
 
             if (metrics.immediateSuperclasFqn != null) {
                 decorator.setProperty(PROP_INHERITANCE_SUPERCLASS_FQN, metrics.immediateSuperclasFqn);

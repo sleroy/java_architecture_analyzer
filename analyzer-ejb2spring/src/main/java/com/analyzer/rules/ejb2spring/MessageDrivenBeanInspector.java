@@ -1,5 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -27,24 +28,24 @@ import java.util.List;
  * dependencies
  * and adds resource requirements.
  */
-@InspectorDependencies(requires = { EjbMigrationTags.EJB_BEAN_DETECTED }, produces = {
+@InspectorDependencies(requires = {EjbMigrationTags.EJB_BEAN_DETECTED}, produces = {
         MessageDrivenBeanInspector.TAGS.TAG_EJB_MESSAGE_DRIVEN_BEAN,
         MessageDrivenBeanInspector.TAGS.TAG_EJB_MDB_DETECTED,
         MessageDrivenBeanInspector.TAGS.TAG_JMS_CONSUMER,
-        MessageDrivenBeanInspector.TAGS.TAG_ANNOTATION_MESSAGE_DRIVEN })
+        MessageDrivenBeanInspector.TAGS.TAG_ANNOTATION_MESSAGE_DRIVEN})
 public class MessageDrivenBeanInspector extends AbstractJavaParserInspector {
 
     private final ClassNodeRepository classNodeRepository;
 
     @Inject
-    public MessageDrivenBeanInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
+    public MessageDrivenBeanInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.classNodeRepository = classNodeRepository;
     }
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-                                          NodeDecorator projectFileDecorator) {
+                                          NodeDecorator<ProjectFile> projectFileDecorator) {
         classNodeRepository.getOrCreateClassNode(cu).ifPresent(classNode -> {
             classNode.setProjectFileId(projectFile.getId());
             MessageDrivenBeanDetector detector = new MessageDrivenBeanDetector();

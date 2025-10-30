@@ -1,6 +1,7 @@
 package com.analyzer.rules.graph;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -40,13 +41,13 @@ import javax.inject.Inject;
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, need = {
          }, produces = {
-                SourceJavaClassNodeInspector.TAGS.TAG_JAVA_CLASS_NODE_SOURCE })
+                SourceJavaClassNodeInspector.TAGS.PROP_JAVA_CLASS_NODE_SOURCE})
 public class SourceJavaClassNodeInspector extends AbstractJavaParserInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(SourceJavaClassNodeInspector.class);
 
     public static class TAGS {
-        public static final String TAG_JAVA_CLASS_NODE_SOURCE = "java.class_node.source";
+        public static final String PROP_JAVA_CLASS_NODE_SOURCE = "java.class_node.source";
 
         // This class is kept for the @InspectorDependencies annotation reference
     }
@@ -54,8 +55,8 @@ public class SourceJavaClassNodeInspector extends AbstractJavaParserInspector {
     private final GraphRepository graphRepository;
 
     @Inject
-    public SourceJavaClassNodeInspector(ResourceResolver resourceResolver, GraphRepository graphRepository) {
-        super(resourceResolver);
+    public SourceJavaClassNodeInspector(ResourceResolver resourceResolver, GraphRepository graphRepository, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.graphRepository = graphRepository;
     }
 
@@ -119,7 +120,7 @@ public class SourceJavaClassNodeInspector extends AbstractJavaParserInspector {
         logger.debug("Created/found class node from source: {} (type: {})", fullyQualifiedName, classType);
 
         // Set tag to indicate this class node was created from source analysis
-        projectFileDecorator.setProperty(TAGS.TAG_JAVA_CLASS_NODE_SOURCE, fullyQualifiedName);
+        projectFileDecorator.setProperty(TAGS.PROP_JAVA_CLASS_NODE_SOURCE, fullyQualifiedName);
     }
 
     private void processEnum(EnumDeclaration enumDecl, String packageName,
@@ -131,7 +132,7 @@ public class SourceJavaClassNodeInspector extends AbstractJavaParserInspector {
         JavaClassNode existingNode = (JavaClassNode) graphRepository.getOrCreateNode(enumNode);
 
         logger.debug("Created/found enum node from source: {}", fullyQualifiedName);
-        projectFileDecorator.setProperty(TAGS.TAG_JAVA_CLASS_NODE_SOURCE, fullyQualifiedName);
+        projectFileDecorator.setProperty(TAGS.PROP_JAVA_CLASS_NODE_SOURCE, fullyQualifiedName);
     }
 
     private void processRecord(RecordDeclaration recordDecl, String packageName,
@@ -143,7 +144,7 @@ public class SourceJavaClassNodeInspector extends AbstractJavaParserInspector {
         JavaClassNode existingNode = (JavaClassNode) graphRepository.getOrCreateNode(recordNode);
 
         logger.debug("Created/found record node from source: {}", fullyQualifiedName);
-        projectFileDecorator.setProperty(TAGS.TAG_JAVA_CLASS_NODE_SOURCE, fullyQualifiedName);
+        projectFileDecorator.setProperty(TAGS.PROP_JAVA_CLASS_NODE_SOURCE, fullyQualifiedName);
     }
 
     private void processAnnotation(AnnotationDeclaration annotationDecl, String packageName,
@@ -155,7 +156,7 @@ public class SourceJavaClassNodeInspector extends AbstractJavaParserInspector {
         JavaClassNode existingNode = (JavaClassNode) graphRepository.getOrCreateNode(annotationNode);
 
         logger.debug("Created/found annotation node from source: {}", fullyQualifiedName);
-        projectFileDecorator.setProperty(TAGS.TAG_JAVA_CLASS_NODE_SOURCE, fullyQualifiedName);
+        projectFileDecorator.setProperty(TAGS.PROP_JAVA_CLASS_NODE_SOURCE, fullyQualifiedName);
     }
 
     private String buildFullyQualifiedName(String packageName, String className) {

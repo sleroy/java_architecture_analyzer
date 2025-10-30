@@ -1,5 +1,6 @@
 package com.analyzer.dev.inspectors.binary;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
@@ -15,8 +16,8 @@ public abstract class AbstractBinaryClassNodeInspector extends AbstractBinaryCla
     protected ClassNodeRepository classNodeRepository;
 
     protected AbstractBinaryClassNodeInspector(ResourceResolver resourceResolver,
-            ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
+                                               ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.classNodeRepository = classNodeRepository;
     }
 

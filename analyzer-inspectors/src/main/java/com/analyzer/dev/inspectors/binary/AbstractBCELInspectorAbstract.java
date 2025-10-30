@@ -1,5 +1,6 @@
 package com.analyzer.dev.inspectors.binary;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorResult;
 import com.analyzer.core.model.ProjectFile;
@@ -32,11 +33,12 @@ public abstract class AbstractBCELInspectorAbstract extends AbstractBinaryClassI
 
     /**
      * Creates a AbstractBCELInspectorAbstract with the specified ResourceResolver.
-     * 
+     *
      * @param resourceResolver the resolver for accessing class file resources
+     * @param localCache
      */
-    protected AbstractBCELInspectorAbstract(ResourceResolver resourceResolver) {
-        super(resourceResolver);
+    protected AbstractBCELInspectorAbstract(ResourceResolver resourceResolver, LocalCache localCache) {
+        super(resourceResolver, localCache);
     }
 
     @Override

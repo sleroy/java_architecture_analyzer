@@ -39,12 +39,12 @@ public class JavaClassNode extends BaseGraphNode {
     public static final String PROP_CLASS_TYPE = "classType";
     public static final String PROP_SOURCE_TYPE = "sourceType";
     public static final String PROP_SOURCE_FILE_PATH = "sourceFilePath";
-    public static final String PROP_METHOD_COUNT = "methodCount";
-    public static final String PROP_FIELD_COUNT = "fieldCount";
-    public static final String PROP_CYCLOMATIC_COMPLEXITY = "cyclomaticComplexity";
-    public static final String PROP_WEIGHTED_METHODS = "weightedMethods";
-    public static final String PROP_AFFERENT_COUPLING = "afferentCoupling";
-    public static final String PROP_EFFERENT_COUPLING = "efferentCoupling";
+    public static final String METRIC_METHOD_COUNT = "methodCount";
+    public static final String METRIC_FIELD_COUNT = "fieldCount";
+    public static final String METRIC_CYCLOMATIC_COMPLEXITY = "cyclomaticComplexity";
+    public static final String METRIC_WEIGHTED_METHODS = "weightedMethods";
+    public static final String METRIC_AFFERENT_COUPLING = "afferentCoupling";
+    public static final String METRIC_EFFERENT_COUPLING = "efferentCoupling";
 
     // Source type constants
     public static final String SOURCE_TYPE_SOURCE = "source";
@@ -65,7 +65,7 @@ public class JavaClassNode extends BaseGraphNode {
     public JavaClassNode(String fullyQualifiedName) {
         super(fullyQualifiedName, NodeTypeRegistry.getTypeId(JavaClassNode.class));
         setProperty(PROP_FULLY_QUALIFIED_NAME, fullyQualifiedName);
-        addTag(TAG_JAVA_DETECTED);
+        enableTag(TAG_JAVA_DETECTED);
         // Extract and set simple name and package name
         int lastDotIndex = fullyQualifiedName.lastIndexOf('.');
         if (lastDotIndex >= 0) {
@@ -177,51 +177,57 @@ public class JavaClassNode extends BaseGraphNode {
     }
 
     public int getMethodCount() {
-        return getIntProperty(PROP_METHOD_COUNT, 0);
+        Number metric = getMetrics().getMetric(METRIC_METHOD_COUNT);
+        return metric != null ? metric.intValue() : 0;
     }
 
     public void setMethodCount(int methodCount) {
-        setProperty(PROP_METHOD_COUNT, methodCount);
+        getMetrics().setMetric(METRIC_METHOD_COUNT, methodCount);
     }
 
     public int getFieldCount() {
-        return getIntProperty(PROP_FIELD_COUNT, 0);
+        Number metric = getMetrics().getMetric(METRIC_FIELD_COUNT);
+        return metric != null ? metric.intValue() : 0;
     }
 
     public void setFieldCount(int fieldCount) {
-        setProperty(PROP_FIELD_COUNT, fieldCount);
+        getMetrics().setMetric(METRIC_FIELD_COUNT, fieldCount);
     }
 
     public int getCyclomaticComplexity() {
-        return getIntProperty(PROP_CYCLOMATIC_COMPLEXITY, 0);
+        Number metric = getMetrics().getMetric(METRIC_CYCLOMATIC_COMPLEXITY);
+        return metric != null ? metric.intValue() : 0;
     }
 
     public void setCyclomaticComplexity(int cyclomaticComplexity) {
-        setProperty(PROP_CYCLOMATIC_COMPLEXITY, cyclomaticComplexity);
+        getMetrics().setMetric(METRIC_CYCLOMATIC_COMPLEXITY, cyclomaticComplexity);
     }
 
     public int getWeightedMethods() {
-        return getIntProperty(PROP_WEIGHTED_METHODS, 0);
+        Number metric = getMetrics().getMetric(METRIC_WEIGHTED_METHODS);
+        return metric != null ? metric.intValue() : 0;
     }
 
     public void setWeightedMethods(int weightedMethods) {
-        setProperty(PROP_WEIGHTED_METHODS, weightedMethods);
+        getMetrics().setMetric(METRIC_WEIGHTED_METHODS, weightedMethods);
     }
 
     public int getAfferentCoupling() {
-        return getIntProperty(PROP_AFFERENT_COUPLING, 0);
+        Number metric = getMetrics().getMetric(METRIC_AFFERENT_COUPLING);
+        return metric != null ? metric.intValue() : 0;
     }
 
     public void setAfferentCoupling(int afferentCoupling) {
-        setProperty(PROP_AFFERENT_COUPLING, afferentCoupling);
+        getMetrics().setMetric(METRIC_AFFERENT_COUPLING, afferentCoupling);
     }
 
     public int getEfferentCoupling() {
-        return getIntProperty(PROP_EFFERENT_COUPLING, 0);
+        Number metric = getMetrics().getMetric(METRIC_EFFERENT_COUPLING);
+        return metric != null ? metric.intValue() : 0;
     }
 
     public void setEfferentCoupling(int efferentCoupling) {
-        setProperty(PROP_EFFERENT_COUPLING, efferentCoupling);
+        getMetrics().setMetric(METRIC_EFFERENT_COUPLING, efferentCoupling);
     }
 
     /**

@@ -13,9 +13,7 @@ import java.util.regex.Pattern;
 public class PropertiesValidator {
 
     private static final Set<String> REQUIRED_PROPERTIES = Set.of(
-        InspectorTags.TAG_FILE_NAME,
-        InspectorTags.TAG_FILE_EXTENSION,
-        InspectorTags.TAG_RELATIVE_PATH
+
     );
 
     private static final Pattern VALID_KEY_PATTERN = Pattern.compile("^[a-zA-Z0-9._-]+$");

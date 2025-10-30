@@ -37,5 +37,7 @@ public class InventoryExample {
 
         int exitCode2 = new CommandLine(new AnalyzerCLI()).execute("json_export", "--project", folder, "--json-output", "/tmp/example");
 
+        int exitCode3 = new CommandLine(new AnalyzerCLI()).execute("csv_export", "--project", folder, "--output-dir", "/tmp/example");
+
     }
 }

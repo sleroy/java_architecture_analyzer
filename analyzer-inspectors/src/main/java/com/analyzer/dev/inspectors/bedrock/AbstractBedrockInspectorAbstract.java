@@ -1,6 +1,7 @@
 package com.analyzer.dev.inspectors.bedrock;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractTextFileInspector;
 import com.analyzer.api.resource.ResourceResolver;
@@ -33,9 +34,10 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
      * configuration.
      *
      * @param resourceResolver the resolver for accessing source file resources
+     * @param localCache       the per-item cache
      */
-    protected AbstractBedrockInspectorAbstract(ResourceResolver resourceResolver) {
-        this(resourceResolver, BedrockConfig.load());
+    protected AbstractBedrockInspectorAbstract(ResourceResolver resourceResolver, LocalCache localCache) {
+        this(resourceResolver, BedrockConfig.load(), localCache);
     }
 
     /**
@@ -46,8 +48,9 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
      * @param resourceResolver the resolver for accessing source file resources
      * @param config           the Bedrock configuration to use
      */
-    protected AbstractBedrockInspectorAbstract(ResourceResolver resourceResolver, BedrockConfig config) {
-        super(resourceResolver);
+    protected AbstractBedrockInspectorAbstract(ResourceResolver resourceResolver, BedrockConfig config,
+            LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.config = config;
 
         try {
@@ -69,7 +72,8 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
     }
 
     @Override
-    protected final void processContent(String content, ProjectFile clazz, NodeDecorator<ProjectFile> projectFileDecorator) {
+    protected final void processContent(String content, ProjectFile clazz,
+            NodeDecorator<ProjectFile> projectFileDecorator) {
         if (!initializedSuccessfully) {
             logger.debug("Bedrock inspector {} is not initialized due to configuration issues.", getName());
             return;
@@ -153,7 +157,7 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
      * @param projectFileDecorator decorator for handling errors and success states
      */
     protected abstract void parseResponse(String response, ProjectFile clazz,
-                                          NodeDecorator<ProjectFile> projectFileDecorator);
+            NodeDecorator<ProjectFile> projectFileDecorator);
 
     /**
      * Get the Bedrock configuration used by this inspector.
@@ -189,7 +193,7 @@ public abstract class AbstractBedrockInspectorAbstract extends AbstractTextFileI
 
         String promptBuilder = basePrompt + "\n\n" +
 
-                // Add class context
+        // Add class context
                 "Class Information:\n" +
                 "- Class Name: " + clazz.getProperty("className") + "\n" +
                 "- Package: " + clazz.getProperty("packageName") + "\n" +

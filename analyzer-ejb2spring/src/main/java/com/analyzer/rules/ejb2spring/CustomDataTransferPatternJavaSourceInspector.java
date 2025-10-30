@@ -1,10 +1,13 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.dev.inspectors.source.AbstractJavaParserInspector;
 import com.analyzer.api.resource.ResourceResolver;
 import com.analyzer.rules.std.ApplicationPackageTagInspector;
@@ -46,8 +49,7 @@ import java.util.Set;
         EjbMigrationTags.VALUE_OBJECT,
         EjbMigrationTags.MAPPING_CUSTOM_LOGIC,
         EjbMigrationTags.MAPPING_RESULTSET_MANUAL,
-        EjbMigrationTags.JDBC_DTO_USAGE,
-        EjbMigrationTags.EJB_MIGRATION_MEDIUM_PRIORITY
+        EjbMigrationTags.JDBC_DTO_USAGE
 })
 public class CustomDataTransferPatternJavaSourceInspector extends AbstractJavaParserInspector {
 
@@ -73,8 +75,8 @@ public class CustomDataTransferPatternJavaSourceInspector extends AbstractJavaPa
 
     @Inject
     public CustomDataTransferPatternJavaSourceInspector(ResourceResolver resourceResolver,
-            ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
+            ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.classNodeRepository = classNodeRepository;
     }
 
@@ -85,7 +87,7 @@ public class CustomDataTransferPatternJavaSourceInspector extends AbstractJavaPa
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-                                          NodeDecorator projectFileDecorator) {
+            NodeDecorator projectFileDecorator) {
 
         DataTransferPatternDetector detector = new DataTransferPatternDetector();
         cu.accept(detector, null);
@@ -112,7 +114,18 @@ public class CustomDataTransferPatternJavaSourceInspector extends AbstractJavaPa
             if (isDataTransferObject || isValueObject || hasCustomMappingLogic ||
                     hasManualResultSetMapping || usesJdbcWithDtos) {
 
-                projectFile.setProperty(EjbMigrationTags.EJB_MIGRATION_MEDIUM_PRIORITY, true);
+                // Set migration metrics
+                String complexityLevel = assessMigrationComplexity(metadata);
+                double complexityValue = switch (complexityLevel) {
+                    case "LOW" -> EjbMigrationTags.COMPLEXITY_LOW;
+                    case "MEDIUM" -> EjbMigrationTags.COMPLEXITY_MEDIUM;
+                    case "HIGH" -> EjbMigrationTags.COMPLEXITY_HIGH;
+                    default -> EjbMigrationTags.COMPLEXITY_MEDIUM;
+                };
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY,
+                        complexityValue);
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+                        EjbMigrationTags.PRIORITY_MEDIUM);
 
                 // Create consolidated analysis result
                 DataTransferAnalysisResult analysisResult = new DataTransferAnalysisResult(

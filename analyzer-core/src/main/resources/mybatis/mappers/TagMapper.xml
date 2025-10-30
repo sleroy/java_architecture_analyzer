@@ -5,14 +5,14 @@
 <mapper namespace="com.analyzer.core.db.mapper.TagMapper">
 
     <!-- Result Map -->
-    <resultMap id="TagResultMap" type="NodeTag">
+    <resultMap id="TagResultMap" type="com.analyzer.core.db.entity.NodeTagEntity">
         <result property="nodeId" column="node_id"/>
         <result property="tag" column="tag"/>
         <result property="createdAt" column="created_at"/>
     </resultMap>
 
     <!-- Insert Tag - Using MERGE to handle duplicates -->
-    <insert id="insertTag" parameterType="NodeTag">
+    <insert id="insertTag" parameterType="com.analyzer.core.db.entity.NodeTagEntity">
         MERGE INTO node_tags (node_id, tag, created_at)
         KEY(node_id, tag)
         VALUES (#{nodeId}, #{tag}, CURRENT_TIMESTAMP)

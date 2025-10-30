@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -46,17 +47,16 @@ import java.util.*;
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
         TransactionScriptInspector.TAGS.TAG_IS_TRANSACTION_SCRIPT,
-        EjbMigrationTags.EJB_PROGRAMMATIC_TRANSACTION,
-        EjbMigrationTags.EJB_BEAN_MANAGED_TRANSACTION,
-        EjbMigrationTags.SPRING_TRANSACTION_CONVERSION,
-        EjbMigrationTags.SPRING_SERVICE_CONVERSION,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM
+        EjbMigrationTags.TAG_EJB_PROGRAMMATIC_TRANSACTION,
+        EjbMigrationTags.TAG_EJB_BEAN_MANAGED_TRANSACTION,
+        EjbMigrationTags.TAG_SPRING_TRANSACTION_CONVERSION,
+        EjbMigrationTags.TAG_SPRING_SERVICE_CONVERSION,
 })
 public class TransactionScriptInspector extends AbstractJavaClassInspector {
 
     @Inject
-    public TransactionScriptInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public TransactionScriptInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
@@ -84,31 +84,28 @@ public class TransactionScriptInspector extends AbstractJavaClassInspector {
             info.className = className;
 
             // Set tags according to the produces contract
-            projectFileDecorator.setProperty(TAGS.TAG_IS_TRANSACTION_SCRIPT, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.EJB_PROGRAMMATIC_TRANSACTION, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.EJB_BEAN_MANAGED_TRANSACTION, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.SPRING_TRANSACTION_CONVERSION, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.SPRING_SERVICE_CONVERSION, true);
-            projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, true);
+            projectFileDecorator.enableTag(TAGS.TAG_IS_TRANSACTION_SCRIPT);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_EJB_PROGRAMMATIC_TRANSACTION);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_EJB_BEAN_MANAGED_TRANSACTION);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_TRANSACTION_CONVERSION);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_SERVICE_CONVERSION);
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
 
             // Set property on class node for detailed analysis
-            classNode.setProperty("transaction.analysis", info.toString());
+            classNode.setProperty("transaction.analysis", info);
 
             // Set analysis statistics
-            projectFileDecorator.setProperty("transaction.tx_begin_count", info.beginCount);
-            projectFileDecorator.setProperty("transaction.tx_commit_count", info.commitCount);
-            projectFileDecorator.setProperty("transaction.tx_rollback_count", info.rollbackCount);
-            projectFileDecorator.setProperty("transaction.tx_boundary_methods", info.transactionMethods.size());
+            projectFileDecorator.setMetric("transaction.tx_begin_count", info.beginCount);
+            projectFileDecorator.setMetric("transaction.tx_commit_count", info.commitCount);
+            projectFileDecorator.setMetric("transaction.tx_rollback_count", info.rollbackCount);
+            projectFileDecorator.setMetric("transaction.tx_boundary_methods", info.transactionMethods.size());
 
             // Set Spring Boot migration target
             projectFileDecorator.setProperty("spring.conversion.target", "@Service+@Transactional");
 
             // Set migration complexity based on transaction patterns
             if (info.hasNestedTransactions || info.hasMultipleTransactionScopes) {
-                projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH, true);
-                // Override the medium complexity tag - since we can't remove tags, just set to
-                // false
-                projectFileDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM, false);
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
             }
         }
     }

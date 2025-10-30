@@ -1,8 +1,11 @@
 package com.analyzer.dev.inspectors.source;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.resource.ResourceResolver;
 
 import java.io.IOException;
@@ -27,8 +30,8 @@ public abstract class AbstractCountRegexpInspector extends AbstractSourceFileIns
      * @param regexPattern the regex pattern string to compile and use for counting
      * @throws IllegalArgumentException if regexPattern is null or invalid
      */
-    protected AbstractCountRegexpInspector(ResourceResolver resourceResolver, String regexPattern) {
-        super(resourceResolver);
+    protected AbstractCountRegexpInspector(ResourceResolver resourceResolver, String regexPattern, LocalCache localCache) {
+        super(resourceResolver, localCache);
         if (regexPattern == null || regexPattern.trim().isEmpty()) {
             throw new IllegalArgumentException("Regex pattern cannot be null or empty");
         }
@@ -42,8 +45,8 @@ public abstract class AbstractCountRegexpInspector extends AbstractSourceFileIns
      * @param pattern the compiled Pattern to use for counting
      * @throws IllegalArgumentException if pattern is null
      */
-    protected AbstractCountRegexpInspector(ResourceResolver resourceResolver, Pattern pattern) {
-        super(resourceResolver);
+    protected AbstractCountRegexpInspector(ResourceResolver resourceResolver, Pattern pattern, LocalCache localCache) {
+        super(resourceResolver, localCache);
         if (pattern == null) {
             throw new IllegalArgumentException("Pattern cannot be null");
         }

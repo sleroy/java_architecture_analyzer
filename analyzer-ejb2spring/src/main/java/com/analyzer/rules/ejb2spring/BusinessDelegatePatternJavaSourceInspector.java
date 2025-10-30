@@ -1,5 +1,6 @@
 package com.analyzer.rules.ejb2spring;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -38,8 +39,7 @@ import java.util.Set;
                 EjbMigrationTags.EJB_BUSINESS_DELEGATE,
                 EjbMigrationTags.EJB_SERVICE_LOCATOR,
                 EjbMigrationTags.EJB_CLIENT_CODE,
-                EjbMigrationTags.EJB_JNDI_LOOKUP,
-                EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY
+                EjbMigrationTags.EJB_JNDI_LOOKUP
         })
 public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaParserInspector {
 
@@ -59,21 +59,19 @@ public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaPars
 
     @Inject
     public BusinessDelegatePatternJavaSourceInspector(ResourceResolver resourceResolver,
-            ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
+            ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.classNodeRepository = classNodeRepository;
     }
 
     @Override
     public boolean supports(ProjectFile projectFile) {
-        // Trust @InspectorDependencies to handle ALL filtering - never check tags
-        // manually
         return super.supports(projectFile);
     }
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,
-                                          NodeDecorator projectFileDecorator) {
+            NodeDecorator projectFileDecorator) {
 
         BusinessDelegateDetector detector = new BusinessDelegateDetector();
         cu.accept(detector, null);
@@ -93,7 +91,8 @@ public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaPars
         projectFile.setProperty(EjbMigrationTags.EJB_JNDI_LOOKUP, hasJndiLookup);
 
         if (isBusinessDelegate || isServiceLocator || usesBusinessDelegate || hasJndiLookup) {
-            projectFile.setProperty(EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY, true);
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+                    EjbMigrationTags.PRIORITY_HIGH);
         }
 
         // Store detailed analysis metadata on JavaClassNode
@@ -101,15 +100,16 @@ public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaPars
             classNode.setProjectFileId(projectFile.getId());
 
             if (isBusinessDelegate || isServiceLocator || usesBusinessDelegate || hasJndiLookup) {
-                // Set migration complexity tags
+                // Set migration complexity metrics
                 String complexity = assessMigrationComplexity(metadata);
-                if ("HIGH".equals(complexity)) {
-                    classNode.setProperty(EjbMigrationTags.EJB_MIGRATION_COMPLEX, true);
-                } else if ("MEDIUM".equals(complexity)) {
-                    classNode.setProperty(EjbMigrationTags.EJB_MIGRATION_MEDIUM, true);
-                } else {
-                    classNode.setProperty(EjbMigrationTags.EJB_MIGRATION_SIMPLE, true);
-                }
+                double complexityValue = switch (complexity) {
+                    case "LOW" -> EjbMigrationTags.COMPLEXITY_LOW;
+                    case "MEDIUM" -> EjbMigrationTags.COMPLEXITY_MEDIUM;
+                    case "HIGH" -> EjbMigrationTags.COMPLEXITY_HIGH;
+                    default -> EjbMigrationTags.COMPLEXITY_MEDIUM;
+                };
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY,
+                        complexityValue);
 
                 // Generate migration recommendations
                 List<String> recommendations = generateMigrationRecommendations(metadata);

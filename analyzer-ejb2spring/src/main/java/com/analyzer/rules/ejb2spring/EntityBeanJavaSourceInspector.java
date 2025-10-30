@@ -1,11 +1,14 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.dev.inspectors.source.AbstractJavaClassInspector;
 import com.analyzer.api.resource.ResourceResolver;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
@@ -36,8 +39,8 @@ import java.util.Objects;
 public class EntityBeanJavaSourceInspector extends AbstractJavaClassInspector {
 
     @Inject
-    public EntityBeanJavaSourceInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public EntityBeanJavaSourceInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
@@ -53,7 +56,7 @@ public class EntityBeanJavaSourceInspector extends AbstractJavaClassInspector {
 
                 // Honor produces contract: set tags on ProjectFile using ProjectFileDecorator
                 // for dependency chains
-                projectFileDecorator.setProperty(TAGS.TAG_IS_ENTITY_BEAN, true);
+                projectFileDecorator.enableTag(TAGS.TAG_IS_ENTITY_BEAN);
                 projectFileDecorator.setProperty(TAGS.TAG_BEAN_PERSISTENCE_TYPE,
                         Objects.requireNonNullElse(info.persistenceType, "UNKNOWN"));
 

@@ -1,5 +1,6 @@
 package com.analyzer.rules.inspectors.core.detection;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
@@ -30,7 +31,8 @@ class JavaSourceFileInspectorTest {
     @BeforeEach
     void setUp() {
         resourceResolver = new FileResourceResolver();
-        detector = new JavaSourceFileInspector(resourceResolver);
+        LocalCache localCache = new LocalCache(true);
+        detector = new JavaSourceFileInspector(resourceResolver, localCache);
     }
 
     @Test

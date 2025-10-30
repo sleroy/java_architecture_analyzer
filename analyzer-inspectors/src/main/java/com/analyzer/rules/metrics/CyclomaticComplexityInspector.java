@@ -1,10 +1,13 @@
 package com.analyzer.rules.metrics;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.dev.inspectors.source.AbstractJavaParserInspector;
 import com.analyzer.api.resource.ResourceResolver;
 import com.github.javaparser.ast.CompilationUnit;
@@ -45,8 +48,8 @@ public class CyclomaticComplexityInspector extends AbstractJavaParserInspector {
     public static final String TAG_CYCLOMATIC_COMPLEXITY = "metrics.cyclomatic-complexity";
 
     @Inject
-    public CyclomaticComplexityInspector(ResourceResolver resourceResolver, GraphRepository graphRepository) {
-        super(resourceResolver);
+    public CyclomaticComplexityInspector(ResourceResolver resourceResolver, GraphRepository graphRepository, LocalCache localCache) {
+        super(resourceResolver, localCache);
     }
 
     @Override
@@ -66,7 +69,7 @@ public class CyclomaticComplexityInspector extends AbstractJavaParserInspector {
         cu.accept(calculator, null);
 
         int totalComplexity = calculator.getTotalComplexity();
-        projectFileDecorator.setProperty(getColumnName(), totalComplexity);
+        projectFileDecorator.setMetric(getColumnName(), totalComplexity);
     }
 
     /**

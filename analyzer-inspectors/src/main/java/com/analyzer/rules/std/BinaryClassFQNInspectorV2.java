@@ -1,5 +1,6 @@
 package com.analyzer.rules.std;
 
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
@@ -36,16 +37,16 @@ import static com.analyzer.core.inspector.InspectorTags.*;
  * @author Phase 3 - Class-Centric Architecture Migration
  * @since Phase 3 - Systematic Inspector Migration
  */
-@InspectorDependencies(produces = {TAG_JAVA_PACKAGE_NAME})
+@InspectorDependencies(produces = { TAG_JAVA_PACKAGE_NAME })
 public class BinaryClassFQNInspectorV2 extends AbstractASMClassInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(BinaryClassFQNInspectorV2.class);
 
-
     @Inject
     public BinaryClassFQNInspectorV2(ProjectFileRepository projectFileRepository,
-            ResourceResolver resourceResolver) {
-        super(projectFileRepository, resourceResolver);
+            ResourceResolver resourceResolver,
+            LocalCache localCache) {
+        super(projectFileRepository, resourceResolver, localCache);
     }
 
     @Override

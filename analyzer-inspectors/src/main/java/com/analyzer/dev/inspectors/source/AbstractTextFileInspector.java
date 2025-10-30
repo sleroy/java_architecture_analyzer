@@ -1,8 +1,11 @@
 package com.analyzer.dev.inspectors.source;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.resource.ResourceResolver;
 
 import java.io.IOException;
@@ -24,8 +27,8 @@ public abstract class AbstractTextFileInspector extends AbstractSourceFileInspec
      *
      * @param resourceResolver the resolver for accessing source file resources
      */
-    protected AbstractTextFileInspector(ResourceResolver resourceResolver) {
-        super(resourceResolver);
+    protected AbstractTextFileInspector(ResourceResolver resourceResolver, LocalCache localCache) {
+        super(resourceResolver, localCache);
     }
 
     @Override

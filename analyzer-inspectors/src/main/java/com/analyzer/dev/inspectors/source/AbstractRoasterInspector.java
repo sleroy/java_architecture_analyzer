@@ -1,9 +1,13 @@
 package com.analyzer.dev.inspectors.source;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.inspector.InspectorResult;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.resource.ResourceLocation;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.resource.ResourceResolver;
 import org.jboss.forge.roaster.Roaster;
 import org.jboss.forge.roaster.model.source.JavaSource;
@@ -34,8 +38,8 @@ public abstract class AbstractRoasterInspector extends AbstractSourceFileInspect
      * 
      * @param resourceResolver the resolver for accessing source file resources
      */
-    protected AbstractRoasterInspector(ResourceResolver resourceResolver) {
-        super(resourceResolver);
+    protected AbstractRoasterInspector(ResourceResolver resourceResolver, LocalCache localCache) {
+        super(resourceResolver, localCache);
     }
 
     @Override

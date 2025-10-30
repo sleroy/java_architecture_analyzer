@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
@@ -43,9 +44,8 @@ import java.util.List;
  * Boot External Configuration</a>
  */
 @InspectorDependencies(requires = {InspectorTags.TAG_JAVA_IS_SOURCE}, produces = {
-        EjbMigrationTags.SPRING_CONFIG_CONVERSION,
-        EjbMigrationTags.CODE_MODERNIZATION,
-        EjbMigrationTags.MIGRATION_COMPLEXITY_LOW
+        EjbMigrationTags.TAG_SPRING_CONFIG_CONVERSION,
+        EjbMigrationTags.TAG_CODE_MODERNIZATION,
 })
 public class ConfigurationConstantsInspector extends AbstractJavaClassInspector {
 
@@ -59,8 +59,8 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
             "CONNECTION", "RETRY", "BUFFER", "CACHE", "THRESHOLD");
 
     @Inject
-    public ConfigurationConstantsInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository) {
-        super(resourceResolver, classNodeRepository);
+    public ConfigurationConstantsInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
@@ -84,9 +84,9 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
             ConfigConstantsInfo info = detector.getConfigConstantsInfo();
 
             // Set tags according to the produces contract
-            nodeDecorator.setProperty(EjbMigrationTags.SPRING_CONFIG_CONVERSION, true);
-            nodeDecorator.setProperty(EjbMigrationTags.CODE_MODERNIZATION, true);
-            nodeDecorator.setProperty(EjbMigrationTags.MIGRATION_COMPLEXITY_LOW, true);
+            nodeDecorator.enableTag(EjbMigrationTags.TAG_SPRING_CONFIG_CONVERSION);
+            nodeDecorator.enableTag(EjbMigrationTags.TAG_CODE_MODERNIZATION);
+            nodeDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
 
             // Set custom tags for more detailed analysis
             nodeDecorator.setProperty("config.constants.detected", true);
@@ -105,14 +105,14 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
             }
 
             // Set property on class node for detailed analysis
-            classNode.setProperty("config.constants.analysis", info.toString());
+            classNode.setProperty("config.constants.analysis", info);
 
             // Set analysis statistics
-            nodeDecorator.setProperty("config.constants.total", info.totalConstantsCount);
-            nodeDecorator.setProperty("config.constants.strings", info.stringConstantsCount);
-            nodeDecorator.setProperty("config.constants.numeric", info.numericConstantsCount);
-            nodeDecorator.setProperty("config.constants.boolean", info.booleanConstantsCount);
-            nodeDecorator.setProperty("config.constants.nested", info.nestedConstantCount);
+            nodeDecorator.setMetric("config.constants.total", info.totalConstantsCount);
+            nodeDecorator.setMetric("config.constants.strings", info.stringConstantsCount);
+            nodeDecorator.setMetric("config.constants.numeric", info.numericConstantsCount);
+            nodeDecorator.setMetric("config.constants.boolean", info.booleanConstantsCount);
+            nodeDecorator.setMetric("config.constants.nested", info.nestedConstantCount);
         }
     }
 

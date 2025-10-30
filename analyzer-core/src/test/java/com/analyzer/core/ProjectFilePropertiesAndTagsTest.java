@@ -94,7 +94,7 @@ public class ProjectFilePropertiesAndTagsTest {
         assertFalse(projectFile.hasTag("nonexistent"));
 
         // Test addTag and hasTag
-        projectFile.addTag("simple_tag");
+        projectFile.enableTag("simple_tag");
         assertTrue(projectFile.hasTag("simple_tag"));
 
         // Test getTags
@@ -108,7 +108,7 @@ public class ProjectFilePropertiesAndTagsTest {
         projectFile.setProperty("java.className", "InventoryExample");
         projectFile.setProperty("java.packageName", "com.example");
         projectFile.setProperty("java.lineCount", 150);
-        projectFile.addTag("java.hasMainMethod");
+        projectFile.enableTag("java.hasMainMethod");
         projectFile.setProperty("java.complexity", 12.5);
         projectFile.setProperty("java.imports", Arrays.asList("java.util.List", "java.io.File"));
 

@@ -2,12 +2,12 @@ package com.analyzer.cli;
 
 import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.core.AnalysisConstants;
-import com.analyzer.core.db.GraphDatabaseConfig;
-import com.analyzer.core.db.loader.GraphDatabaseLoader;
+import com.analyzer.core.db.H2GraphDatabase;
 import com.analyzer.core.db.loader.LoadOptions;
-import com.analyzer.core.export.ProjectSerializer;
+import com.analyzer.core.export.JsonProjectSerializer;
 import com.analyzer.core.model.Project;
-import com.analyzer.core.db.repository.H2GraphStorageRepository;
+import com.analyzer.core.db.H2GraphStorageRepository;
+import com.analyzer.core.serialization.JsonSerializationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
@@ -80,20 +80,11 @@ public class JsonExportCommand implements Callable<Integer> {
             // path)
             Path dbPath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR).resolve(AnalysisConstants.GRAPH_DB_NAME);
             logger.info("Loading database from: {}", dbPath);
-            GraphDatabaseConfig dbConfig = new GraphDatabaseConfig();
-            dbConfig.initialize(dbPath);
-
-            // Create H2 database repository to load data
-            var dbRepository = new H2GraphStorageRepository(
-                    dbConfig);
-
-            // Get statistics
-            var stats = dbRepository.getStatistics();
-            logger.info("Database loaded: {}", stats);
 
             // Load data from H2 into in-memory repository using GraphDatabaseLoader
             LoadOptions.Builder optionsBuilder = LoadOptions.builder()
-                    .withProjectRoot(projectDir);
+                    .withProjectRoot(projectDir)
+                    .withDatabasePath(dbPath);
 
             if (nodeTypeFilters != null && !nodeTypeFilters.isEmpty()) {
                 optionsBuilder.withNodeTypeFilters(nodeTypeFilters);
@@ -108,14 +99,20 @@ public class JsonExportCommand implements Callable<Integer> {
             }
 
             LoadOptions loadOptions = optionsBuilder.build();
-            GraphRepository inMemoryRepo = GraphDatabaseLoader.loadFromDatabase(dbRepository, loadOptions);
+            H2GraphDatabase h2DB = new H2GraphDatabase(loadOptions, new JsonSerializationService());
+            h2DB.load();
+
+            // Get statistics
+            var stats = h2DB.getRepository().getStatistics();
+            logger.info("Database loaded: {}", stats);
+            GraphRepository inMemoryRepo = h2DB.snapshot();
 
             // Create minimal project object for serialization
             Project project = createMinimalProject(projectDir, inMemoryRepo);
 
             // Export to JSON using ProjectSerializer
             File outputFile = outputDir.toFile();
-            ProjectSerializer serializer = new ProjectSerializer(outputFile, inMemoryRepo);
+            JsonProjectSerializer serializer = new JsonProjectSerializer(outputFile, inMemoryRepo);
 
             logger.info("Exporting to JSON...");
             serializer.serialize(project);

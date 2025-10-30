@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.inspector.Inspector;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
@@ -18,7 +19,7 @@ import java.util.*;
  * configuration
  * files are not Java classes.
  */
-@InspectorDependencies(requires = {InspectorTags.TAG_SOURCE_FILE}, produces = {
+@InspectorDependencies(requires = { InspectorTags.TAG_SOURCE_FILE }, produces = {
         ApplicationServerConfigDetector.TAGS.TAG_APP_SERVER_CONFIG,
         ApplicationServerConfigDetector.TAGS.TAG_FILE_TYPE_SERVER_CONFIG,
         ApplicationServerConfigDetector.TAGS.TAG_APP_SERVER_GENERAL,
@@ -35,8 +36,7 @@ import java.util.*;
         ApplicationServerConfigDetector.TAGS.TAG_CONFIG_SECURITY,
         ApplicationServerConfigDetector.TAGS.TAG_CONFIG_DATASOURCE,
         ApplicationServerConfigDetector.TAGS.TAG_CONFIG_MESSAGING,
-        ApplicationServerConfigDetector.TAGS.TAG_CONFIG_WEB,
-        ApplicationServerConfigDetector.TAGS.TAG_MIGRATION_PRIORITY})
+        ApplicationServerConfigDetector.TAGS.TAG_CONFIG_WEB })
 public class ApplicationServerConfigDetector implements Inspector<ProjectFile> {
 
     private final String name;
@@ -164,18 +164,23 @@ public class ApplicationServerConfigDetector implements Inspector<ProjectFile> {
         // Set configuration type tags with migration priority
         if (isSecurityConfig(fileName)) {
             projectFileDecorator.setProperty(TAGS.TAG_CONFIG_SECURITY, true);
-            projectFileDecorator.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "HIGH");
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+                    EjbMigrationTags.PRIORITY_HIGH);
         } else if (isDataSourceConfig(fileName)) {
             projectFileDecorator.setProperty(TAGS.TAG_CONFIG_DATASOURCE, true);
-            projectFileDecorator.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "MEDIUM");
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+                    EjbMigrationTags.PRIORITY_MEDIUM);
         } else if (isMessagingConfig(fileName)) {
             projectFileDecorator.setProperty(TAGS.TAG_CONFIG_MESSAGING, true);
-            projectFileDecorator.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "MEDIUM");
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+                    EjbMigrationTags.PRIORITY_MEDIUM);
         } else if (isWebConfig(fileName)) {
             projectFileDecorator.setProperty(TAGS.TAG_CONFIG_WEB, true);
-            projectFileDecorator.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "MEDIUM");
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+                    EjbMigrationTags.PRIORITY_MEDIUM);
         } else {
-            projectFileDecorator.setProperty(TAGS.TAG_MIGRATION_PRIORITY, "LOW");
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+                    EjbMigrationTags.PRIORITY_LOW);
         }
     }
 
@@ -335,8 +340,5 @@ public class ApplicationServerConfigDetector implements Inspector<ProjectFile> {
         public static final String TAG_CONFIG_DATASOURCE = "application_server_config_detector.config.datasource";
         public static final String TAG_CONFIG_MESSAGING = "application_server_config_detector.config.messaging";
         public static final String TAG_CONFIG_WEB = "application_server_config_detector.config.web";
-
-        // Migration Priority
-        public static final String TAG_MIGRATION_PRIORITY = "application_server_config_detector.migration_priority";
     }
 }

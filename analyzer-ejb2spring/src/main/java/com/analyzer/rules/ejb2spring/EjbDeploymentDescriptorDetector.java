@@ -1,4 +1,5 @@
 package com.analyzer.rules.ejb2spring;
+import com.analyzer.core.cache.LocalCache;
 
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.inspector.Inspector;
@@ -30,9 +31,6 @@ import java.util.Set;
         com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_DEPLOYMENT_DESCRIPTOR,
         com.analyzer.rules.ejb2spring.EjbMigrationTags.VENDOR_DEPLOYMENT_DESCRIPTOR,
         com.analyzer.rules.ejb2spring.EjbMigrationTags.JPA_CONVERSION_CANDIDATE,
-        com.analyzer.rules.ejb2spring.EjbMigrationTags.MIGRATION_COMPLEXITY_LOW,
-        com.analyzer.rules.ejb2spring.EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM,
-        com.analyzer.rules.ejb2spring.EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH
 })
 public class EjbDeploymentDescriptorDetector implements Inspector<ProjectFile> {
 
@@ -91,15 +89,11 @@ public class EjbDeploymentDescriptorDetector implements Inspector<ProjectFile> {
         // Set EJB-specific migration tags from EjbMigrationTags
         if ("ejb-jar.xml".equals(fileName)) {
             projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_DEPLOYMENT_DESCRIPTOR);
-            projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.MIGRATION_COMPLEXITY_HIGH);
         } else if ("persistence.xml".equals(fileName) || "orm.xml".equals(fileName)) {
             projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.JPA_CONVERSION_CANDIDATE);
-            projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
         } else if ("web.xml".equals(fileName) || "application.xml".equals(fileName)) {
             projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.VENDOR_DEPLOYMENT_DESCRIPTOR);
-            projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.MIGRATION_COMPLEXITY_MEDIUM);
         } else {
-            projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.MIGRATION_COMPLEXITY_LOW);
         }
     }
 

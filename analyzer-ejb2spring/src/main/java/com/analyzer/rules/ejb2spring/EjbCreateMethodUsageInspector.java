@@ -2,10 +2,13 @@ package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.api.inspector.Inspector;
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.cache.LocalCache;
+import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.binary.AbstractASMClassInspector;
 import com.analyzer.api.resource.ResourceResolver;
 import org.objectweb.asm.Opcodes;
@@ -36,7 +39,8 @@ import java.util.stream.Collectors;
  * <strong>Key Differences from EjbCreateMethodUsageInspector:</strong>
  * </p>
  * <ul>
- * <li>Extends AbstractASMClassInspector (class-centric) instead of AbstractASMInspector (file-centric)</li>
+ * <li>Extends AbstractASMClassInspector (class-centric) instead of
+ * AbstractASMInspector (file-centric)</li>
  * <li>Receives JavaClassNode directly instead of creating it</li>
  * <li>Writes all analysis results to JavaClassNode properties</li>
  * <li>Uses NodeDecorator for type-safe property access</li>
@@ -54,10 +58,7 @@ import java.util.stream.Collectors;
         EjbMigrationTags.EJB_PARAMETERIZED_CREATE,
         EjbMigrationTags.EJB_COMPLEX_INITIALIZATION,
         EjbMigrationTags.EJB_DEPENDENCY_INJECTION_CANDIDATE,
-        EjbMigrationTags.EJB_JNDI_LOOKUP,
-        EjbMigrationTags.EJB_MIGRATION_SIMPLE,
-        EjbMigrationTags.EJB_MIGRATION_MEDIUM,
-        EjbMigrationTags.EJB_MIGRATION_COMPLEX
+        EjbMigrationTags.EJB_JNDI_LOOKUP
 })
 public class EjbCreateMethodUsageInspector extends AbstractASMClassInspector {
 
@@ -79,8 +80,8 @@ public class EjbCreateMethodUsageInspector extends AbstractASMClassInspector {
 
     @Inject
     public EjbCreateMethodUsageInspector(ProjectFileRepository projectFileRepository,
-            ResourceResolver resourceResolver) {
-        super(projectFileRepository, resourceResolver);
+            ResourceResolver resourceResolver, LocalCache localCache) {
+        super(projectFileRepository, resourceResolver, localCache);
     }
 
     @Override
@@ -500,15 +501,18 @@ public class EjbCreateMethodUsageInspector extends AbstractASMClassInspector {
                 enableTag(EjbMigrationTags.EJB_SESSION_BEAN);
             }
 
-            // Add complexity tags
+            // Add complexity metrics
             int totalCreateMethods = beanMetadata.getEjbCreateMethods().size();
-            if (totalCreateMethods > 3) {
-                enableTag(EjbMigrationTags.EJB_MIGRATION_COMPLEX);
-            } else if (totalCreateMethods > 1) {
-                enableTag(EjbMigrationTags.EJB_MIGRATION_MEDIUM);
-            } else {
-                enableTag(EjbMigrationTags.EJB_MIGRATION_SIMPLE);
-            }
+            String complexityLevel = (totalCreateMethods > 3) ? "HIGH" : (totalCreateMethods > 1) ? "MEDIUM" : "LOW";
+            double complexityValue = switch (complexityLevel) {
+                case "LOW" -> EjbMigrationTags.COMPLEXITY_LOW;
+                case "MEDIUM" -> EjbMigrationTags.COMPLEXITY_MEDIUM;
+                case "HIGH" -> EjbMigrationTags.COMPLEXITY_HIGH;
+                default -> EjbMigrationTags.COMPLEXITY_MEDIUM;
+            };
+            decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, complexityValue);
+            decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+                    EjbMigrationTags.PRIORITY_MEDIUM);
 
             // Add create method specific tags
             for (EjbCreateMethodInfo createMethod : beanMetadata.getEjbCreateMethods()) {
@@ -675,7 +679,7 @@ public class EjbCreateMethodUsageInspector extends AbstractASMClassInspector {
             this.isLocalHome = isLocalHome;
             this.metadata = metadata;
         }
-}
+    }
 
     /**
      * Consolidated analysis result for EJB create method usage data

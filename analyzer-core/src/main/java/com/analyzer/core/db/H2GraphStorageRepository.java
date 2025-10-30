@@ -1,18 +1,18 @@
-package com.analyzer.core.db.repository;
+package com.analyzer.core.db;
 
-import com.analyzer.core.db.GraphDatabaseConfig;
+import com.analyzer.api.graph.GraphEdge;
+import com.analyzer.api.graph.GraphNode;
 import com.analyzer.core.db.entity.GraphEdgeEntity;
 import com.analyzer.core.db.entity.GraphNodeEntity;
-import com.analyzer.core.db.entity.NodeTagEntity;
 import com.analyzer.core.db.mapper.EdgeMapper;
 import com.analyzer.core.db.mapper.NodeMapper;
-import com.analyzer.core.db.mapper.TagMapper;
 import com.analyzer.core.db.validation.PropertiesValidator;
 import com.analyzer.core.serialization.JsonSerializationService;
 import org.apache.ibatis.session.SqlSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,58 +28,19 @@ public class H2GraphStorageRepository {
 
     private static final Logger logger = LoggerFactory.getLogger(H2GraphStorageRepository.class);
 
-    private final GraphDatabaseConfig config;
+    private final GraphDatabaseSessionManager config;
     private final JsonSerializationService jsonSerializer;
 
-    public H2GraphStorageRepository(GraphDatabaseConfig config) {
+    public H2GraphStorageRepository(GraphDatabaseSessionManager config) {
         this(config, new JsonSerializationService());
     }
 
-    public H2GraphStorageRepository(GraphDatabaseConfig config, JsonSerializationService jsonSerializer) {
+    public H2GraphStorageRepository(GraphDatabaseSessionManager config, JsonSerializationService jsonSerializer) {
         this.config = config;
         this.jsonSerializer = jsonSerializer;
     }
 
     // ==================== NODE OPERATIONS ====================
-
-    /**
-     * Save a node with all its properties and tags.
-     *
-     * @param nodeId       Node ID (file path or FQN)
-     * @param nodeType     Node type (java, xml, class, etc.)
-     * @param displayLabel Human-readable label
-     * @param properties   Map of properties
-     * @param tags         Set of tags
-     */
-    public void saveNode(String nodeId, String nodeType, String displayLabel,
-            Map<String, Object> properties, Set<String> tags) {
-        try (SqlSession session = config.openSession()) {
-            // Validate properties
-            PropertiesValidator.validate(properties);
-
-            NodeMapper nodeMapper = session.getMapper(NodeMapper.class);
-            TagMapper tagMapper = session.getMapper(TagMapper.class);
-
-            // Create node with JSON-serialized properties
-            String propertiesJson = jsonSerializer.serializeProperties(properties);
-            GraphNodeEntity node = new GraphNodeEntity(nodeId, nodeType, displayLabel, propertiesJson);
-            nodeMapper.insertNode(node);
-
-            // Save tags
-            if (tags != null && !tags.isEmpty()) {
-                List<NodeTagEntity> tagEntities = tags.stream()
-                        .map(tag -> new NodeTagEntity(nodeId, tag))
-                        .collect(Collectors.toList());
-
-                if (!tagEntities.isEmpty()) {
-                    tagMapper.insertTags(tagEntities);
-                }
-            }
-
-            session.commit();
-            logger.debug("Saved node: {} (type: {})", nodeId, nodeType);
-        }
-    }
 
     /**
      * Find a node by its ID.
@@ -220,50 +181,6 @@ public class H2GraphStorageRepository {
         }
     }
 
-    // ==================== TAG OPERATIONS ====================
-
-    /**
-     * Get all tags for a node.
-     *
-     * @param nodeId The node ID
-     * @return Set of tags
-     */
-    public Set<String> getNodeTags(String nodeId) {
-        try (SqlSession session = config.openSession()) {
-            TagMapper mapper = session.getMapper(TagMapper.class);
-            return mapper.findByNodeId(nodeId).stream()
-                    .map(NodeTagEntity::getTag)
-                    .collect(Collectors.toSet());
-        }
-    }
-
-    /**
-     * Find all nodes with a specific tag.
-     *
-     * @param tag The tag to search for
-     * @return List of node IDs
-     */
-    public List<String> findNodesByTag(String tag) {
-        try (SqlSession session = config.openSession()) {
-            TagMapper mapper = session.getMapper(TagMapper.class);
-            return mapper.findByTag(tag).stream()
-                    .map(NodeTagEntity::getNodeId)
-                    .collect(Collectors.toList());
-        }
-    }
-
-    /**
-     * Get all unique tags in the database.
-     *
-     * @return List of unique tags
-     */
-    public List<String> getAllTags() {
-        try (SqlSession session = config.openSession()) {
-            TagMapper mapper = session.getMapper(TagMapper.class);
-            return mapper.findAllUniqueTags();
-        }
-    }
-
     // ==================== PROPERTY OPERATIONS ====================
 
     /**
@@ -309,12 +226,20 @@ public class H2GraphStorageRepository {
         try (SqlSession session = config.openSession()) {
             NodeMapper nodeMapper = session.getMapper(NodeMapper.class);
             EdgeMapper edgeMapper = session.getMapper(EdgeMapper.class);
-            TagMapper tagMapper = session.getMapper(TagMapper.class);
+
+            // Count nodes with tags from JSON column
+            int tagCount = 0;
+            List<GraphNodeEntity> nodes = nodeMapper.findAll();
+            for (GraphNodeEntity node : nodes) {
+                if (node.getTags() != null && !node.getTags().isEmpty() && !"[]".equals(node.getTags())) {
+                    tagCount++;
+                }
+            }
 
             return new GraphStatistics(
                     nodeMapper.countNodes(),
                     edgeMapper.countEdges(),
-                    tagMapper.countTags());
+                    tagCount);
         }
     }
 
@@ -324,16 +249,105 @@ public class H2GraphStorageRepository {
     public void clearAll() {
         try (SqlSession session = config.openSession()) {
             EdgeMapper edgeMapper = session.getMapper(EdgeMapper.class);
-            TagMapper tagMapper = session.getMapper(TagMapper.class);
             NodeMapper nodeMapper = session.getMapper(NodeMapper.class);
 
             // Delete in order (respecting foreign keys)
             edgeMapper.deleteAll();
-            tagMapper.deleteAll();
             nodeMapper.deleteAll();
 
             session.commit();
             logger.info("Cleared all graph data");
+        }
+    }
+
+    /**
+     * Save a GraphNode with merge semantics (insert if not exists, update if
+     * exists).
+     * This method handles nodes, their properties, metrics, and tags.
+     *
+     * @param node The GraphNode to save
+     */
+    public void saveNode(GraphNode node) {
+        try (SqlSession session = config.openSession()) {
+            // Extract node data
+            String nodeId = node.getId();
+            String nodeType = node.getNodeType();
+            String displayLabel = node.getDisplayLabel();
+            Map<String, Object> properties = node.getNodeProperties();
+            Set<String> tags = node.getTags();
+
+            // Extract metrics separately - DO NOT include in properties
+            Map<String, Double> metricsMap = null;
+            if (node.getMetrics() != null) {
+                metricsMap = node.getMetrics().getAllMetrics();
+            }
+
+            // Validate properties
+            PropertiesValidator.validate(properties);
+
+            NodeMapper nodeMapper = session.getMapper(NodeMapper.class);
+
+            // Serialize properties, metrics, and tags to JSON
+            String propertiesJson = jsonSerializer.serializeProperties(properties);
+
+            String metricsJson = null;
+            if (metricsMap != null && !metricsMap.isEmpty()) {
+                // Cast Map<String, Double> to Map<String, Object> for serialization
+                Map<String, Object> metricsAsObjects = new HashMap<>(metricsMap);
+                metricsJson = jsonSerializer.serializeProperties(metricsAsObjects);
+            }
+
+            String tagsJson = jsonSerializer.serializeTags(tags);
+
+            // Use merge operation for atomic insert/update
+            GraphNodeEntity nodeEntity = new GraphNodeEntity(nodeId, nodeType, displayLabel, propertiesJson,
+                    metricsJson, tagsJson);
+            nodeMapper.mergeNode(nodeEntity);
+
+            session.commit();
+            logger.debug("Saved/merged node: {} (type: {}, {} tags, {} metrics)", nodeId, nodeType,
+                    tags != null ? tags.size() : 0,
+                    metricsMap != null ? metricsMap.size() : 0);
+        }
+    }
+
+    /**
+     * Save a GraphEdge with duplicate prevention.
+     * Only creates the edge if it doesn't already exist.
+     *
+     * @param edge The GraphEdge to save
+     */
+    public void saveEdge(GraphEdge edge) {
+        try (SqlSession session = config.openSession()) {
+            EdgeMapper edgeMapper = session.getMapper(EdgeMapper.class);
+
+            // Extract edge data
+            String sourceId = edge.getSource().getId();
+            String targetId = edge.getTarget().getId();
+            String edgeType = edge.getEdgeType();
+            Map<String, Object> properties = edge.getProperties();
+
+            // Check if edge already exists
+            GraphEdgeEntity existingEdge = edgeMapper.findEdge(sourceId, targetId, edgeType);
+            if (existingEdge != null) {
+                logger.debug("Edge already exists: {} -> {} (type: {})", sourceId, targetId, edgeType);
+                return;
+            }
+
+            // Serialize properties to JSON metadata
+            String metadataJson = null;
+            if (properties != null && !properties.isEmpty()) {
+                metadataJson = jsonSerializer.serializeProperties(properties);
+            }
+
+            // Create and insert edge
+            GraphEdgeEntity edgeEntity = new GraphEdgeEntity(sourceId, targetId, edgeType);
+            edgeEntity.setMetadataJson(metadataJson);
+
+            edgeMapper.insertEdge(edgeEntity);
+            session.commit();
+
+            logger.debug("Saved edge: {} -> {} (type: {})", sourceId, targetId, edgeType);
         }
     }
 

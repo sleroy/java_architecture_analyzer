@@ -1,14 +1,15 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
+import com.analyzer.api.resource.ResourceResolver;
+import com.analyzer.core.cache.LocalCache;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.dev.inspectors.source.AbstractSourceFileInspector;
 import com.analyzer.core.resource.ResourceLocation;
-import com.analyzer.api.resource.ResourceResolver;
+import com.analyzer.dev.inspectors.source.AbstractSourceFileInspector;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -43,8 +44,8 @@ import java.util.regex.Pattern;
  * Tags: EjbMigrationTags.RESOURCE_*, EjbMigrationTags.DATASOURCE_*
  * Target: 6-8 tests
  */
-@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_DETECTED}, produces = {
-        "resource.management.analysis"})
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_DETECTED }, produces = {
+        "resource.management.analysis" })
 public class DatabaseResourceManagementInspector extends AbstractSourceFileInspector {
 
     private static final Pattern DATASOURCE_PATTERN = Pattern.compile(
@@ -72,8 +73,8 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
 
     @Inject
     public DatabaseResourceManagementInspector(ResourceResolver resourceResolver,
-                                               ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
+            ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.classNodeRepository = classNodeRepository;
     }
 
@@ -89,7 +90,7 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
 
     @Override
     protected void analyzeSourceFile(ProjectFile projectFile, ResourceLocation sourceLocation,
-                                     NodeDecorator<ProjectFile> decorator) throws IOException {
+            NodeDecorator<ProjectFile> decorator) throws IOException {
         String fqn = projectFile.getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
         if (fqn != null && !fqn.isEmpty()) {
             JavaClassNode classNode = classNodeRepository.getOrCreateByFqn(fqn);
@@ -102,7 +103,7 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
                 }
 
                 ResourceManagementMetadata metadata = analyzeResourceConfiguration(content, projectFile);
-                applyResourceManagementTags(classNode, metadata);
+                applyResourceManagementTags(classNode, metadata, decorator);
                 generateMigrationRecommendations(classNode, metadata);
 
                 // CRITICAL: Honor produces contract - set the declared tag on ProjectFile
@@ -110,7 +111,7 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
 
                 // Create graph relationships for resource dependencies
                 if (metadata.hasResourceConfiguration()) {
-                    createResourceGraphRelationships(projectFile, metadata);
+                    createResourceGraphRelationships(projectFile);
                 }
 
             } catch (Exception e) {
@@ -125,7 +126,7 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
      * even if file parsing fails in tests.
      */
     private void setBasicTagsForSupportedFile(JavaClassNode classNode, ProjectFile projectFile,
-                                              NodeDecorator<ProjectFile> decorator) {
+            NodeDecorator<ProjectFile> decorator) {
         // Set basic properties on ClassNode
         classNode.setProperty(EjbMigrationTags.DATASOURCE_CONFIGURATION, true);
         classNode.setProperty(EjbMigrationTags.RESOURCE_REFERENCE, true);
@@ -162,7 +163,7 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
     }
 
     private void analyzeXmlResourceConfiguration(String content, ResourceManagementMetadata metadata,
-                                                 ProjectFile projectFile) {
+            ProjectFile projectFile) {
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setNamespaceAware(false);
@@ -318,7 +319,8 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
         }
     }
 
-    private void applyResourceManagementTags(JavaClassNode classNode, ResourceManagementMetadata metadata) {
+    private void applyResourceManagementTags(JavaClassNode classNode, ResourceManagementMetadata metadata,
+            NodeDecorator<ProjectFile> decorator) {
         // Basic resource configuration tags
         classNode.setProperty(EjbMigrationTags.DATASOURCE_CONFIGURATION, metadata.hasDataSourceConfig());
         classNode.setProperty(EjbMigrationTags.RESOURCE_REFERENCE, metadata.hasResourceRefs());
@@ -339,11 +341,17 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
                 metadata.hasResourceConfiguration());
         classNode.setProperty("resource.analysis_result", analysisResult);
 
-        // Migration priority
+        // Migration priority and complexity using metrics
         if (metadata.hasComplexConfiguration()) {
-            classNode.setProperty(EjbMigrationTags.EJB_MIGRATION_HIGH_PRIORITY, true);
+            decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+                    EjbMigrationTags.PRIORITY_HIGH);
+            decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY,
+                    EjbMigrationTags.COMPLEXITY_HIGH);
         } else if (metadata.hasResourceConfiguration()) {
-            classNode.setProperty(EjbMigrationTags.EJB_MIGRATION_MEDIUM_PRIORITY, true);
+            decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+                    EjbMigrationTags.PRIORITY_MEDIUM);
+            decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY,
+                    EjbMigrationTags.COMPLEXITY_MEDIUM);
         }
     }
 
@@ -422,9 +430,8 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
         }
     }
 
-    private void createResourceGraphRelationships(ProjectFile projectFile, ResourceManagementMetadata metadata) {
+    private void createResourceGraphRelationships(ProjectFile projectFile) {
         // Create database resource configuration node
-        String nodeId = "resource_config_" + projectFile.getFileName();
 
         if (classNodeRepository != null) {
             try {
@@ -457,7 +464,7 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
         private final boolean hasResourceConfiguration;
 
         public ResourceAnalysisResult(int dataSourceCount, int resourceRefCount, int poolConfigCount,
-                                      String patternType, String complexity, boolean hasResourceConfiguration) {
+                String patternType, String complexity, boolean hasResourceConfiguration) {
             this.dataSourceCount = dataSourceCount;
             this.resourceRefCount = resourceRefCount;
             this.poolConfigCount = poolConfigCount;

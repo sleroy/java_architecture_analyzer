@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS nodes (
     display_label VARCHAR(512),                -- Human-readable label
     properties CLOB,                           -- JSON document stored as CLOB for H2 compatibility
     metrics CLOB,                              -- Metrics stored as JSON (key-value pairs of metric_name: double_value)
+    tags CLOB,                                 -- Tags stored as JSON array for performance (e.g., ["tag1", "tag2"])
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -36,18 +37,6 @@ CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source_id);
 CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_id);
 CREATE INDEX IF NOT EXISTS idx_edges_type ON edges(edge_type);
 
--- Node tags table: for fast tag-based queries
-CREATE TABLE IF NOT EXISTS node_tags (
-    node_id VARCHAR(1024) NOT NULL,
-    tag VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (node_id, tag),
-    FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_tags_tag ON node_tags(tag);
-CREATE INDEX IF NOT EXISTS idx_tags_node ON node_tags(node_id);
-
 -- Project metadata table
 CREATE TABLE IF NOT EXISTS projects (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -65,5 +54,4 @@ SELECT
     (SELECT COUNT(DISTINCT node_type) FROM nodes) as node_types,
     (SELECT COUNT(*) FROM edges) as total_edges,
     (SELECT COUNT(DISTINCT edge_type) FROM edges) as edge_types,
-    (SELECT COUNT(*) FROM node_tags) as total_tags,
-    (SELECT COUNT(DISTINCT tag) FROM node_tags) as unique_tags;
+    (SELECT COUNT(*) FROM nodes WHERE tags IS NOT NULL AND tags != '[]') as nodes_with_tags;

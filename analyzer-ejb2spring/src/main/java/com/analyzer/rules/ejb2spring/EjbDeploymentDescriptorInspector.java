@@ -1,6 +1,7 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.GraphEdge;
 import com.analyzer.api.graph.GraphRepository;
@@ -28,7 +29,7 @@ import java.util.stream.Collectors;
 
 /**
  * Comprehensive inspector that analyzes ejb-jar.xml deployment descriptors.
- * 
+ *
  * <p>This inspector performs complete analysis of EJB deployment descriptors including:
  * <ul>
  *   <li>Parsing bean definitions (session, entity, message-driven beans)</li>
@@ -38,7 +39,7 @@ import java.util.stream.Collectors;
  *   <li>Attaching deployment descriptor metadata to bean ClassNodes</li>
  *   <li>Storing summary statistics on the XML ProjectFile</li>
  * </ul>
- * 
+ *
  * <p>Configuration files are not Java classes, so this inspector stores summary
  * data on ProjectFile while enriching actual bean ClassNodes with detailed metadata
  * and creating proper graph relationships.
@@ -49,7 +50,7 @@ import java.util.stream.Collectors;
         EjbDeploymentDescriptorInspector.TAGS.TAG_EJB_JAR_ANALYSIS,
         com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_DECLARATIVE_TRANSACTION,
         com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_CONTAINER_MANAGED_TRANSACTION,
-        com.analyzer.rules.ejb2spring.EjbMigrationTags.SPRING_TRANSACTION_CONVERSION
+        com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_SPRING_TRANSACTION_CONVERSION
 })
 public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector {
 
@@ -61,9 +62,9 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
 
     @Inject
     public EjbDeploymentDescriptorInspector(ResourceResolver resourceResolver,
-                                           ClassNodeRepository classNodeRepository,
-                                           GraphRepository graphRepository) {
-        super(resourceResolver);
+                                            ClassNodeRepository classNodeRepository,
+                                            GraphRepository graphRepository, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.classNodeRepository = classNodeRepository;
         this.graphRepository = graphRepository;
     }
@@ -83,14 +84,14 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
         try {
             // Phase 1: Parse XML
             Document doc = parseXmlDocument(content);
-            
+
             // Phase 2: Extract bean definitions and transaction configurations
             Map<String, BeanMetadata> beansById = extractBeanDefinitions(doc);
             List<TransactionConfiguration> transactionConfigs = extractTransactionConfigurations(doc);
-            
+
             // Phase 3: Enrich graph with ClassNodes and edges
             int enrichedBeans = enrichGraph(beansById, transactionConfigs);
-            
+
             // Phase 4: Store summary on XML ProjectFile
             storeSummary(projectFile, projectFileDecorator, beansById, transactionConfigs, enrichedBeans);
 
@@ -110,7 +111,7 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
         factory.setValidating(false);
         factory.setIgnoringComments(true);
         factory.setIgnoringElementContentWhitespace(true);
-        
+
         // Security: Disable external entity processing
         factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", false);
         factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
@@ -320,9 +321,9 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
 
     private boolean isReadOnlyMethod(String methodName) {
         return methodName.startsWith("find") || methodName.startsWith("get") ||
-               methodName.startsWith("is") || methodName.startsWith("has") ||
-               methodName.startsWith("count") || methodName.startsWith("list") ||
-               methodName.startsWith("search");
+                methodName.startsWith("is") || methodName.startsWith("has") ||
+                methodName.startsWith("count") || methodName.startsWith("list") ||
+                methodName.startsWith("search");
     }
 
     private List<String> parseMethodParams(Element method) {
@@ -395,12 +396,12 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
         }
     }
 
-    private void attachBeanMetadata(JavaClassNode beanNode, BeanMetadata bean, 
-                                   List<TransactionConfiguration> allConfigs) {
+    private void attachBeanMetadata(JavaClassNode beanNode, BeanMetadata bean,
+                                    List<TransactionConfiguration> allConfigs) {
         // Deployment descriptor metadata
         beanNode.setProperty("ejb.deployment.ejb_name", bean.ejbName);
         beanNode.setProperty("ejb.deployment.bean_type", bean.beanType);
-        
+
         if (bean.homeInterface != null) {
             beanNode.setProperty("ejb.deployment.home_interface", bean.homeInterface);
         }
@@ -447,18 +448,19 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
     }
 
     private void storeSummary(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator,
-                             Map<String, BeanMetadata> beans, 
-                             List<TransactionConfiguration> transactionConfigs,
-                             int enrichedBeans) {
+                              Map<String, BeanMetadata> beans,
+                              List<TransactionConfiguration> transactionConfigs,
+                              int enrichedBeans) {
         // Count beans by type
         long sessionBeans = beans.values().stream().filter(b -> "session".equals(b.beanType)).count();
         long entityBeans = beans.values().stream().filter(b -> "entity".equals(b.beanType)).count();
         long messageDrivenBeans = beans.values().stream().filter(b -> "message-driven".equals(b.beanType)).count();
 
         // Store counts
-        decorator.setProperty(TAGS.TAG_SESSION_BEANS_COUNT, (int) sessionBeans);
-        decorator.setProperty(TAGS.TAG_ENTITY_BEANS_COUNT, (int) entityBeans);
-        decorator.setProperty(TAGS.TAG_MESSAGE_DRIVEN_BEANS_COUNT, (int) messageDrivenBeans);
+        decorator.setMetric(TAGS.METRIC_SESSION_BEANS_COUNT, (int) sessionBeans);
+        decorator.setMetric(TAGS.METRIC_ENTITY_BEANS_COUNT, (int) entityBeans);
+        decorator.setMetric(TAGS.METRIC_MESSAGE_DRIVEN_BEANS_COUNT, (int) messageDrivenBeans);
+
 
         // Store analysis summary as a plain object
         Map<String, Object> summary = new HashMap<>();
@@ -473,7 +475,7 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
         if (!transactionConfigs.isEmpty()) {
             projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_DECLARATIVE_TRANSACTION, true);
             projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_CONTAINER_MANAGED_TRANSACTION, true);
-            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.SPRING_TRANSACTION_CONVERSION, true);
+            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_SPRING_TRANSACTION_CONVERSION, true);
         }
     }
 
@@ -487,9 +489,9 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
 
     public static class TAGS {
         public static final String TAG_EJB_JAR_ANALYSIS = "ejb_jar_analysis";
-        public static final String TAG_SESSION_BEANS_COUNT = "ejb.session_beans_count";
-        public static final String TAG_ENTITY_BEANS_COUNT = "ejb.entity_beans_count";
-        public static final String TAG_MESSAGE_DRIVEN_BEANS_COUNT = "ejb.message_driven_beans_count";
+        public static final String METRIC_SESSION_BEANS_COUNT = "ejb.session_beans_count";
+        public static final String METRIC_ENTITY_BEANS_COUNT = "ejb.entity_beans_count";
+        public static final String METRIC_MESSAGE_DRIVEN_BEANS_COUNT = "ejb.message_driven_beans_count";
     }
 
     // Data classes

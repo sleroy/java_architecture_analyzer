@@ -1,9 +1,11 @@
 package com.analyzer.rules.ejb2spring;
 
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.model.ProjectFile;
+import com.analyzer.core.cache.LocalCache;
 import com.analyzer.dev.inspectors.source.AbstractJavaParserInspector;
 import com.analyzer.api.resource.ResourceResolver;
 import com.analyzer.rules.std.ApplicationPackageTagInspector;
@@ -41,8 +43,8 @@ public class ComplexCmpRelationshipJavaSourceInspector extends AbstractJavaParse
 
     @Inject
     public ComplexCmpRelationshipJavaSourceInspector(ResourceResolver resourceResolver,
-            ClassNodeRepository classNodeRepository) {
-        super(resourceResolver);
+            ClassNodeRepository classNodeRepository, LocalCache localCache) {
+        super(resourceResolver, localCache);
         this.classNodeRepository = classNodeRepository;
     }
 
