@@ -27,7 +27,7 @@ import java.sql.DriverManager;
  * Configuration class for the H2 graph database with MyBatis.
  * Handles database initialization, schema creation, and SqlSessionFactory setup.
  */
-public class GraphDatabaseConfig {
+class GraphDatabaseConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(GraphDatabaseConfig.class);
 

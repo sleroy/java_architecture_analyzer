@@ -2,39 +2,29 @@ package com.analyzer.cli;
 
 import com.analyzer.api.graph.GraphNode;
 import com.analyzer.api.graph.GraphRepository;
-import com.analyzer.api.inspector.Inspector;
 import com.analyzer.core.AnalysisConstants;
-import com.analyzer.core.db.GraphDatabaseConfig;
-import com.analyzer.core.db.loader.GraphDatabaseLoader;
+import com.analyzer.core.db.H2GraphDatabase;
 import com.analyzer.core.db.loader.LoadOptions;
-import com.analyzer.core.engine.AnalysisEngine;
-import com.analyzer.core.export.CsvExporter;
-import com.analyzer.core.inspector.InspectorRegistry;
-import com.analyzer.core.model.Project;
-import com.analyzer.core.model.ProjectFile;
-import com.analyzer.core.resource.CompositeResourceResolver;
-import com.analyzer.dev.collectors.CollectorBeanFactory;
-import com.analyzer.dev.detection.FileDetectionBeanFactory;
-import com.analyzer.core.db.repository.H2GraphStorageRepository;
-import com.analyzer.rules.ejb2spring.Ejb2SpringInspectorBeanFactory;
-import com.analyzer.rules.graph.GraphInspectorBeanFactory;
-import com.analyzer.rules.metrics.MetricsInspectorBeanFactory;
-import com.analyzer.rules.std.StdInspectorBeanFactory;
+import com.analyzer.core.serialization.JsonSerializationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-import java.io.File;
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 /**
  * CSV Export command implementation.
- * Loads project data from the H2 database and exports it to CSV format.
+ * Loads project data from the H2 database and exports it to CSV format,
+ * creating one CSV file per node type with dynamic columns for tags and
+ * metrics.
  */
 @Command(name = "csv_export", description = "Export project data from database to CSV format")
 public class CsvExportCommand implements Callable<Integer> {
@@ -46,11 +36,12 @@ public class CsvExportCommand implements Callable<Integer> {
     private String projectPath;
 
     @Option(names = {
-            "--output" }, description = "Output file for CSV export", defaultValue = "out/inventory.csv")
-    private File outputFile;
+            "--output-dir" }, description = "Output directory for CSV files (default: <project>/.analysis/csv)")
+    private String outputDir;
 
-    @Option(names = { "--inspector" }, description = "List of inspectors to use (comma-separated)", split = ",")
-    private List<String> inspectors;
+    @Option(names = {
+            "--node-types" }, description = "Comma-separated list of node types to export (e.g., file,java_class). If not specified, all types are exported.", split = ",")
+    private List<String> nodeTypeFilters;
 
     @Override
     public Integer call() throws Exception {
@@ -64,77 +55,196 @@ public class CsvExportCommand implements Callable<Integer> {
         // Resolve project path (handle both relative and absolute)
         Path projectDir = resolveProjectPath(projectPath);
 
+        // Resolve output path
+        Path csvOutputDir = resolveOutputPath(projectDir, outputDir);
+
         logger.info("Configuration:");
         logger.info("  Project path: {}", projectDir);
-        logger.info("  CSV output: {}", outputFile.getAbsolutePath());
-        logger.info("  Inspectors: {}", inspectors);
+        logger.info("  CSV output: {}", csvOutputDir);
+        logger.info("  Node type filters: {}", nodeTypeFilters != null ? nodeTypeFilters : "all");
 
         try {
             // Check if database exists
-            Path dbPath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
+            Path dbFileNamePath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
                     .resolve(AnalysisConstants.getCompleteDatabaseName());
-            if (!Files.exists(dbPath)) {
-                logger.error("Database not found at: {}", dbPath);
+            if (!Files.exists(dbFileNamePath)) {
+                logger.error("Database not found at: {}", dbFileNamePath);
                 logger.error("Please run the 'inventory' command first to create the database.");
                 return 1;
             }
 
-            // Initialize database connection (H2 adds .mv.db automatically, so use base
-            // path)
-            Path dbBasePath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
+            // Initialize database connection
+            Path dbPath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
                     .resolve(AnalysisConstants.GRAPH_DB_NAME);
             logger.info("Loading database from: {}", dbPath);
-            GraphDatabaseConfig dbConfig = new GraphDatabaseConfig();
-            dbConfig.initialize(dbBasePath);
 
-            // Create H2 database repository to load data
-            H2GraphStorageRepository dbRepository = new H2GraphStorageRepository(
-                    dbConfig);
+            // Load data from H2 into in-memory repository
+            LoadOptions.Builder optionsBuilder = LoadOptions.builder()
+                    .withProjectRoot(projectDir)
+                    .withDatabasePath(dbPath);
+
+            if (nodeTypeFilters != null && !nodeTypeFilters.isEmpty()) {
+                optionsBuilder.withNodeTypeFilters(nodeTypeFilters);
+            } else {
+                optionsBuilder.loadAllNodes();
+            }
+
+            // Load all edges to get complete context
+            optionsBuilder.withCommonEdgeTypes();
+
+            LoadOptions loadOptions = optionsBuilder.build();
+            H2GraphDatabase h2DB = new H2GraphDatabase(loadOptions, new JsonSerializationService());
+            h2DB.load();
 
             // Get statistics
-            var stats = dbRepository.getStatistics();
+            var stats = h2DB.getRepository().getStatistics();
             logger.info("Database loaded: {}", stats);
+            GraphRepository repository = h2DB.snapshot();
 
-            // Load data from H2 into in-memory repository using GraphDatabaseLoader
-            LoadOptions loadOptions = LoadOptions.builder()
-                    .withCommonNodeTypes()
-                    .withCommonEdgeTypes()
-                    .withProjectRoot(projectDir)
-                    .build();
-            GraphRepository inMemoryRepo = GraphDatabaseLoader.loadFromDatabase(dbRepository, loadOptions);
+            // Create output directory if it doesn't exist
+            Files.createDirectories(csvOutputDir);
 
-            // Create minimal project object for serialization
-            Project project = createMinimalProject(projectDir, inMemoryRepo);
+            // Group nodes by type
+            Map<String, List<GraphNode>> nodesByType = repository.getNodes().stream()
+                    .collect(Collectors.groupingBy(GraphNode::getNodeType));
 
-            // Initialize Inspector Registry to get inspector list
-            CompositeResourceResolver resolver = CompositeResourceResolver.createDefault();
-            InspectorRegistry inspectorRegistry = InspectorRegistry.newInspectorRegistry(resolver);
-            inspectorRegistry.registerComponents(FileDetectionBeanFactory.class);
-            inspectorRegistry.registerComponents(CollectorBeanFactory.class);
-            inspectorRegistry.registerComponents(StdInspectorBeanFactory.class);
-            inspectorRegistry.registerComponents(Ejb2SpringInspectorBeanFactory.class);
-            inspectorRegistry.registerComponents(GraphInspectorBeanFactory.class);
-            inspectorRegistry.registerComponents(MetricsInspectorBeanFactory.class);
+            logger.info("Found {} node types to export", nodesByType.size());
 
-            AnalysisEngine analysisEngine = inspectorRegistry.getAnalysisEngine();
-            List<Inspector> inspectorList = analysisEngine.getInspectors(inspectors);
+            // Export each node type to a separate CSV file
+            int totalExported = 0;
+            for (Map.Entry<String, List<GraphNode>> entry : nodesByType.entrySet()) {
+                String nodeType = entry.getKey();
+                List<GraphNode> nodes = entry.getValue();
 
-            // Export to CSV using CsvExporter
-            CsvExporter csvExporter = new CsvExporter(outputFile);
+                String csvFileName = nodeType + "_nodes.csv";
+                Path csvFile = csvOutputDir.resolve(csvFileName);
 
-            logger.info("Exporting to CSV...");
-            csvExporter.exportToCsv(project, inspectorList);
+                logger.info("Exporting {} nodes of type '{}' to {}", nodes.size(), nodeType, csvFileName);
+                exportNodesToCsv(nodes, nodeType, csvFile);
+                totalExported += nodes.size();
+            }
 
-            // Get final statistics
             logger.info("Export completed successfully!");
-            logger.info("CSV data written to: {}", outputFile.getAbsolutePath());
-            logger.info("Exported: {} files", project.getProjectFiles().size());
+            logger.info("CSV files written to: {}", csvOutputDir.toAbsolutePath());
+            logger.info("Exported: {} nodes across {} node types", totalExported, nodesByType.size());
 
             return 0;
         } catch (Exception e) {
             logger.error("Error during CSV export: {}", e.getMessage(), e);
             return 1;
         }
+    }
+
+    /**
+     * Exports a list of nodes to a CSV file.
+     * Creates dynamic columns based on tags and metrics present in the nodes.
+     */
+    private void exportNodesToCsv(List<GraphNode> nodes, String nodeType, Path csvFile) throws IOException {
+        if (nodes.isEmpty()) {
+            logger.warn("No nodes to export for type: {}", nodeType);
+            return;
+        }
+
+        // Collect all unique tags and metrics across all nodes
+        Set<String> allTags = new TreeSet<>();
+        Set<String> allMetrics = new TreeSet<>();
+
+        for (GraphNode node : nodes) {
+            allTags.addAll(node.getTags());
+            if (node.getMetrics() != null) {
+                allMetrics.addAll(node.getMetrics().getAllMetrics().keySet());
+            }
+        }
+
+        // Write CSV file
+        try (BufferedWriter writer = Files.newBufferedWriter(csvFile)) {
+            // Write header
+            writeHeader(writer, allTags, allMetrics);
+
+            // Write data rows
+            for (GraphNode node : nodes) {
+                writeNodeRow(writer, node, allTags, allMetrics);
+            }
+        }
+
+        logger.debug("Wrote {} rows to {}", nodes.size(), csvFile.getFileName());
+    }
+
+    /**
+     * Writes the CSV header with fixed columns followed by dynamic tag and metric
+     * columns.
+     */
+    private void writeHeader(BufferedWriter writer, Set<String> allTags, Set<String> allMetrics) throws IOException {
+        List<String> headers = new ArrayList<>();
+
+        // Fixed columns
+        headers.add("node_id");
+        headers.add("node_type");
+        headers.add("display_label");
+
+        // Tag columns (prefixed with "tag:")
+        for (String tag : allTags) {
+            headers.add("tag:" + tag);
+        }
+
+        // Metric columns (prefixed with "metric:")
+        for (String metric : allMetrics) {
+            headers.add("metric:" + metric);
+        }
+
+        writer.write(String.join(",", headers));
+        writer.newLine();
+    }
+
+    /**
+     * Writes a single node as a CSV row.
+     */
+    private void writeNodeRow(BufferedWriter writer, GraphNode node, Set<String> allTags, Set<String> allMetrics)
+            throws IOException {
+        List<String> values = new ArrayList<>();
+
+        // Fixed columns
+        values.add(escapeCsv(node.getId()));
+        values.add(escapeCsv(node.getNodeType()));
+        values.add(escapeCsv(node.getDisplayLabel()));
+
+        // Tag columns (true/false)
+        for (String tag : allTags) {
+            values.add(node.hasTag(tag) ? "true" : "false");
+        }
+
+        // Metric columns (numeric values or empty)
+        for (String metric : allMetrics) {
+            String value = "";
+            if (node.getMetrics() != null) {
+                Number metricValue = node.getMetrics().getMetric(metric);
+                if (metricValue != null) {
+                    value = metricValue.toString();
+                }
+            }
+            values.add(value);
+        }
+
+        writer.write(String.join(",", values));
+        writer.newLine();
+    }
+
+    /**
+     * Escapes a string value for CSV format.
+     * Handles quotes and commas by wrapping in quotes.
+     */
+    private String escapeCsv(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        // If value contains comma, quote, or newline, wrap in quotes and escape
+        // internal quotes
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+
+        return value;
     }
 
     /**
@@ -149,25 +259,21 @@ public class CsvExportCommand implements Callable<Integer> {
     }
 
     /**
-     * Creates a minimal Project object from database metadata for serialization
-     * purposes.
+     * Resolves the output path, handling both relative and absolute paths.
+     * If outputPath is null, uses default location.
      */
-    private Project createMinimalProject(Path projectDir, GraphRepository repository) {
-        // Get project name from directory
-        String projectName = projectDir.getFileName().toString();
-
-        // Create project with basic info
-        Project project = new Project(projectDir, projectName);
-
-        // Add all nodes from repository to project
-        for (GraphNode node : repository.getNodes()) {
-            if (node instanceof ProjectFile) {
-                ProjectFile projectFile = (ProjectFile) node;
-                project.addProjectFile(projectFile);
-            }
+    private Path resolveOutputPath(Path projectDir, String outputPath) {
+        if (outputPath == null) {
+            // Default: <project>/.analysis/csv
+            return projectDir.resolve(AnalysisConstants.ANALYSIS_DIR).resolve("csv");
         }
 
-        return project;
+        Path p = Paths.get(outputPath);
+        if (p.isAbsolute()) {
+            return p;
+        }
+        // Relative path is resolved against current working directory
+        return Paths.get(System.getProperty("user.dir")).resolve(outputPath).normalize();
     }
 
     private boolean validateParameters() {
@@ -197,11 +303,11 @@ public class CsvExportCommand implements Callable<Integer> {
         return projectPath;
     }
 
-    public File getOutputFile() {
-        return outputFile;
+    public String getOutputDir() {
+        return outputDir;
     }
 
-    public List<String> getInspectors() {
-        return inspectors;
+    public List<String> getNodeTypeFilters() {
+        return nodeTypeFilters;
     }
 }
