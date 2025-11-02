@@ -1,4 +1,5 @@
 package com.analyzer.rules.ejb2spring;
+
 import com.analyzer.core.cache.LocalCache;
 
 import com.analyzer.api.inspector.BeanFactory;
@@ -22,6 +23,7 @@ public class Ejb2SpringInspectorBeanFactory implements BeanFactory {
         container.addComponent(EjbDeploymentDescriptorDetector.class);
         container.addComponent(EjbDeploymentDescriptorInspector.class);
         container.addComponent(EjbHomeInterfaceInspector.class);
+        container.addComponent(ExceptionAntipatternInspector.class);
         container.addComponent(EjbRemoteInterfaceInspector.class);
         container.addComponent(EntityBeanJavaSourceInspector.class);
         container.addComponent(FactoryBeanProviderInspector.class);
@@ -34,13 +36,17 @@ public class Ejb2SpringInspectorBeanFactory implements BeanFactory {
         container.addComponent(LegacyFrameworkDetector.class);
         container.addComponent(MessageDrivenBeanInspector.class);
         container.addComponent(MutableServiceInspector.class);
+        container.addComponent(RestServiceInspector.class);
         container.addComponent(SecurityFacadeInspector.class);
         container.addComponent(ServiceLocatorInspector.class);
         container.addComponent(ServletInspector.class);
         container.addComponent(SessionBeanJavaSourceInspector.class);
+        container.addComponent(SingletonPatternInspector.class);
         container.addComponent(StatefulSessionStateInspector.class);
         container.addComponent(TimerBeanInspector.class);
         container.addComponent(TransactionScriptInspector.class);
+        container.addComponent(UtilityClassInspector.class);
         container.addComponent(UtilityHelperInspector.class);
+        container.addComponent(WebServiceInspector.class);
     }
 }

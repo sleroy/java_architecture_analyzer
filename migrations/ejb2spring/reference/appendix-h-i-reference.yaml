@@ -1,0 +1,135 @@
+# Appendices H & I: Dependency Guide and JDBC vs JPA Decision Matrix
+# Reference data for dependency management and persistence strategy
+
+reference-data:
+  appendices:
+    - id: "appendix-h"
+      name: "Dependency Update Guide"
+      
+      spring-boot-starters:
+        - artifact: "spring-boot-starter-web"
+          purpose: "REST APIs, embedded Tomcat"
+          required: true
+          
+        - artifact: "spring-boot-starter-jdbc"
+          purpose: "JDBC support (pure JDBC, NO JPA)"
+          required: true
+          
+        - artifact: "spring-boot-starter-validation"
+          purpose: "Bean Validation"
+          required: true
+          
+        - artifact: "spring-boot-starter-actuator"
+          purpose: "Monitoring and metrics"
+          required: true
+          
+        - artifact: "spring-boot-starter-test"
+          purpose: "Testing framework"
+          required: true
+          scope: "test"
+          
+      database-drivers:
+        - database: "PostgreSQL"
+          jdk8-version: "42.2.27"
+          jdk11-version: "42.5.x"
+          artifact: "org.postgresql:postgresql"
+          
+        - database: "MySQL"
+          jdk8-version: "8.0.33"
+          jdk11-version: "8.2.x"
+          artifact: "mysql:mysql-connector-java"
+          
+        - database: "H2 (Testing)"
+          jdk8-version: "1.4.200"
+          jdk11-version: "2.2.x"
+          artifact: "com.h2database:h2"
+          scope: "test"
+          
+      dependencies-to-remove:
+        - artifact: "jboss-ejb-api_3.1_spec"
+          reason: "EJB container dependencies"
+          replacement: "Spring Context"
+          
+        - artifact: "javax.ejb:ejb-api"
+          reason: "EJB API"
+          replacement: "Spring annotations"
+          
+        - artifact: "javax.servlet:servlet-api"
+          reason: "Container-provided"
+          replacement: "Spring Boot Embedded"
+          
+        - artifact: "arquillian-junit-container"
+          reason: "EJB testing framework"
+          replacement: "Spring Boot Test"
+          
+    - id: "appendix-i"
+      name: "JDBC vs JPA Decision Matrix"
+      
+      use-jdbc-when:
+        - scenario: "Legacy SQL queries exist"
+          reason: "Reuse existing, tested SQL without rewriting"
+          
+        - scenario: "Complex SQL queries"
+          reason: "Native SQL easier to write and optimize than JPQL"
+          
+        - scenario: "Performance critical"
+          reason: "Direct control over SQL, no ORM overhead"
+          
+        - scenario: "Reporting/Analytics"
+          reason: "Complex aggregations better in SQL"
+          
+        - scenario: "Database-specific features"
+          reason: "Window functions, CTEs, stored procedures"
+          
+        - scenario: "Team expertise in SQL"
+          reason: "Leverage existing SQL skills"
+          
+        - scenario: "Batch operations"
+          reason: "JdbcTemplate batch updates very efficient"
+          
+      use-jpa-when:
+        - scenario: "CRUD-heavy application"
+          reason: "JPA simplifies CRUD operations"
+          
+        - scenario: "Complex object graphs"
+          reason: "Automatic relationship management"
+          
+        - scenario: "Database portability needed"
+          reason: "Abstract away database differences"
+          
+        - scenario: "Large domain model"
+          reason: "ORM reduces boilerplate"
+          
+        - scenario: "Caching requirements"
+          reason: "Second-level cache built-in"
+          
+      performance-comparison:
+        - operation: "Simple SELECT"
+          jdbc-performance: 100
+          jpa-performance: 95-100
+          winner: "~Tie"
+          
+        - operation: "Complex JOIN"
+          jdbc-performance: 100
+          jpa-performance: 80-90
+          winner: "JDBC"
+          
+        - operation: "Batch INSERT"
+          jdbc-performance: 100
+          jpa-performance: 70-85
+          winner: "JDBC"
+          
+        - operation: "Bulk UPDATE"
+          jdbc-performance: 100
+          jpa-performance: 60-80
+          winner: "JDBC"
+          notes: "N+1 query risk with JPA"
+          
+      migration-decision:
+        this-plan-uses: "Pure JDBC"
+        rationale:
+          - "Preserve existing SQL queries"
+          - "Avoid JPA complexity"
+          - "Maintain performance"
+          - "Leverage team SQL expertise"
+        future-consideration: "Can migrate to JPA later if requirements change"

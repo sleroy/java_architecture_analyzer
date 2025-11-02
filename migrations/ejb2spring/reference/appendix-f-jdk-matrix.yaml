@@ -1,0 +1,104 @@
+# Appendix F: JDK Version Migration Matrix
+# JDK upgrade path and compatibility reference
+
+reference-data:
+  appendix-id: "appendix-f"
+  name: "JDK Version Migration Matrix"
+  
+  jdk-features:
+    - feature: "Lambda Expressions"
+      jdk8: true
+      jdk11: true
+      jdk17: true
+      jdk21: true
+      
+    - feature: "Stream API"
+      jdk8: true
+      jdk11: true
+      jdk17: true
+      jdk21: true
+      
+    - feature: "HTTP Client (java.net.http)"
+      jdk8: false
+      jdk11: true
+      jdk17: true
+      jdk21: true
+      notes: "New in JDK 11"
+      
+    - feature: "var (Type Inference)"
+      jdk8: false
+      jdk11: true
+      jdk17: true
+      jdk21: true
+      
+    - feature: "Switch Expressions"
+      jdk8: false
+      jdk11: false
+      jdk17: true
+      jdk21: true
+      
+    - feature: "Text Blocks"
+      jdk8: false
+      jdk11: false
+      jdk17: true
+      jdk21: true
+      
+    - feature: "Records"
+      jdk8: false
+      jdk11: false
+      jdk17: true
+      jdk21: true
+      
+    - feature: "Pattern Matching"
+      jdk8: false
+      jdk11: false
+      jdk17: true
+      jdk21: true
+      
+    - feature: "Virtual Threads"
+      jdk8: false
+      jdk11: false
+      jdk17: false
+      jdk21: true
+      
+  removed-features:
+    - feature: "Java EE Modules (JAXB, JAX-WS)"
+      removed-in: "JDK 11"
+      replacement: "Add explicit dependencies or use Jakarta EE"
+      
+    - feature: "CORBA"
+      removed-in: "JDK 11"
+      replacement: "Use REST or gRPC"
+      
+    - feature: "Security Manager"
+      removed-in: "JDK 17 (deprecated), JDK 18+ (removed)"
+      replacement: "Use OS-level security, containerization"
+      
+  spring-boot-requirements:
+    - spring-boot-version: "2.7.x"
+      min-jdk: 8
+      max-jdk: 19
+      namespace: "javax.*"
+      notes: "Recommended for JDK 8-11 migration"
+      
+    - spring-boot-version: "3.0.x - 3.2.x"
+      min-jdk: 17
+      max-jdk: 21
+      namespace: "jakarta.*"
+      notes: "Requires javax → jakarta namespace migration"
+      
+  migration-paths:
+    - path-name: "Conservative"
+      sequence: "JDK 8 → 11 → 17 → 21"
+      estimated-effort: "2-3 weeks per step"
+      recommended-for: "Large applications"
+      
+    - path-name: "Moderate"
+      sequence: "JDK 8 → 11 → 21"
+      estimated-effort: "2-3 weeks + 3-4 weeks"
+      recommended-for: "Medium applications"
+      
+    - path-name: "Aggressive"
+      sequence: "JDK 8 → 17 → 21"
+      estimated-effort: "3-4 weeks + 2-3 weeks"
+      recommended-for: "Small apps, modern codebase"

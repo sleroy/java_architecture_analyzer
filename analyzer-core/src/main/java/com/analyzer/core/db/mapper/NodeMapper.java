@@ -45,7 +45,7 @@ public interface NodeMapper {
      * Find nodes by JSON property value using JSON path query.
      *
      * @param jsonPath JSON path expression (e.g., '$.java.fullyQualifiedName')
-     * @param value The value to match
+     * @param value    The value to match
      * @return List of matching nodes
      */
     List<GraphNodeEntity> findByPropertyValue(@Param("jsonPath") String jsonPath, @Param("value") String value);
@@ -53,7 +53,7 @@ public interface NodeMapper {
     /**
      * Merge properties into a node using JSON_MERGEPATCH.
      *
-     * @param nodeId The node ID
+     * @param nodeId          The node ID
      * @param propertiesPatch JSON string with properties to merge
      */
     void mergeProperties(@Param("nodeId") String nodeId, @Param("propertiesPatch") String propertiesPatch);
@@ -106,4 +106,54 @@ public interface NodeMapper {
      * @return true if node exists
      */
     boolean exists(@Param("id") String id);
+
+    /**
+     * Find nodes by a single tag.
+     *
+     * @param tag The tag to search for
+     * @return List of nodes containing this tag
+     */
+    List<GraphNodeEntity> findByTag(@Param("tag") String tag);
+
+    /**
+     * Find nodes having any of the provided tags.
+     *
+     * @param tags List of tags (OR condition)
+     * @return List of nodes containing any of these tags
+     */
+    List<GraphNodeEntity> findByAnyTags(@Param("tags") List<String> tags);
+
+    /**
+     * Find nodes having all of the provided tags.
+     *
+     * @param tags List of tags (AND condition)
+     * @return List of nodes containing all of these tags
+     */
+    List<GraphNodeEntity> findByAllTags(@Param("tags") List<String> tags);
+
+    /**
+     * Find nodes by type and having any of the provided tags.
+     *
+     * @param nodeType The node type
+     * @param tags     List of tags (OR condition)
+     * @return List of nodes of this type containing any of these tags
+     */
+    List<GraphNodeEntity> findByTypeAndAnyTags(@Param("nodeType") String nodeType, @Param("tags") List<String> tags);
+
+    /**
+     * Find nodes by type and having all of the provided tags.
+     *
+     * @param nodeType The node type
+     * @param tags     List of tags (AND condition)
+     * @return List of nodes of this type containing all of these tags
+     */
+    List<GraphNodeEntity> findByTypeAndAllTags(@Param("nodeType") String nodeType, @Param("tags") List<String> tags);
+
+    /**
+     * Count nodes by tag.
+     *
+     * @param tag The tag to count
+     * @return Count of nodes containing this tag
+     */
+    int countByTag(@Param("tag") String tag);
 }

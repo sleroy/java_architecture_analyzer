@@ -1,0 +1,467 @@
+# Phase 3: Session Bean Migration
+# Session Beans to Spring Services
+# Tasks: 300-302
+
+migration-plan:
+  phases:
+    - id: "phase-3"
+      name: "Session Bean Migration"
+      description: "Migrate Session Beans (Stateless & Stateful) to Spring Services"
+      
+      tasks:
+        - id: "task-300"
+          name: "Identify Session Beans"
+          description: "Locate all Session Bean implementations (Stateless and Stateful)"
+          pattern-tag: "SESSION_BEAN_IDENTIFICATION"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-stateless-session-beans"
+              description: "Query graph for Stateless Session Beans (tagged by EjbBinaryClassInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "ejb.stateless.sessionBean"
+              output-variable: "stateless_beans"
+              
+            - type: "GRAPH_QUERY"
+              name: "query-stateful-session-beans"
+              description: "Query graph for Stateful Session Beans (tagged by EjbBinaryClassInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "ejb.stateful.sessionBean"
+              output-variable: "stateful_beans"
+              
+            - type: "AI_PROMPT"
+              name: "analyze-session-beans"
+              description: "Comprehensive analysis of Session Beans"
+              prompt: |
+                Analyze all Session Bean implementations found in the application.
+                
+                ## Stateless Session Beans
+                Count: ${stateless_beans.size()}
+                ${stateless_beans}
+                
+                ## Stateful Session Beans
+                Count: ${stateful_beans.size()}
+                ${stateful_beans}
+                
+                For each Session Bean, provide:
+                1. **Bean Name**: EJB name
+                2. **Bean Type**: Stateless or Stateful
+                3. **Bean Class**: Fully qualified class name
+                4. **Business Interface**: Remote/Local interface name
+                5. **Business Methods**: All public methods with signatures
+                6. **Dependencies**: @EJB, @Resource injections
+                7. **Transaction Attributes**: @TransactionAttribute settings
+                8. **Security Annotations**: @RolesAllowed, @PermitAll, @DenyAll
+                9. **Lifecycle Callbacks**: @PostConstruct, @PreDestroy, @PrePassivate, @PostActivate
+                10. **EJBContext Usage**: getCallerPrincipal(), setRollbackOnly(), etc.
+                11. **State Management**: For stateful beans, what state is maintained?
+                12. **Migration Complexity**: HIGH/MEDIUM/LOW
+                
+                Format as structured inventory for Spring migration.
+              output-variable: "session_bean_analysis"
+              temperature: 0.2
+              max-tokens: 3000
+              
+            - type: "FILE_OPERATION"
+              name: "create-session-bean-inventory"
+              description: "Create SESSION_BEAN_INVENTORY.md"
+              operation: "CREATE"
+              path: "${project_root}/docs/migration/SESSION_BEAN_INVENTORY.md"
+              content: |
+                # Session Bean Inventory
+                
+                **Generated:** ${current_datetime}
+                **Migration Phase:** Phase 3 - Session Bean Migration
+                **Pattern TAG:** SESSION_BEAN_IDENTIFICATION
+                
+                ## Overview
+                
+                All Session Bean implementations to be migrated to Spring Services.
+                
+                ## Stateless Session Beans
+                
+                ${stateless_beans}
+                
+                ## Stateful Session Beans
+                
+                ${stateful_beans}
+                
+                ## Comprehensive Analysis
+                
+                ${session_bean_analysis}
+                
+                ## Migration Strategy
+                
+                **Stateless Session Beans → Spring @Service:**
+                1. Replace @Stateless with @Service
+                2. Replace @EJB with constructor injection
+                3. Replace @TransactionAttribute with @Transactional
+                4. Replace EJBContext operations with Spring equivalents
+                5. Update security annotations to Spring Security
+                
+                **Stateful Session Beans → Spring Session-Scoped:**
+                1. Use @Component with @Scope(SESSION)
+                2. Implement Serializable for HTTP session
+                3. Replace lifecycle callbacks (@PrePassivate → not needed)
+                4. Use @PreDestroy for cleanup
+                
+                ## Next Steps
+                
+                Proceed to TASK-301: Migrate Stateless Session Beans
+                
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-session-bean-inventory"
+              description: "Review Session Bean inventory"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                Session Bean inventory completed.
+                
+                - Stateless beans: ${stateless_beans.count}
+                - Stateful beans: ${stateful_beans.count}
+                - Total: ${stateless_beans.count + stateful_beans.count}
+                - Analysis complete
+                - SESSION_BEAN_INVENTORY.md created
+                
+                Review and confirm:
+                1. All Session Beans documented
+                2. Dependencies identified
+                3. Transaction settings understood
+                4. Migration approach clear
+                
+                Proceed to migrate Stateless Session Beans?
+              required: true
+              timeout-seconds: 1800
+              
+        - id: "task-301"
+          name: "Migrate Stateless Session Beans to Spring Services"
+          description: "Convert Stateless Session Beans to Spring @Service components"
+          pattern-tag: "STATELESS_TO_SPRING_SERVICE"
+          
+          blocks:
+            - type: "AI_PROMPT_BATCH"
+              name: "generate-spring-services"
+              description: "Generate Spring Services from Stateless Session Beans"
+              items-variable: "stateless_beans"
+              prompt-template: |
+                Convert the Stateless Session Bean to a Spring @Service.
+                
+                ## Stateless Bean: ${item.bean_name}
+                ## Analysis:
+                ${session_bean_analysis}
+                
+                Generate a Spring @Service class that:
+                
+                **Basic Structure:**
+                1. Package: ${package_base}.service
+                2. Class name: ${item.bean_name}Service (or keep original name)
+                3. Use @Service annotation
+                4. Use @Transactional at class level
+                
+                **Dependency Injection:**
+                - Replace @EJB with constructor injection
+                - Replace @Resource DataSource with DAO injection
+                - Use final fields for immutability
+                
+                **Business Methods:**
+                - Keep all business methods exactly as is
+                - Preserve method signatures
+                - Keep business logic unchanged
+                
+                **Transaction Management:**
+                ```java
+                // OLD: @TransactionAttribute(TransactionAttributeType.REQUIRED)
+                // NEW: @Transactional (default is REQUIRED)
+                
+                // OLD: @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
+                // NEW: @Transactional(propagation = Propagation.REQUIRES_NEW)
+                
+                // OLD: @TransactionAttribute(TransactionAttributeType.NOT_SUPPORTED)
+                // NEW: @Transactional(propagation = Propagation.NOT_SUPPORTED)
+                ```
+                
+                **EJBContext Operations:**
+                ```java
+                // OLD: sessionContext.setRollbackOnly()
+                // NEW: TransactionAspectSupport.currentTransactionStatus().setRollbackOnly()
+                
+                // OLD: sessionContext.getCallerPrincipal()
+                // NEW: SecurityContextHolder.getContext().getAuthentication()
+                
+                // OLD: sessionContext.isCallerInRole("ADMIN")
+                // NEW: auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"))
+                ```
+                
+                **Security Annotations:**
+                - @RolesAllowed → @Secured or @PreAuthorize
+                - @PermitAll → @PermitAll (Spring Security)
+                - @DenyAll → @DenyAll (Spring Security)
+                
+                Provide complete, compilable Spring @Service class.
+              output-variable: "spring_services"
+              temperature: 0.2
+              max-tokens: 3000
+              parallel: false
+              
+            - type: "FILE_OPERATION"
+              name: "create-service-classes"
+              description: "Create Spring Service classes"
+              operation: "CREATE_MULTIPLE"
+              files: "${spring_services}"
+              base-path: "${project_root}/semeru-springboot/src/main/java/${package_base_path}/service"
+              
+            - type: "OPENREWRITE"
+              name: "refactor-ejb-injections"
+              description: "Replace @EJB with @Autowired"
+              recipe: "org.openrewrite.java.spring.boot2.ReplaceEJBWithSpring"
+              options:
+                source-pattern: "@EJB"
+                target-pattern: "@Autowired"
+                
+            - type: "COMMAND"
+              name: "compile-services"
+              description: "Compile Spring Services"
+              command: |
+                cd ${project_root}/semeru-springboot && mvn compile
+              working-directory: "${project_root}"
+              timeout-seconds: 180
+              capture-output: true
+              
+            - type: "AI_PROMPT"
+              name: "generate-service-tests"
+              description: "Generate unit tests for services"
+              prompt: |
+                Generate comprehensive unit tests for the migrated Spring Services.
+                
+                ## Generated Services:
+                ${spring_services}
+                
+                Create JUnit 5 tests that:
+                1. Use @SpringBootTest or @ExtendWith(MockitoExtension.class)
+                2. Mock dependencies with @MockBean or @Mock
+                3. Test all business methods
+                4. Verify transaction behavior
+                5. Test exception handling
+                6. Verify security (if applicable)
+                
+                Provide complete test classes.
+              output-variable: "service_tests"
+              temperature: 0.2
+              max-tokens: 3000
+              
+            - type: "FILE_OPERATION"
+              name: "create-service-tests"
+              description: "Create Service test classes"
+              operation: "CREATE_MULTIPLE"
+              files: "${service_tests}"
+              base-path: "${project_root}/semeru-springboot/src/test/java/${package_base_path}/service"
+              
+            - type: "COMMAND"
+              name: "run-service-tests"
+              description: "Execute service tests"
+              command: |
+                cd ${project_root}/semeru-springboot && mvn test -Dtest="*ServiceTest"
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+              capture-output: true
+              
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-stateless-migration"
+              description: "Verify Stateless Session Bean migration"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                Stateless Session Bean migration completed.
+                
+                - Services created: ${spring_services.count}
+                - @EJB replaced with constructor injection
+                - Transaction management migrated
+                - EJBContext operations replaced
+                - Compilation successful
+                - Tests pass
+                
+                Verify:
+                1. All business logic preserved
+                2. Dependencies properly injected
+                3. Transactions work correctly
+                4. No EJB dependencies remain
+                
+                Proceed to migrate Stateful Session Beans?
+              required: true
+              timeout-seconds: 1800
+              
+        - id: "task-302"
+          name: "Migrate Stateful Session Beans to Spring Session-Scoped Components"
+          description: "Convert Stateful Session Beans to Spring session-scoped beans"
+          pattern-tag: "STATEFUL_TO_SPRING_SCOPE"
+          
+          blocks:
+            - type: "AI_PROMPT_BATCH"
+              name: "generate-session-scoped-beans"
+              description: "Generate Spring session-scoped components"
+              items-variable: "stateful_beans"
+              prompt-template: |
+                Convert the Stateful Session Bean to Spring session-scoped component.
+                
+                ## Stateful Bean: ${item.bean_name}
+                ## Analysis:
+                ${session_bean_analysis}
+                
+                Generate a Spring session-scoped component that:
+                
+                **Basic Structure:**
+                1. Package: ${package_base}.service
+                2. Use @Component annotation
+                3. Use @Scope(value = WebApplicationContext.SCOPE_SESSION, proxyMode = ScopedProxyMode.TARGET_CLASS)
+                4. Implement Serializable for HTTP session persistence
+                
+                **State Management:**
+                - Keep all instance variables (conversational state)
+                - Mark non-serializable fields as transient
+                - Initialize transient fields in @PostConstruct if needed
+                
+                **Lifecycle Callbacks:**
+                ```java
+                // OLD: @PrePassivate - not needed
+                // OLD: @PostActivate - not needed
+                // NEW: @PostConstruct for initialization
+                // NEW: @PreDestroy for cleanup (replaces @Remove)
+                ```
+                
+                **Example:**
+                ```java
+                @Component
+                @Scope(value = WebApplicationContext.SCOPE_SESSION, 
+                       proxyMode = ScopedProxyMode.TARGET_CLASS)
+                public class ShoppingCartService implements Serializable {
+                    private static final long serialVersionUID = 1L;
+                    
+                    private List<CartItem> items = new ArrayList<>();
+                    private Customer customer;
+                    
+                    private final OrderService orderService;
+                    
+                    public ShoppingCartService(OrderService orderService) {
+                        this.orderService = orderService;
+                    }
+                    
+                    @PostConstruct
+                    public void init() {
+                        // Initialize if needed
+                    }
+                    
+                    @PreDestroy
+                    public void cleanup() {
+                        items.clear();
+                    }
+                    
+                    // Business methods maintain state
+                }
+                ```
+                
+                **Session Configuration:**
+                Add to application.properties:
+                ```properties
+                server.servlet.session.timeout=30m
+                ```
+                
+                Provide complete Spring session-scoped component.
+              output-variable: "session_scoped_beans"
+              temperature: 0.2
+              max-tokens: 3000
+              parallel: false
+              
+            - type: "FILE_OPERATION"
+              name: "create-session-scoped-beans"
+              description: "Create session-scoped components"
+              operation: "CREATE_MULTIPLE"
+              files: "${session_scoped_beans}"
+              base-path: "${project_root}/semeru-springboot/src/main/java/${package_base_path}/service"
+              
+            - type: "FILE_OPERATION"
+              name: "update-application-properties"
+              description: "Add session configuration"
+              operation: "APPEND"
+              path: "${project_root}/semeru-springboot/src/main/resources/application.properties"
+              content: |
+                
+                # Session Configuration (for Stateful beans)
+                server.servlet.session.timeout=30m
+                server.servlet.session.cookie.http-only=true
+                server.servlet.session.cookie.secure=true
+                
+            - type: "COMMAND"
+              name: "compile-session-scoped-beans"
+              description: "Compile session-scoped beans"
+              command: |
+                cd ${project_root}/semeru-springboot && mvn compile
+              working-directory: "${project_root}"
+              timeout-seconds: 180
+              capture-output: true
+              
+            - type: "AI_PROMPT"
+              name: "generate-session-tests"
+              description: "Generate tests for session-scoped beans"
+              prompt: |
+                Generate integration tests for session-scoped beans.
+                
+                ## Session-Scoped Beans:
+                ${session_scoped_beans}
+                
+                Create tests that:
+                1. Use @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+                2. Test state persistence across requests
+                3. Test session isolation between users
+                4. Verify serialization works
+                5. Test cleanup on session timeout
+                
+                Provide complete test classes.
+              output-variable: "session_tests"
+              temperature: 0.2
+              max-tokens: 3000
+              
+            - type: "FILE_OPERATION"
+              name: "create-session-tests"
+              description: "Create session-scoped bean tests"
+              operation: "CREATE_MULTIPLE"
+              files: "${session_tests}"
+              base-path: "${project_root}/semeru-springboot/src/test/java/${package_base_path}/service"
+              
+            - type: "COMMAND"
+              name: "run-all-service-tests"
+              description: "Run all service tests"
+              command: |
+                cd ${project_root}/semeru-springboot && mvn test
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+              capture-output: true
+              
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-stateful-migration"
+              description: "Verify Stateful Session Bean migration"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                Stateful Session Bean migration completed.
+                
+                - Session-scoped beans: ${session_scoped_beans.count}
+                - Implements Serializable
+                - Session configuration added
+                - Compilation successful
+                - Tests pass
+                
+                Verify:
+                1. State maintained across requests
+                2. Session isolation works
+                3. Cleanup methods execute
+                4. No passivation/activation issues
+                
+                Phase 3 (Session Bean Migration) COMPLETE!
+                
+                Summary:
+                - Stateless → @Service: ${spring_services.count}
+                - Stateful → Session-scoped: ${session_scoped_beans.count}
+                - Total migrated: ${spring_services.count + session_scoped_beans.count}
+                
+                Proceed to Phase 3B (Message-Driven Beans)?
+              required: true
+              timeout-seconds: 1800

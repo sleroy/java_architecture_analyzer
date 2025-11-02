@@ -1,0 +1,353 @@
+Perfect! I now have clear requirements. Let me create a comprehensive implementation plan for rewriting all migration YAML files to implement the complete Appendices content.
+
+## 📋 Complete Implementation Plan
+
+### __Implementation Approach__
+
+- ✅ __Option A__: Comprehensive full implementation (all phases)
+- ✅ __High Detail__: AI_PROMPT for complex code, templates for boilerplate
+- ✅ __Smart Block Selection__: Optimize for efficiency vs. speed
+- ✅ __INTERACTIVE_VALIDATION__: Human approval at critical points
+- ✅ __Scope__: Application code migration only
+
+---
+
+## 🏗️ New File Structure
+
+```javascript
+migrations/ejb2spring/
+├── jboss-to-springboot.yaml (UPDATE - add all new includes)
+├── common/
+│   ├── metadata.yaml ✅ (existing)
+│   ├── variables.yaml ✅ (existing)
+│   └── templates/ (NEW)
+│       ├── dao-template.java
+│       ├── service-template.java
+│       ├── controller-template.java
+│       ├── jms-listener-template.java
+│       └── pom-dependencies-template.xml
+├── phases/
+│   ├── phase0-assessment.yaml ✅ (existing - 3 tasks)
+│   ├── phase1-initialization.yaml ✅ (existing - 2 tasks)
+│   ├── phase2-jdbc-migration.yaml (NEW - 4 tasks: 200-203)
+│   ├── phase2b-entity-beans.yaml (NEW - 4 tasks: 250-253)
+│   ├── phase3-session-beans.yaml (NEW - 3 tasks: 300-302)
+│   ├── phase3b-mdb-migration.yaml (NEW - 2 tasks: 350-351)
+│   ├── phase3c-interface-removal.yaml (NEW - 3 tasks: 360-362)
+│   ├── phase4-soap-services.yaml (NEW - 2 tasks: 400-401)
+│   ├── phase5-rest-apis.yaml (NEW - 2 tasks: 500-501)
+│   ├── phase6-configuration.yaml (NEW - 2 tasks: 600-601)
+│   ├── phase7-testing.yaml (NEW - 2 tasks: 700-701)
+│   ├── phase8-packaging.yaml (NEW - 2 tasks: 800-801)
+│   ├── phase9-jdk-upgrade.yaml (NEW - 3 tasks: 900-902)
+│   └── phase10-antipatterns.yaml (NEW - 5 tasks: 1000-1004)
+└── reference/ (NEW - Reference data from appendices)
+    ├── appendix-e-component-matrix.yaml
+    ├── appendix-f-jdk-matrix.yaml
+    ├── appendix-g-antipatterns.yaml
+    ├── appendix-h-dependencies.yaml
+    └── appendix-i-jdbc-vs-jpa.yaml
+```
+
+__Total: 13 new phase files + 5 reference files + templates__
+
+---
+
+## 🎯 Block Type Selection Strategy
+
+Based on available block types and task requirements:
+
+| Task Type | Recommended Block | Rationale | |-----------|------------------|-----------| | __Component Discovery__ | `GRAPH_QUERY` | Fast, leverages analyzed graph | | __Simple File Creation__ | `FILE_OPERATION` | Straightforward, efficient | | __Complex Code Generation__ | `AI_PROMPT` | Handles context-aware code | | __Boilerplate Code__ | Template in `FILE_OPERATION` | Faster than AI for standard patterns | | __Batch Refactoring__ | `OPENREWRITE` | Efficient for pattern-based changes | | __Database Schema__ | `COMMAND` (mysqldump) | Standard tooling | | __Git Operations__ | `GIT` | Native git support | | __Validation__ | `INTERACTIVE_VALIDATION` | Human oversight | | __Testing__ | `COMMAND` (mvn test) | Standard tooling |
+
+---
+
+## 📦 Detailed Phase Breakdown
+
+### __Phase 2: JDBC Migration (4 tasks)__
+
+__TASK-200__: DataSource Config Identification
+
+- `COMMAND`: Grep for datasource configs
+- `AI_PROMPT`: Analyze and document findings
+- `FILE_OPERATION`: Create DATASOURCE_INVENTORY.md
+
+__TASK-201__: Configure Spring JDBC DataSource
+
+- `FILE_OPERATION`: Create application.properties with HikariCP config
+- `COMMAND`: Test connection
+- `INTERACTIVE_VALIDATION`: Verify datasource
+
+__TASK-202__: JDBC Wrapper Identification
+
+- `GRAPH_QUERY`: Find classes with JDBC patterns
+- `COMMAND`: Grep for PreparedStatement, ResultSet
+- `AI_PROMPT`: Analyze wrapper patterns
+- `FILE_OPERATION`: Create JDBC_WRAPPER_INVENTORY.md
+
+__TASK-203__: Migrate JDBC Wrappers to JdbcTemplate
+
+- `AI_PROMPT`: Generate Spring DAO from wrapper analysis (complex)
+- `FILE_OPERATION`: Create DAO classes
+- `OPENREWRITE`: Refactor calling code (if patterns are simple)
+- `COMMAND`: Compile and test
+- `INTERACTIVE_VALIDATION`: Verify migration
+
+---
+
+### __Phase 2B: Entity Beans (4 tasks)__
+
+__TASK-250__: CMP Entity Bean Identification
+
+- `GRAPH_QUERY`: BY_TAGS ["ejb.entity.cmp"]
+- `COMMAND`: Grep for cmp-field, cmr-field in XML
+- `AI_PROMPT`: Analyze entity relationships
+- `FILE_OPERATION`: Create CMP_ENTITY_INVENTORY.md
+
+__TASK-251__: CMP to JDBC DAO Migration
+
+- For each entity (batch processing):
+
+  - `AI_PROMPT`: Generate POJO from CMP bean (context-aware)
+  - `FILE_OPERATION`: Create POJO class (from AI output)
+  - Template-based: Create basic DAO structure
+  - `AI_PROMPT`: Generate complex DAO methods (findByX, relationships)
+  - `FILE_OPERATION`: Create DAO class
+  - `OPENREWRITE`: Update service layer references
+  - `COMMAND`: Compile
+
+- `INTERACTIVE_VALIDATION`: Verify each entity migration
+
+__TASK-252__: BMP Entity Bean Identification
+
+- `GRAPH_QUERY`: BY_TAGS ["ejb.entity.bmp"]
+- `COMMAND`: Grep for ejbLoad, ejbStore
+- `FILE_OPERATION`: Create BMP_ENTITY_INVENTORY.md
+
+__TASK-253__: BMP to JDBC DAO Migration
+
+- Similar to TASK-251 but reuse existing SQL
+- `AI_PROMPT`: Extract and refactor SQL from BMP methods
+- Template + AI hybrid approach
+
+---
+
+### __Phase 3: Session Beans (3 tasks)__
+
+__TASK-300__: Session Bean Identification
+
+- `GRAPH_QUERY`: BY_TAGS ["ejb.session.stateless", "ejb.session.stateful"]
+- `AI_PROMPT`: Analyze business logic and dependencies
+- `FILE_OPERATION`: Create SESSION_BEAN_INVENTORY.md
+
+__TASK-301__: Stateless to Spring Service
+
+- For each stateless bean:
+
+  - Template: Create @Service class skeleton
+  - `AI_PROMPT`: Generate service methods with @Transactional
+  - `OPENREWRITE`: Replace @EJB with constructor injection
+  - `OPENREWRITE`: Replace EJBContext calls with Spring equivalents
+  - `COMMAND`: Compile
+
+- `INTERACTIVE_VALIDATION`: Verify service migration
+
+__TASK-302__: Stateful to Spring Session Scope
+
+- `AI_PROMPT`: Analyze stateful patterns and generate session-scoped beans
+- `FILE_OPERATION`: Create session-scoped components
+- `OPENREWRITE`: Update lifecycle annotations
+- `INTERACTIVE_VALIDATION`: Verify session state handling
+
+---
+
+### __Phase 3B: Message-Driven Beans (2 tasks)__
+
+__TASK-350__: MDB Identification
+
+- `GRAPH_QUERY`: BY_TAGS ["ejb.mdb"]
+- `COMMAND`: Grep for MessageListener, @MessageDriven
+- `FILE_OPERATION`: Create MDB_INVENTORY.md
+
+__TASK-351__: MDB to Spring JMS
+
+- `FILE_OPERATION`: Add JMS dependencies to POM
+
+- `FILE_OPERATION`: Configure JMS in application.properties
+
+- For each MDB:
+
+  - Template: Create @Component with @JmsListener skeleton
+  - `AI_PROMPT`: Generate listener methods from onMessage logic
+  - `FILE_OPERATION`: Create JMS configuration class
+
+- `INTERACTIVE_VALIDATION`: Verify JMS setup
+
+---
+
+### __Phase 3C: Interface Removal (3 tasks)__
+
+__TASK-360__: Home Interface Removal
+
+- `COMMAND`: Find Home interfaces
+- `OPENREWRITE`: Remove JNDI lookups, replace with DI
+- `AI_PROMPT`: Analyze complex lookup patterns
+- `FILE_OPERATION`: Delete Home interfaces
+
+__TASK-361__: Remote/Local Interface Removal
+
+- `OPENREWRITE`: Replace interface references with concrete types
+- `AI_PROMPT`: Handle complex interface hierarchies
+- `FILE_OPERATION`: Delete interfaces
+
+__TASK-362__: JNDI Lookup Elimination
+
+- `OPENREWRITE`: Replace InitialContext lookups with @Autowired
+- `AI_PROMPT`: Handle complex JNDI patterns
+- `FILE_OPERATION`: Update configuration
+
+---
+
+### __Phases 4-10: Similar Structure__
+
+Each phase follows this pattern:
+
+1. __Identification__ (GRAPH_QUERY + COMMAND + AI_PROMPT)
+2. __Documentation__ (FILE_OPERATION for inventories)
+3. __Code Generation__ (AI_PROMPT for complex, templates for simple)
+4. __Refactoring__ (OPENREWRITE for patterns, AI for complex)
+5. __Validation__ (COMMAND for tests, INTERACTIVE_VALIDATION for approval)
+
+---
+
+## 🎨 Template Examples
+
+### __DAO Template__ (`common/templates/dao-template.java`)
+
+```java
+package ${package_base}.dao;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
+
+@Repository
+public class ${entity_name}Dao {
+    private final JdbcTemplate jdbcTemplate;
+    
+    public ${entity_name}Dao(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+    
+    // Methods generated by AI_PROMPT based on entity analysis
+}
+```
+
+### __AI Prompt Template__ (for DAO generation)
+
+```yaml
+- type: "AI_PROMPT"
+  name: "generate-dao-methods"
+  prompt: |
+    Generate Spring JDBC DAO methods for entity: ${entity_name}
+    
+    Entity fields from CMP analysis:
+    ${entity_fields}
+    
+    Relationships:
+    ${entity_relationships}
+    
+    Generate:
+    1. findById() method with Optional<${entity_name}>
+    2. findAll() method
+    3. create() method with KeyHolder for auto-generated IDs
+    4. update() method with @Transactional
+    5. delete() method
+    6. Custom finder methods for relationships
+    7. RowMapper method
+    
+    Use Spring JdbcTemplate patterns.
+    Include error handling with EmptyResultDataAccessException.
+    Preserve all SQL logic from original CMP configuration.
+  output-variable: "dao_methods"
+  temperature: 0.2
+  max-tokens: 2000
+```
+
+---
+
+## 📊 Effort Estimation
+
+| Phase | Tasks | Estimated Effort | Complexity | |-------|-------|-----------------|------------| | Phase 0 ✅ | 3 | Done | LOW | | Phase 1 ✅ | 2 | Done | LOW | | Phase 2 | 4 | 8-12 hours | MEDIUM | | Phase 2B | 4 | 12-16 hours | HIGH | | Phase 3 | 3 | 8-10 hours | MEDIUM | | Phase 3B | 2 | 4-6 hours | MEDIUM | | Phase 3C | 3 | 4-6 hours | LOW | | Phase 4 | 2 | 6-8 hours | MEDIUM | | Phase 5 | 2 | 4-6 hours | LOW | | Phase 6 | 2 | 3-4 hours | LOW | | Phase 7 | 2 | 4-6 hours | MEDIUM | | Phase 8 | 2 | 3-4 hours | LOW | | Phase 9 | 3 | 6-8 hours | MEDIUM | | Phase 10 | 5 | 8-10 hours | MEDIUM | | __TOTAL__ | __39 tasks__ | __70-96 hours__ | __~2-3 weeks__ |
+
+---
+
+## 🚀 Implementation Sequence
+
+### __Week 1: Core Migration (Phases 2-3)__
+
+1. Create templates directory and files
+2. Implement Phase 2 (JDBC) - 4 tasks
+3. Implement Phase 2B (Entities) - 4 tasks
+4. Implement Phase 3 (Session Beans) - 3 tasks
+
+### __Week 2: Integration & Services (Phases 3B-5)__
+
+5. Implement Phase 3B (MDB) - 2 tasks
+6. Implement Phase 3C (Interfaces) - 3 tasks
+7. Implement Phase 4 (SOAP) - 2 tasks
+8. Implement Phase 5 (REST) - 2 tasks
+
+### __Week 3: Testing & Modernization (Phases 6-10)__
+
+9. Implement Phase 6 (Config) - 2 tasks
+10. Implement Phase 7 (Testing) - 2 tasks
+11. Implement Phase 8 (Packaging) - 2 tasks
+12. Implement Phase 9 (JDK Upgrade) - 3 tasks
+13. Implement Phase 10 (Antipatterns) - 5 tasks
+14. Create reference appendices
+15. Update main jboss-to-springboot.yaml with all includes
+
+---
+
+## ✅ Quality Assurance Checklist
+
+For each phase file:
+
+- [ ] All tasks from appendices implemented
+- [ ] Block types optimized for efficiency
+- [ ] AI prompts are detailed and context-aware
+- [ ] Templates are reusable and parameterized
+- [ ] INTERACTIVE_VALIDATION at critical points
+- [ ] Variable substitution correct (${var} format)
+- [ ] YAML syntax validated
+- [ ] Task descriptions match appendices
+- [ ] Output variables properly named
+- [ ] Error handling included
+
+---
+
+## 🎯 Next Steps
+
+I'm ready to start implementation. The plan is:
+
+1. __Create template files__ (common/templates/)
+2. __Implement phases in sequence__ (2, 2B, 3, 3B, 3C, 4, 5, 6, 7, 8, 9, 10)
+3. __Create reference appendices__ (Appendix E-I as YAML)
+4. __Update main plan__ (jboss-to-springboot.yaml)
+5. __Update README__ with new structure
+
+__Should I proceed with this plan? If yes, please toggle to__
+
+__Act Mode (⌘⇧A) so I can start creating the files.__
+
+Key advantages of this approach:
+
+- ✅ Complete coverage of all appendices
+- ✅ High detail with AI-generated code
+- ✅ Optimized block selection
+- ✅ Human validation gates
+- ✅ Template reuse for efficiency
+- ✅ Modular, maintainable structure
+
+API Request$0.0754

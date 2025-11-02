@@ -13,6 +13,9 @@ import picocli.CommandLine.HelpCommand;
         CsvExportCommand.class,
         JsonExportCommand.class,
         InspectorDependencyGraphCommand.class,
+        ApplyMigrationCommand.class,
+        PlanInfoCommand.class,
+        MigrationHistoryCommand.class,
         HelpCommand.class
 })
 public class AnalyzerCLI implements Runnable {

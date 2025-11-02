@@ -1,0 +1,272 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://analyzer.com/schemas/migration-plan.json",
+  "title": "Migration Plan Schema",
+  "description": "JSON Schema for validating migration plan YAML files",
+  "type": "object",
+  "required": ["migration-plan"],
+  "properties": {
+    "migration-plan": {
+      "type": "object",
+      "required": ["phases"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "description": { "type": "string" },
+        "variables": { "type": "object" },
+        "phases": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/phase" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "phase": {
+      "type": "object",
+      "required": ["id", "name", "tasks"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "tasks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/task" }
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": ["id", "blocks"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "pattern-tag": { "type": "string" },
+        "blocks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/block" }
+        }
+      }
+    },
+    "block": {
+      "type": "object",
+      "required": ["type", "name"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "COMMAND",
+            "GIT",
+            "FILE_OPERATION",
+            "OPENREWRITE",
+            "GRAPH_QUERY",
+            "AI_PROMPT",
+            "AI_PROMPT_BATCH",
+            "INTERACTIVE_VALIDATION"
+          ]
+        },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "enable_if": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "COMMAND" } }
+          },
+          "then": {
+            "required": ["command"],
+            "properties": {
+              "command": { "type": "string" },
+              "working-directory": { "type": "string" },
+              "timeout-seconds": { "type": "integer" },
+              "capture-output": { "type": "boolean" },
+              "output-variable": { "type": "string" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "GIT" } }
+          },
+          "then": {
+            "required": ["args"],
+            "properties": {
+              "args": {
+                "oneOf": [
+                  { "type": "string" },
+                  { "type": "array", "items": { "type": "string" } }
+                ]
+              },
+              "working-directory": { "type": "string" },
+              "timeout-seconds": { "type": "integer" },
+              "idempotent": { "type": "boolean" },
+              "capture-output": { "type": "boolean" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "FILE_OPERATION" } }
+          },
+          "then": {
+            "required": ["operation"],
+            "properties": {
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "CREATE",
+                  "CREATE_MULTIPLE",
+                  "APPEND",
+                  "COPY",
+                  "MOVE",
+                  "DELETE",
+                  "REPLACE"
+                ]
+              },
+              "path": { "type": "string" },
+              "content": { "type": "string" },
+              "source": { "type": "string" },
+              "destination": { "type": "string" },
+              "files": { "type": "string" },
+              "base-path": { "type": "string" }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "operation": { "enum": ["CREATE", "REPLACE"] }
+                  }
+                },
+                "then": {
+                  "required": ["path"]
+                }
+              },
+              {
+                "if": {
+                  "properties": { "operation": { "const": "CREATE_MULTIPLE" } }
+                },
+                "then": {
+                  "required": ["files", "base-path"]
+                }
+              },
+              {
+                "if": {
+                  "properties": { "operation": { "enum": ["COPY", "MOVE"] } }
+                },
+                "then": {
+                  "required": ["source", "destination"]
+                }
+              },
+              {
+                "if": {
+                  "properties": { "operation": { "const": "DELETE" } }
+                },
+                "then": {
+                  "required": ["path"]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "OPENREWRITE" } }
+          },
+          "then": {
+            "required": ["recipe"],
+            "properties": {
+              "recipe": { "type": "string" },
+              "recipe-options": { "type": "object" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "GRAPH_QUERY" } }
+          },
+          "then": {
+            "required": ["query-type"],
+            "properties": {
+              "query-type": {
+                "type": "string",
+                "enum": ["BY_TYPE", "BY_TAGS", "BY_PACKAGE", "CUSTOM"]
+              },
+              "node-type": { "type": "string" },
+              "tags": {
+                "oneOf": [
+                  { "type": "string" },
+                  { "type": "array", "items": { "type": "string" } }
+                ]
+              },
+              "output-variable": { "type": "string" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "AI_PROMPT" } }
+          },
+          "then": {
+            "required": ["prompt"],
+            "properties": {
+              "prompt": { "type": "string" },
+              "output-variable": { "type": "string" },
+              "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
+              "max-tokens": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "AI_PROMPT_BATCH" } }
+          },
+          "then": {
+            "required": ["items-variable", "prompt-template"],
+            "properties": {
+              "items-variable": {
+                "type": "string",
+                "description": "Variable name containing list of items to process"
+              },
+              "prompt-template": {
+                "type": "string",
+                "description": "Template for generating prompts for each item"
+              },
+              "max-prompts": { "type": "integer", "minimum": -1 },
+              "parallel": { "type": "boolean" },
+              "temperature": { "type": "number", "minimum": 0, "maximum": 2 },
+              "max-tokens": { "type": "integer", "minimum": 1 },
+              "output-variable": { "type": "string" }
+            },
+            "not": {
+              "required": ["batch-variable"],
+              "errorMessage": "Use 'items-variable' not 'batch-variable'"
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "INTERACTIVE_VALIDATION" } }
+          },
+          "then": {
+            "required": ["validation-type"],
+            "properties": {
+              "validation-type": {
+                "type": "string",
+                "enum": ["MANUAL_CONFIRM", "CODE_REVIEW", "TEST_VERIFICATION"]
+              },
+              "message": { "type": "string" },
+              "validation-params": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "required": { "type": "boolean" },
+              "timeout-seconds": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

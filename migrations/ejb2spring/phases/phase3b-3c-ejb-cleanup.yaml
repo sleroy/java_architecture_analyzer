@@ -1,0 +1,254 @@
+# Phase 3B & 3C: Message-Driven Beans and EJB Interface Removal
+# MDB Migration + Home/Remote/Local Interface Elimination + JNDI Cleanup
+# Tasks: 350-351, 360-362
+
+migration-plan:
+  phases:
+    - id: "phase-3b"
+      name: "Message-Driven Bean Migration"
+      description: "Migrate Message-Driven Beans to Spring JMS"
+      
+      tasks:
+        - id: "task-350"
+          name: "Identify Message-Driven Beans"
+          description: "Locate all MDB implementations"
+          pattern-tag: "MDB_IDENTIFICATION"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-message-driven-beans"
+              description: "Query graph for MDBs (tagged by EjbBinaryClassInspector or MessageDrivenBeanInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "ejb.messageDrivenBean"
+              output-variable: "mdbs"
+              
+            - type: "AI_PROMPT"
+              name: "analyze-mdbs"
+              description: "Analyze MDBs"
+              prompt: |
+                Analyze Message-Driven Beans from graph analysis.
+                
+                ## Message-Driven Beans
+                Count: ${mdbs.size()}
+                ${mdbs}
+                
+                For each MDB document:
+                1. Bean name, destination (queue/topic)
+                2. Message processing logic
+                3. Transaction settings
+                4. Dependencies
+                
+                Provide Spring @JmsListener migration strategy.
+              output-variable: "mdb_analysis"
+              temperature: 0.2
+              max-tokens: 2000
+              
+            - type: "FILE_OPERATION"
+              name: "create-mdb-inventory"
+              description: "Create MDB_INVENTORY.md"
+              operation: "CREATE"
+              path: "${project_root}/docs/migration/MDB_INVENTORY.md"
+              content: |
+                # Message-Driven Bean Inventory
+                
+                ${mdb_analysis}
+                
+                Migration: @MessageDriven → @JmsListener
+                
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-mdb-inventory"
+              validation-type: "MANUAL_CONFIRM"
+              message: "MDB inventory complete. Proceed to migration?"
+              required: true
+              timeout-seconds: 1800
+              
+        - id: "task-351"
+          name: "Migrate MDBs to Spring JMS"
+          description: "Convert MDBs to @JmsListener"
+          pattern-tag: "MDB_TO_SPRING_JMS"
+          
+          blocks:
+            - type: "FILE_OPERATION"
+              name: "add-jms-dependencies"
+              description: "Add Spring JMS dependencies"
+              operation: "APPEND"
+              path: "${project_root}/semeru-springboot/pom.xml"
+              content: |
+                
+                        <!-- JMS Support -->
+                        <dependency>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-starter-activemq</artifactId>
+                        </dependency>
+                
+            - type: "AI_PROMPT_BATCH"
+              name: "generate-jms-listeners"
+              description: "Generate @JmsListener components"
+              items-variable: "mdbs"
+              prompt-template: |
+                Convert MDB to Spring @JmsListener.
+                
+                ${item}
+                ${mdb_analysis}
+                
+                Generate @Component with @JmsListener(destination="...").
+                Use @Transactional for transaction management.
+                Inject dependencies via constructor.
+                
+                Provide complete Spring JMS listener.
+              output-variable: "jms_listeners"
+              temperature: 0.2
+              max-tokens: 2000
+              parallel: false
+              
+            - type: "FILE_OPERATION"
+              name: "create-jms-listeners"
+              description: "Create JMS listeners"
+              operation: "CREATE_MULTIPLE"
+              files: "${jms_listeners}"
+              base-path: "${project_root}/semeru-springboot/src/main/java/${package_base_path}/listener"
+              
+            - type: "FILE_OPERATION"
+              name: "add-jms-config"
+              description: "Add JMS configuration"
+              operation: "APPEND"
+              path: "${project_root}/semeru-springboot/src/main/resources/application.properties"
+              content: |
+                
+                # JMS Configuration
+                spring.activemq.broker-url=tcp://localhost:61616
+                spring.jms.listener.concurrency=1-10
+                
+            - type: "COMMAND"
+              name: "compile-jms"
+              description: "Compile JMS listeners"
+              command: "cd ${project_root}/semeru-springboot && mvn compile"
+              working-directory: "${project_root}"
+              timeout-seconds: 180
+              
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-mdb-migration"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                MDB migration complete.
+                - JMS listeners created: ${jms_listeners.count}
+                - Configuration added
+                Proceed to Phase 3C?
+              required: true
+              timeout-seconds: 1800
+              
+    - id: "phase-3c"
+      name: "EJB Interface Removal"
+      description: "Eliminate Home, Remote, Local interfaces and JNDI lookups"
+      
+      tasks:
+        - id: "task-360"
+          name: "Remove Home and LocalHome Interfaces"
+          description: "Eliminate Home/LocalHome interfaces"
+          pattern-tag: "HOME_INTERFACE_REMOVAL"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-home-interfaces"
+              description: "Query graph for Home and LocalHome interfaces (tagged by EjbBinaryClassInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "ejb.homeInterface"
+                - "ejb.localHomeInterface"
+              output-variable: "home_interfaces"
+              
+            - type: "OPENREWRITE"
+              name: "remove-jndi-lookups"
+              description: "Replace JNDI lookups with DI"
+              recipe: "org.openrewrite.java.spring.boot2.ReplaceEJBWithSpring"
+              options:
+                remove-home-lookups: true
+                replace-with-di: true
+                
+            - type: "COMMAND"
+              name: "delete-home-files"
+              description: "Delete Home interface files"
+              command: |
+                find ${project_root}/src -name "*Home.java" -delete
+              working-directory: "${project_root}"
+              timeout-seconds: 60
+              
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-home-removal"
+              validation-type: "MANUAL_CONFIRM"
+              message: "Home interfaces removed. Proceed?"
+              required: true
+              timeout-seconds: 1800
+              
+        - id: "task-361"
+          name: "Remove Remote and Local Interfaces"
+          description: "Eliminate component interfaces"
+          pattern-tag: "REMOTE_INTERFACE_REMOVAL"
+          
+          blocks:
+            - type: "OPENREWRITE"
+              name: "replace-interface-refs"
+              description: "Replace interface references with concrete types"
+              recipe: "org.openrewrite.java.spring.boot2.ReplaceEJBWithSpring"
+              options:
+                remove-interfaces: true
+                
+            - type: "COMMAND"
+              name: "delete-interface-files"
+              description: "Delete Remote/Local files"
+              command: |
+                find ${project_root}/src -name "*Remote.java" -o -name "*Local.java" | xargs rm -f
+              working-directory: "${project_root}"
+              timeout-seconds: 60
+              
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-interface-removal"
+              validation-type: "MANUAL_CONFIRM"
+              message: "Component interfaces removed. Proceed?"
+              required: true
+              timeout-seconds: 1800
+              
+        - id: "task-362"
+          name: "Eliminate JNDI Lookups"
+          description: "Replace all JNDI with Spring DI"
+          pattern-tag: "JNDI_LOOKUP_ELIMINATION"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-jndi-lookups"
+              description: "Query graph for JNDI lookup patterns (tagged by JndiLookupInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "jndi_lookup_inspector.uses_jndi"
+              output-variable: "jndi_lookups"
+              
+            - type: "OPENREWRITE"
+              name: "replace-jndi-with-di"
+              description: "Replace JNDI with @Autowired"
+              recipe: "org.openrewrite.java.spring.boot2.ReplaceEJBWithSpring"
+              options:
+                remove-jndi: true
+                replace-with-spring-di: true
+                
+            - type: "COMMAND"
+              name: "final-compile"
+              description: "Final compilation"
+              command: "cd ${project_root}/semeru-springboot && mvn clean compile"
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+              
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-ejb-cleanup"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                EJB cleanup complete!
+                - Home interfaces removed
+                - Component interfaces removed
+                - JNDI lookups eliminated
+                - Application compiles
+                
+                Phase 3B & 3C COMPLETE!
+                Proceed to remaining phases (4-10)?
+              required: true
+              timeout-seconds: 1800

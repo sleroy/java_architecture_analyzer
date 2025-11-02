@@ -81,6 +81,73 @@ public class H2GraphStorageRepository {
     }
 
     /**
+     * Find nodes by a single tag (optimized query).
+     *
+     * @param tag The tag to search for
+     * @return List of nodes containing this tag
+     */
+    public List<GraphNodeEntity> findNodesByTag(String tag) {
+        try (SqlSession session = config.openSession()) {
+            NodeMapper mapper = session.getMapper(NodeMapper.class);
+            return mapper.findByTag(tag);
+        }
+    }
+
+    /**
+     * Find nodes having any of the provided tags (optimized query).
+     *
+     * @param tags List of tags (OR condition)
+     * @return List of nodes containing any of these tags
+     */
+    public List<GraphNodeEntity> findNodesByAnyTags(List<String> tags) {
+        try (SqlSession session = config.openSession()) {
+            NodeMapper mapper = session.getMapper(NodeMapper.class);
+            return mapper.findByAnyTags(tags);
+        }
+    }
+
+    /**
+     * Find nodes having all of the provided tags (optimized query).
+     *
+     * @param tags List of tags (AND condition)
+     * @return List of nodes containing all of these tags
+     */
+    public List<GraphNodeEntity> findNodesByAllTags(List<String> tags) {
+        try (SqlSession session = config.openSession()) {
+            NodeMapper mapper = session.getMapper(NodeMapper.class);
+            return mapper.findByAllTags(tags);
+        }
+    }
+
+    /**
+     * Find nodes by type and having any of the provided tags (optimized query).
+     *
+     * @param nodeType The node type
+     * @param tags     List of tags (OR condition)
+     * @return List of nodes of this type containing any of these tags
+     */
+    public List<GraphNodeEntity> findNodesByTypeAndAnyTags(String nodeType, List<String> tags) {
+        try (SqlSession session = config.openSession()) {
+            NodeMapper mapper = session.getMapper(NodeMapper.class);
+            return mapper.findByTypeAndAnyTags(nodeType, tags);
+        }
+    }
+
+    /**
+     * Find nodes by type and having all of the provided tags (optimized query).
+     *
+     * @param nodeType The node type
+     * @param tags     List of tags (AND condition)
+     * @return List of nodes of this type containing all of these tags
+     */
+    public List<GraphNodeEntity> findNodesByTypeAndAllTags(String nodeType, List<String> tags) {
+        try (SqlSession session = config.openSession()) {
+            NodeMapper mapper = session.getMapper(NodeMapper.class);
+            return mapper.findByTypeAndAllTags(nodeType, tags);
+        }
+    }
+
+    /**
      * Check if a node exists.
      *
      * @param nodeId The node ID

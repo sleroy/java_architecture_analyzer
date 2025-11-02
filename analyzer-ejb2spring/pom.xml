@@ -40,6 +40,12 @@
             <artifactId>rewrite-spring</artifactId>
         </dependency>
 
+        <!-- FreeMarker Template Engine for migration plans -->
+        <dependency>
+            <groupId>org.freemarker</groupId>
+            <artifactId>freemarker</artifactId>
+        </dependency>
+
         <!-- XML Binding for ejb-jar.xml parsing -->
         <dependency>
             <groupId>jakarta.xml.bind</groupId>

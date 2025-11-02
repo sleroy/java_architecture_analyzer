@@ -1,0 +1,230 @@
+# Example Migration Plan with Conditional Block Execution
+# Demonstrates the enable_if feature for conditional execution based on variables
+
+migration-plan:
+  name: "Conditional Execution Example"
+  version: "1.0.0"
+  description: |
+    Demonstrates conditional block execution using enable_if expressions.
+    Blocks can be conditionally executed based on variable values.
+  
+  metadata:
+    author: "Migration Team"
+    created-date: "2025-01-11"
+  
+  # Global variables that can be used in enable_if conditions
+  variables:
+    migrate_db: true
+    backup_enabled: false
+    environment: "production"
+    database_type: "mysql"
+    ejb_count: 150
+    complexity_score: 8
+    skip_tests: false
+  
+  phases:
+    # ========================================================================
+    # PHASE 1: Conditional Execution Examples
+    # ========================================================================
+    - id: "phase-1"
+      name: "Conditional Execution Examples"
+      description: "Various examples of conditional block execution"
+      
+      tasks:
+        # ====================================================================
+        # TASK 1: Simple Boolean Conditions
+        # ====================================================================
+        - id: "task-1"
+          name: "Simple Boolean Conditions"
+          description: "Basic true/false conditions"
+          
+          blocks:
+            # Always executes (no condition)
+            - type: "COMMAND"
+              name: "always-execute"
+              command: echo "This block always executes"
+              
+            # Executes only if migrate_db is true
+            - type: "COMMAND"
+              name: "conditional-on-true"
+              enable_if: "migrate_db == true"
+              command: echo "Migrating database because migrate_db is true"
+              
+            # Skips because backup_enabled is false
+            - type: "COMMAND"
+              name: "conditional-on-false"
+              enable_if: "backup_enabled == true"
+              command: echo "This will be skipped because backup_enabled is false"
+              
+        # ====================================================================
+        # TASK 2: Numeric Comparisons
+        # ====================================================================
+        - id: "task-2"
+          name: "Numeric Comparisons"
+          description: "Conditions based on numeric values"
+          
+          blocks:
+            # Executes because ejb_count > 100
+            - type: "COMMAND"
+              name: "high-ejb-count"
+              enable_if: "ejb_count > 100"
+              command: echo "High EJB count detected: ${ejb_count}"
+              
+            # Skips because complexity_score < 10
+            - type: "COMMAND"
+              name: "very-high-complexity"
+              enable_if: "complexity_score >= 10"
+              command: echo "This skips because complexity_score is only ${complexity_score}"
+              
+            # Executes because ejb_count equals 150
+            - type: "COMMAND"
+              name: "exact-count-match"
+              enable_if: "ejb_count == 150"
+              command: echo "Exact match: EJB count is 150"
+              
+        # ====================================================================
+        # TASK 3: String Comparisons
+        # ====================================================================
+        - id: "task-3"
+          name: "String Comparisons"
+          description: "Conditions based on string values"
+          
+          blocks:
+            # Executes because environment is 'production'
+            - type: "COMMAND"
+              name: "production-only"
+              enable_if: "environment == 'production'"
+              command: echo "Running in production environment"
+              
+            # Skips because environment is not 'development'
+            - type: "COMMAND"
+              name: "development-only"
+              enable_if: "environment == 'development'"
+              command: echo "This skips - not in development"
+              
+            # Executes because database_type is 'mysql'
+            - type: "COMMAND"
+              name: "mysql-specific"
+              enable_if: "database_type == 'mysql'"
+              command: echo "MySQL-specific operations"
+              
+        # ====================================================================
+        # TASK 4: Logical Operators (AND, OR, NOT)
+        # ====================================================================
+        - id: "task-4"
+          name: "Logical Operators"
+          description: "Complex conditions with logical operators"
+          
+          blocks:
+            # Executes because BOTH conditions are true
+            - type: "COMMAND"
+              name: "and-condition"
+              enable_if: "migrate_db && (database_type == 'mysql')"
+              command: echo "Both migrate_db is true AND database is mysql"
+              
+            # Skips because backup_enabled is false (even though migrate_db is true)
+            - type: "COMMAND"
+              name: "and-condition-fail"
+              enable_if: "migrate_db && backup_enabled"
+              command: echo "This skips because backup_enabled is false"
+              
+            # Executes because at least ONE condition is true
+            - type: "COMMAND"
+              name: "or-condition"
+              enable_if: "backup_enabled || migrate_db"
+              command: echo "At least one condition is true"
+              
+            # Executes because skip_tests is false (NOT operator)
+            - type: "COMMAND"
+              name: "not-condition"
+              enable_if: "!skip_tests"
+              command: echo "Tests are not skipped"
+              
+        # ====================================================================
+        # TASK 5: Complex Expressions
+        # ====================================================================
+        - id: "task-5"
+          name: "Complex Expressions"
+          description: "Advanced conditions with parentheses and multiple operators"
+          
+          blocks:
+            # Executes: (ejb_count > 100 is true OR complexity >= 7 is true) AND environment == 'production' is true
+            - type: "COMMAND"
+              name: "complex-condition-1"
+              enable_if: "(ejb_count > 100 || complexity_score >= 7) && environment == 'production'"
+              command: echo "Complex condition met: High count or complexity in production"
+              
+            # Skips: migrate_db is true but NOT (database mysql OR postgresql)
+            - type: "COMMAND"
+              name: "complex-condition-2"
+              enable_if: "migrate_db && (database_type == 'postgresql' || database_type == 'oracle')"
+              command: echo "This skips because database is mysql, not postgresql or oracle"
+              
+            # Executes: Multiple conditions
+            - type: "COMMAND"
+              name: "complex-condition-3"
+              enable_if: "!skip_tests && environment != 'development' && ejb_count >= 100"
+              command: echo "Tests enabled, not development, and sufficient EJB count"
+              
+        # ====================================================================
+        # TASK 6: Nested Object Access
+        # ====================================================================
+        - id: "task-6"
+          name: "Nested Object Access"
+          description: "Access nested properties in variables"
+          
+          blocks:
+            # These examples show accessing nested objects
+            # The actual values come from MigrationContext built-in variables
+            - type: "COMMAND"
+              name: "project-name-check"
+              enable_if: "project.name != null"
+              command: echo "Project name is available: ${project.name}"
+              
+            - type: "COMMAND"
+              name: "user-home-check"
+              enable_if: "user.home != null"
+              command: echo "User home directory: ${user.home}"
+              
+        # ====================================================================
+        # TASK 7: Real-World Database Migration Example
+        # ====================================================================
+        - id: "task-7"
+          name: "Database Migration with Conditionals"
+          description: "Realistic database migration scenario"
+          
+          blocks:
+            # Step 1: Always check database connectivity
+            - type: "COMMAND"
+              name: "check-connectivity"
+              command: echo "Checking database connectivity..."
+              
+            # Step 2: Backup only if enabled
+            - type: "COMMAND"
+              name: "backup-database"
+              enable_if: "backup_enabled == true"
+              command: echo "Creating database backup..."
+              timeout-seconds: 600
+              
+            # Step 3: Export schema only if migrating database
+            - type: "COMMAND"
+              name: "export-schema"
+              enable_if: "migrate_db == true"
+              command: echo "Exporting database schema..."
+              
+            # Step 4: MySQL-specific migration
+            - type: "COMMAND"
+              name: "mysql-migration"
+              enable_if: "migrate_db && database_type == 'mysql'"
+              command: echo "Running MySQL-specific migration scripts..."
+              
+            # Step 5: Production-only validation
+            - type: "COMMAND"
+              name: "production-validation"
+              enable_if: "environment == 'production' && migrate_db"
+              command: echo "Running production validation checks..."
+              
+            # Step 6: Always log completion
+            - type: "COMMAND"
+              name: "log-completion"
+              command: echo "Database migration task completed"

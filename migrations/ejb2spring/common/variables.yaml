@@ -1,0 +1,22 @@
+# Common Variables for EJB 2 to Spring Boot Migration
+# These variables are shared across all migration phases
+
+migration-plan:
+  variables:
+    spring_boot_version: "2.7.18"
+    java_version: "8"
+    group_id: "br.com.semeru"
+    artifact_id: "semeru-springboot"
+    package_base: "br.com.semeru"
+    migration_branch_prefix: "migration"
+    
+    # Database Configuration (disabled by default)
+    # Set database_enabled: true to enable database operations
+    database_enabled: false    
+    read_dependencies: false    
+    DB_HOST: "localhost"
+    DB_PORT: "3306"
+    DB_NAME: "your_database_name"
+    DB_USER: "your_username"
+    DB_PASSWORD: "your_password"
+    DB_DRIVER: "mysql"

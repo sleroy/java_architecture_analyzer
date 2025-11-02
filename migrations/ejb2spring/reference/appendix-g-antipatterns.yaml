@@ -1,0 +1,95 @@
+# Appendix G: Legacy Antipatterns Catalog
+# Common antipatterns and refactoring strategies
+
+reference-data:
+  appendix-id: "appendix-g"
+  name: "Legacy Antipatterns Catalog"
+  
+  antipatterns:
+    - name: "Deep Inheritance Hierarchies"
+      description: "Inheritance depth > 3 levels"
+      problems:
+        - "Tight coupling"
+        - "Hard to understand"
+        - "Fragile base class problem"
+      detection: "Manual analysis of extends chains"
+      refactoring-strategy: "Favor composition over inheritance, use interfaces"
+      estimated-effort: "2-4 hours per hierarchy"
+      pattern-tag: "DEEP_INHERITANCE_REFACTORING"
+      
+    - name: "God Classes"
+      description: "Classes > 1000 lines or > 20 methods"
+      problems:
+        - "Violates Single Responsibility"
+        - "Hard to test"
+        - "High coupling"
+      detection: "find . -name '*.java' -exec wc -l {} + | awk '$1 > 1000'"
+      refactoring-strategy: "Extract related methods into separate services"
+      estimated-effort: "1-2 days per god class"
+      pattern-tag: "GOD_CLASS_DECOMPOSITION"
+      
+    - name: "Manual Singleton Pattern"
+      description: "Hand-rolled singleton with getInstance()"
+      problems:
+        - "Hard to test"
+        - "Global state"
+        - "Tight coupling"
+      detection: "Inspector: SingletonPatternInspector"
+      inspector-tag: "antipattern.singleton.detected"
+      refactoring-strategy: "Convert to Spring @Component (singleton by default)"
+      estimated-effort: "30 minutes per singleton"
+      pattern-tag: "SINGLETON_MODERNIZATION"
+      
+    - name: "Excessive Checked Exceptions"
+      description: "Methods throw multiple checked exceptions"
+      problems:
+        - "Forces exception handling everywhere"
+        - "Clutters code"
+        - "Often leads to empty catch blocks"
+      detection: "Inspector: ExceptionAntipatternInspector"
+      inspector-tag: "antipattern.exception.generic"
+      refactoring-strategy: "Use runtime exceptions, Optional<T>, global @ControllerAdvice"
+      estimated-effort: "30 minutes per method"
+      pattern-tag: "CHECKED_EXCEPTION_MODERNIZATION"
+      
+    - name: "Static Utility Hell"
+      description: "Utility classes with complex static methods and dependencies"
+      problems:
+        - "Hard to test"
+        - "Hidden dependencies"
+        - "Hard to mock"
+      detection: "Inspector: UtilityClassInspector"
+      inspector-tag: "antipattern.utilityClass"
+      refactoring-strategy: "Convert to @Component for complex logic, keep static for pure functions"
+      estimated-effort: "1-2 hours per utility class"
+      pattern-tag: "STATIC_UTILITY_REFACTORING"
+      
+    - name: "Anemic Domain Model"
+      description: "POJOs with only getters/setters, no behavior"
+      problems:
+        - "Business logic scattered"
+        - "Tight coupling"
+      detection: "Manual code review"
+      refactoring-strategy: "Add business methods to domain objects"
+      estimated-effort: "1-2 hours per domain object"
+      
+  detection-tools:
+    - tool: "SonarQube"
+      purpose: "Code quality & security"
+      cost: "Free (Community), Paid (Enterprise)"
+      
+    - tool: "PMD"
+      purpose: "Static code analysis"
+      cost: "Free"
+      
+    - tool: "Checkstyle"
+      purpose: "Code style violations"
+      cost: "Free"
+      
+    - tool: "SpotBugs"
+      purpose: "Bug patterns"
+      cost: "Free"
+      
+    - tool: "ArchUnit"
+      purpose: "Architecture testing"
+      cost: "Free"
