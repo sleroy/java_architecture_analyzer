@@ -1,4 +1,5 @@
 package com.analyzer.rules.ejb2spring;
+
 import com.analyzer.core.cache.LocalCache;
 
 /**
@@ -340,6 +341,40 @@ public final class EjbMigrationTags {
      * Tag for JPA repository conversion targets
      */
     public static final String JPA_REPOSITORY_CONVERSION = "jpa.conversion.repository";
+
+    // ==================== WEB SERVICE TAGS ====================
+
+    /**
+     * Tag for JAX-WS Web Service components
+     */
+    public static final String WEBSERVICE_JAX_WS = "webservice.jaxws.detected";
+
+    /**
+     * Tag for SOAP endpoint services
+     */
+    public static final String WEBSERVICE_SOAP_ENDPOINT = "webservice.soap.endpoint";
+
+    /**
+     * Tag for web service operations
+     */
+    public static final String WEBSERVICE_OPERATION = "webservice.operation";
+
+    // ==================== REST SERVICE TAGS ====================
+
+    /**
+     * Tag for JAX-RS REST resource components
+     */
+    public static final String REST_JAX_RS = "rest.jaxrs.detected";
+
+    /**
+     * Tag for REST resource endpoints
+     */
+    public static final String REST_RESOURCE_ENDPOINT = "rest.resource.endpoint";
+
+    /**
+     * Tag for HTTP method handlers
+     */
+    public static final String REST_HTTP_METHOD = "rest.http.method";
 
     // ==================== SPRING CONVERSION TAGS ====================
 
@@ -821,4 +856,26 @@ public final class EjbMigrationTags {
      * Tag for JDBC bulk operation patterns
      */
     public static final String JDBC_BULK_OPERATIONS = "jdbc.performance.bulkOperations";
+
+    // ==================== ANTIPATTERN TAGS ====================
+
+    /**
+     * Tag for singleton pattern detection
+     */
+    public static final String ANTIPATTERN_SINGLETON = "antipattern.singleton.detected";
+
+    /**
+     * Tag for utility class antipattern
+     */
+    public static final String ANTIPATTERN_UTILITY_CLASS = "antipattern.utilityClass";
+
+    /**
+     * Tag for generic exception handling antipattern
+     */
+    public static final String ANTIPATTERN_EXCEPTION_GENERIC = "antipattern.exception.generic";
+
+    /**
+     * Tag for deep inheritance hierarchy
+     */
+    public static final String ANTIPATTERN_INHERITANCE_DEEP = "antipattern.inheritance.deep";
 }

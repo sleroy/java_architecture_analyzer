@@ -1,0 +1,161 @@
+# Appendix E: EJB 2.x Component Matrix
+# Complete mapping reference from EJB 2.x to Spring Boot
+
+reference-data:
+  appendix-id: "appendix-e"
+  name: "EJB 2.x Component Matrix"
+  description: "Complete component mapping and migration guidelines"
+  
+  component-mappings:
+    - ejb-component: "Stateless Session Bean"
+      characteristics:
+        - "No conversational state"
+        - "Pooled by container"
+        - "Thread-safe"
+      spring-equivalent: "@Service with @Transactional"
+      pattern-tag: "STATELESS_TO_SPRING_SERVICE"
+      complexity: "LOW"
+      typical-effort: "1-2 hours per bean"
+      
+    - ejb-component: "Stateful Session Bean"
+      characteristics:
+        - "Maintains conversational state"
+        - "Passivation/activation support"
+        - "Per-client instance"
+      spring-equivalent: "@Component with @Scope(SESSION)"
+      pattern-tag: "STATEFUL_TO_SPRING_SCOPE"
+      complexity: "MEDIUM"
+      typical-effort: "2-4 hours per bean"
+      
+    - ejb-component: "CMP Entity Bean"
+      characteristics:
+        - "Container-managed persistence"
+        - "Abstract methods"
+        - "Automatic SQL generation"
+      spring-equivalent: "POJO + @Repository JDBC DAO"
+      pattern-tag: "CMP_TO_JDBC_DAO"
+      complexity: "MEDIUM"
+      typical-effort: "3-6 hours per entity"
+      
+    - ejb-component: "BMP Entity Bean"
+      characteristics:
+        - "Bean-managed persistence"
+        - "Manual JDBC code"
+        - "Developer-controlled SQL"
+      spring-equivalent: "POJO + @Repository JDBC DAO"
+      pattern-tag: "BMP_TO_JDBC_DAO"
+      complexity: "MEDIUM"
+      typical-effort: "2-4 hours per entity"
+      
+    - ejb-component: "Message-Driven Bean"
+      characteristics:
+        - "Async message processing"
+        - "JMS listener"
+        - "Transaction support"
+      spring-equivalent: "@Component with @JmsListener"
+      pattern-tag: "MDB_TO_SPRING_JMS"
+      complexity: "MEDIUM"
+      typical-effort: "2-3 hours per MDB"
+      
+    - ejb-component: "Home Interface"
+      characteristics:
+        - "Factory for creating/finding EJBs"
+        - "JNDI lookup required"
+      spring-equivalent: "Eliminated (Spring DI)"
+      pattern-tag: "HOME_INTERFACE_REMOVAL"
+      complexity: "LOW"
+      typical-effort: "30 min per interface"
+      
+    - ejb-component: "Remote Interface"
+      characteristics:
+        - "Remote business interface"
+        - "RMI-IIOP support"
+      spring-equivalent: "Eliminated or plain Java interface"
+      pattern-tag: "REMOTE_INTERFACE_REMOVAL"
+      complexity: "LOW"
+      typical-effort: "30 min per interface"
+      
+    - ejb-component: "Local Interface"
+      characteristics:
+        - "Local business interface"
+        - "Same JVM optimization"
+      spring-equivalent: "Eliminated or plain Java interface"
+      pattern-tag: "REMOTE_INTERFACE_REMOVAL"
+      complexity: "LOW"
+      typical-effort: "30 min per interface"
+      
+  lifecycle-mappings:
+    - ejb-method: "ejbCreate()"
+      purpose: "Entity/Session bean initialization"
+      spring-equivalent: "@PostConstruct or constructor"
+      
+    - ejb-method: "ejbPostCreate()"
+      purpose: "Post-creation callback"
+      spring-equivalent: "@PostConstruct"
+      
+    - ejb-method: "ejbRemove()"
+      purpose: "Bean removal"
+      spring-equivalent: "@PreDestroy"
+      
+    - ejb-method: "ejbActivate()"
+      purpose: "Stateful bean activation"
+      spring-equivalent: "Not needed (HTTP session handles)"
+      
+    - ejb-method: "ejbPassivate()"
+      purpose: "Stateful bean passivation"
+      spring-equivalent: "Not needed (HTTP session handles)"
+      
+    - ejb-method: "ejbLoad()"
+      purpose: "Load entity state from DB"
+      spring-equivalent: "DAO findById() method"
+      
+    - ejb-method: "ejbStore()"
+      purpose: "Persist entity state to DB"
+      spring-equivalent: "DAO update() method"
+      
+  ejb-context-mappings:
+    - ejb-operation: "getCallerPrincipal()"
+      purpose: "Get authenticated user"
+      spring-code: "SecurityContextHolder.getContext().getAuthentication()"
+      
+    - ejb-operation: "isCallerInRole(role)"
+      purpose: "Check user role"
+      spring-code: "auth.getAuthorities().contains(new SimpleGrantedAuthority('ROLE_X'))"
+      
+    - ejb-operation: "setRollbackOnly()"
+      purpose: "Mark transaction for rollback"
+      spring-code: "TransactionAspectSupport.currentTransactionStatus().setRollbackOnly()"
+      
+    - ejb-operation: "getRollbackOnly()"
+      purpose: "Check rollback status"
+      spring-code: "TransactionAspectSupport.currentTransactionStatus().isRollbackOnly()"
+      
+    - ejb-operation: "getUserTransaction()"
+      purpose: "Get transaction handle"
+      spring-code: "Inject PlatformTransactionManager"
+      
+  transaction-mappings:
+    - ejb-attribute: "REQUIRED"
+      behavior: "Join existing or create new"
+      spring-propagation: "Propagation.REQUIRED"
+      is-default: true
+      
+    - ejb-attribute: "REQUIRES_NEW"
+      behavior: "Always create new transaction"
+      spring-propagation: "Propagation.REQUIRES_NEW"
+      
+    - ejb-attribute: "MANDATORY"
+      behavior: "Must have existing transaction"
+      spring-propagation: "Propagation.MANDATORY"
+      
+    - ejb-attribute: "NOT_SUPPORTED"
+      behavior: "Suspend current transaction"
+      spring-propagation: "Propagation.NOT_SUPPORTED"
+      
+    - ejb-attribute: "SUPPORTS"
+      behavior: "Optional transaction"
+      spring-propagation: "Propagation.SUPPORTS"
+      
+    - ejb-attribute: "NEVER"
+      behavior: "Fail if transaction exists"
+      spring-propagation: "Propagation.NEVER"

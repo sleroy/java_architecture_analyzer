@@ -55,3 +55,66 @@ SELECT
     (SELECT COUNT(*) FROM edges) as total_edges,
     (SELECT COUNT(DISTINCT edge_type) FROM edges) as edge_types,
     (SELECT COUNT(*) FROM nodes WHERE tags IS NOT NULL AND tags != '[]') as nodes_with_tags;
+
+-- Migration Progress Tracking Tables
+
+-- Migration plans execution tracking
+CREATE TABLE IF NOT EXISTS migration_progress (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    project_id BIGINT,
+    plan_name VARCHAR(255) NOT NULL,
+    phase_name VARCHAR(255) NOT NULL,
+    task_id VARCHAR(100) NOT NULL,
+    task_name VARCHAR(255) NOT NULL,
+    task_type VARCHAR(50) NOT NULL,              -- AUTOMATED_REFACTORING, AUTOMATED_OPERATIONS, AI_ASSISTED, ANALYSIS, VALIDATION
+    status VARCHAR(50) NOT NULL,                 -- PENDING, IN_PROGRESS, COMPLETED, FAILED, SKIPPED
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    error_message CLOB,
+    metadata_json CLOB,                          -- Additional task metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    CONSTRAINT unique_task_execution UNIQUE (project_id, plan_name, task_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_migration_progress_project ON migration_progress(project_id);
+CREATE INDEX IF NOT EXISTS idx_migration_progress_plan ON migration_progress(plan_name);
+CREATE INDEX IF NOT EXISTS idx_migration_progress_status ON migration_progress(status);
+CREATE INDEX IF NOT EXISTS idx_migration_progress_task_id ON migration_progress(task_id);
+
+-- Task dependencies for execution ordering
+CREATE TABLE IF NOT EXISTS task_dependencies (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    project_id BIGINT,
+    plan_name VARCHAR(255) NOT NULL,
+    task_id VARCHAR(100) NOT NULL,
+    depends_on_task_id VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    CONSTRAINT unique_dependency UNIQUE (project_id, plan_name, task_id, depends_on_task_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_dependencies_task ON task_dependencies(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_dependencies_depends ON task_dependencies(depends_on_task_id);
+
+-- Block execution history for detailed tracking
+CREATE TABLE IF NOT EXISTS block_execution_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    migration_progress_id BIGINT NOT NULL,
+    block_type VARCHAR(50) NOT NULL,             -- CommandBlock, FileOperationBlock, GraphQueryBlock, etc.
+    block_name VARCHAR(255),
+    execution_order INT NOT NULL,
+    status VARCHAR(50) NOT NULL,                 -- SUCCESS, FAILED, SKIPPED
+    started_at TIMESTAMP NOT NULL,
+    completed_at TIMESTAMP,
+    execution_time_ms BIGINT,
+    result_json CLOB,                            -- Block execution result as JSON
+    error_message CLOB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (migration_progress_id) REFERENCES migration_progress(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_block_execution_progress ON block_execution_history(migration_progress_id);
+CREATE INDEX IF NOT EXISTS idx_block_execution_order ON block_execution_history(execution_order);
+CREATE INDEX IF NOT EXISTS idx_block_execution_status ON block_execution_history(status);

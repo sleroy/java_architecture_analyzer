@@ -1,0 +1,10 @@
+# Common Metadata for EJB 2 to Spring Boot Migration
+
+migration-plan:
+  metadata:
+    author: "Migration Team"
+    created-date: "2025-01-30"
+    target-spring-boot-version: "2.7.18"
+    source-jboss-version: "7.x"
+    source-platform: "JBoss EJB 2.x"
+    target-platform: "Spring Boot 2.7"

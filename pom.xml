@@ -47,11 +47,12 @@
         <commons-configuration.version>2.10.1</commons-configuration.version>
 
         <!-- OpenRewrite & Migration Tools -->
-        <openrewrite.version>8.15.0</openrewrite.version>
+        <openrewrite.version>8.21.0</openrewrite.version>
         <rewrite-spring.version>5.13.0</rewrite-spring.version>
         <jqassistant.version>2.3.0</jqassistant.version>
         <jakarta-xml-bind.version>4.0.2</jakarta-xml-bind.version>
         <jaxb-runtime.version>4.0.5</jaxb-runtime.version>
+        <freemarker.version>2.3.32</freemarker.version>
 
         <!-- Graph Storage System -->
         <jgrapht.version>1.5.2</jgrapht.version>
@@ -210,6 +211,13 @@
                 <groupId>org.openrewrite.recipe</groupId>
                 <artifactId>rewrite-spring</artifactId>
                 <version>${rewrite-spring.version}</version>
+            </dependency>
+
+            <!-- FreeMarker Template Engine -->
+            <dependency>
+                <groupId>org.freemarker</groupId>
+                <artifactId>freemarker</artifactId>
+                <version>${freemarker.version}</version>
             </dependency>
 
             <!-- XML Binding -->

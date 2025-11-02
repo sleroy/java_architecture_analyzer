@@ -1,0 +1,386 @@
+# Phases 4-8: Integration, Configuration, Testing, and Packaging
+# SOAP/REST Migration + Configuration + Testing + Deployment
+# Tasks: 400-401, 500-501, 600-601, 700-701, 800-801
+
+migration-plan:
+  phases:
+    - id: "phase-4"
+      name: "SOAP Services Migration"
+      description: "Migrate JAX-WS SOAP to Spring Web Services"
+      
+      tasks:
+        - id: "task-400"
+          name: "Identify JAX-WS Endpoints"
+          pattern-tag: "JAXWS_ENDPOINT_IDENTIFICATION"
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-web-services"
+              description: "Query for JAX-WS web services (tagged by WebServiceInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "webservice.jaxws.detected"
+              output-variable: "web_service_nodes"
+              
+            - type: "AI_PROMPT_BATCH"
+              name: "analyze-soap-services"
+              items-variable: "web_service_nodes"
+              prompt-template: |
+                Analyze this JAX-WS web service for Spring WS migration.
+                
+                Class: ${current_item.fullyQualifiedName}
+                Package: ${current_item.packageName}
+                File: ${current_item.sourceFilePath}
+                Operations: ${current_item.properties.webservice.info.operationCount}
+                Complexity: ${current_item.properties.migration.complexity}
+                
+                Provide migration strategy to Spring @Endpoint.
+              output-variable: "soap_analysis"
+              temperature: 0.2
+              max-tokens: 2000
+              parallel: false
+              
+            - type: "FILE_OPERATION"
+              name: "create-soap-inventory"
+              operation: "CREATE"
+              path: "${project_root}/docs/migration/SOAP_INVENTORY.md"
+              content: "# SOAP Services Inventory\n\n${soap_analysis}"
+              
+        - id: "task-401"
+          name: "Migrate to Spring Web Services"
+          pattern-tag: "JAXWS_TO_SPRING_WS"
+          blocks:
+            - type: "FILE_OPERATION"
+              name: "add-spring-ws-deps"
+              operation: "APPEND"
+              path: "${project_root}/semeru-springboot/pom.xml"
+              content: |
+                
+                        <!-- Spring Web Services -->
+                        <dependency>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-starter-web-services</artifactId>
+                        </dependency>
+                        <dependency>
+                            <groupId>wsdl4j</groupId>
+                            <artifactId>wsdl4j</artifactId>
+                        </dependency>
+              
+            - type: "AI_PROMPT"
+              name: "generate-spring-ws-endpoints"
+              prompt: "Generate Spring @Endpoint classes from JAX-WS analysis. ${soap_analysis}"
+              output-variable: "ws_endpoints"
+              temperature: 0.2
+              max-tokens: 3000
+              
+            - type: "COMMAND"
+              name: "compile-ws-endpoints"
+              command: "cd ${project_root}/semeru-springboot && mvn compile"
+              working-directory: "${project_root}"
+              timeout-seconds: 180
+              
+    - id: "phase-5"
+      name: "REST API Migration"
+      description: "Migrate JAX-RS to Spring MVC REST"
+      
+      tasks:
+        - id: "task-500"
+          name: "Identify JAX-RS Endpoints"
+          pattern-tag: "JAXRS_ENDPOINT_IDENTIFICATION"
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-rest-services"
+              description: "Query for JAX-RS REST services (tagged by RestServiceInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "rest.jaxrs.detected"
+              output-variable: "rest_service_nodes"
+              
+            - type: "AI_PROMPT_BATCH"
+              name: "analyze-rest-endpoints"
+              items-variable: "rest_service_nodes"
+              prompt-template: |
+                Analyze this JAX-RS REST resource for Spring @RestController migration.
+                
+                Class: ${current_item.fullyQualifiedName}
+                Package: ${current_item.packageName}
+                File: ${current_item.sourceFilePath}
+                Base Path: ${current_item.properties.rest.resource.info.basePath}
+                Endpoints: ${current_item.properties.rest.resource.info.endpointCount}
+                Complexity: ${current_item.properties.migration.complexity}
+                
+                Provide Spring @RestController migration with @RequestMapping, @GetMapping, etc.
+              output-variable: "rest_analysis"
+              temperature: 0.2
+              max-tokens: 2000
+              parallel: false
+              
+        - id: "task-501"
+          name: "Migrate to Spring REST"
+          pattern-tag: "JAXRS_TO_SPRING_REST"
+          blocks:
+            - type: "AI_PROMPT_BATCH"
+              name: "generate-rest-controllers"
+              items-variable: "rest_service_nodes"
+              prompt-template: |
+                Convert JAX-RS to Spring @RestController.
+                
+                Class: ${current_item.fullyQualifiedName}
+                Analysis: ${rest_analysis}
+                
+                Replace:
+                @Path → @RequestMapping
+                @GET → @GetMapping
+                @POST → @PostMapping
+                @PathParam → @PathVariable
+                @QueryParam → @RequestParam
+                
+                Use ResponseEntity for HTTP status control.
+              output-variable: "rest_controllers"
+              temperature: 0.2
+              max-tokens: 2000
+              parallel: false
+              
+            - type: "FILE_OPERATION"
+              name: "create-controllers"
+              operation: "CREATE_MULTIPLE"
+              files: "${rest_controllers}"
+              base-path: "${project_root}/semeru-springboot/src/main/java/${package_base_path}/controller"
+              
+            - type: "COMMAND"
+              name: "compile-controllers"
+              command: "cd ${project_root}/semeru-springboot && mvn compile"
+              working-directory: "${project_root}"
+              timeout-seconds: 180
+              
+    - id: "phase-6"
+      name: "Configuration Migration"
+      description: "Migrate JBoss config to Spring Boot"
+      
+      tasks:
+        - id: "task-600"
+          name: "Identify Configuration Files"
+          pattern-tag: "CONFIG_FILE_IDENTIFICATION"
+          blocks:
+            - type: "COMMAND"
+              name: "find-jboss-configs"
+              command: "find ${project_root} -name 'jboss*.xml' -o -name 'application.xml' -o -name '*-ds.xml'"
+              working-directory: "${project_root}"
+              timeout-seconds: 60
+              capture-output: true
+              output-variable: "jboss_configs"
+              
+            - type: "FILE_OPERATION"
+              name: "create-config-inventory"
+              operation: "CREATE"
+              path: "${project_root}/docs/migration/CONFIG_INVENTORY.md"
+              content: "# Configuration Inventory\n\n${jboss_configs}"
+              
+        - id: "task-601"
+          name: "Migrate to Spring Boot Config"
+          pattern-tag: "CONFIG_TO_SPRING_BOOT"
+          blocks:
+            - type: "AI_PROMPT"
+              name: "generate-application-props"
+              prompt: |
+                Convert JBoss configs to Spring Boot application.properties.
+                ${jboss_configs}
+                
+                Include:
+                - DataSource (already done)
+                - Logging
+                - Server ports
+                - Security
+                - Environment profiles
+              output-variable: "spring_configs"
+              temperature: 0.2
+              max-tokens: 1500
+              
+            - type: "FILE_OPERATION"
+              name: "create-profile-configs"
+              operation: "CREATE"
+              path: "${project_root}/semeru-springboot/src/main/resources/application-prod.properties"
+              content: "${spring_configs}"
+              
+    - id: "phase-7"
+      name: "Testing Migration"
+      description: "Migrate test suite to Spring Boot Test"
+      
+      tasks:
+        - id: "task-700"
+          name: "Identify Existing Tests"
+          pattern-tag: "TEST_IDENTIFICATION"
+          blocks:
+            - type: "COMMAND"
+              name: "find-test-classes"
+              command: "find ${project_root}/src/test -name '*Test.java' -o -name '*IT.java'"
+              working-directory: "${project_root}"
+              timeout-seconds: 60
+              capture-output: true
+              output-variable: "test_files"
+              
+            - type: "FILE_OPERATION"
+              name: "create-test-inventory"
+              operation: "CREATE"
+              path: "${project_root}/docs/migration/TEST_INVENTORY.md"
+              content: "# Test Inventory\n\n${test_files}\n\nMigrate to Spring Boot Test with @SpringBootTest"
+              
+        - id: "task-701"
+          name: "Migrate to Spring Boot Test"
+          pattern-tag: "TEST_MIGRATION"
+          blocks:
+            - type: "FILE_OPERATION"
+              name: "add-test-deps"
+              operation: "APPEND"
+              path: "${project_root}/semeru-springboot/pom.xml"
+              content: |
+                
+                        <!-- Testing (already included in starter-test) -->
+                        <!-- H2 for in-memory testing -->
+                        <dependency>
+                            <groupId>com.h2database</groupId>
+                            <artifactId>h2</artifactId>
+                            <scope>test</scope>
+                        </dependency>
+              
+            - type: "AI_PROMPT"
+              name: "generate-test-migration-guide"
+              prompt: |
+                Create test migration guide for converting existing tests to Spring Boot Test.
+                
+                Key changes:
+                - @RunWith(Arquillian.class) → @SpringBootTest
+                - @Deployment methods → Remove
+                - @EJB → @Autowired
+                - EJBContainer → Spring context
+                - DbUnit → @Sql
+              output-variable: "test_guide"
+              temperature: 0.2
+              max-tokens: 2000
+              
+            - type: "FILE_OPERATION"
+              name: "create-test-guide"
+              operation: "CREATE"
+              path: "${project_root}/docs/migration/TEST_MIGRATION_GUIDE.md"
+              content: "${test_guide}"
+              
+    - id: "phase-8"
+      name: "Packaging and Deployment"
+      description: "Package as Spring Boot JAR and configure deployment"
+      
+      tasks:
+        - id: "task-800"
+          name: "Migrate from WAR to JAR"
+          pattern-tag: "PACKAGING_MIGRATION"
+          blocks:
+            - type: "FILE_OPERATION"
+              name: "update-packaging"
+              operation: "REPLACE"
+              path: "${project_root}/semeru-springboot/pom.xml"
+              search: "<packaging>war</packaging>"
+              replace: "<packaging>jar</packaging>"
+              
+            - type: "COMMAND"
+              name: "build-executable-jar"
+              command: "cd ${project_root}/semeru-springboot && mvn clean package"
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+              capture-output: true
+              
+            - type: "COMMAND"
+              name: "test-jar-execution"
+              enable_if: "${database_enabled}"
+              command: |
+                cd ${project_root}/semeru-springboot && \
+                timeout 30 java -jar target/*.jar --spring.profiles.active=test &
+                sleep 20
+                pkill -f "spring"
+              working-directory: "${project_root}"
+              timeout-seconds: 60
+              
+        - id: "task-801"
+          name: "Configure Production Deployment"
+          pattern-tag: "DEPLOYMENT_CONFIG"
+          blocks:
+            - type: "FILE_OPERATION"
+              name: "create-startup-script"
+              operation: "CREATE"
+              path: "${project_root}/semeru-springboot/start.sh"
+              content: |
+                #!/bin/bash
+                # Spring Boot Application Startup Script
+                
+                APP_NAME="${artifact_id}"
+                APP_VERSION="1.0.0"
+                JAR_FILE="target/${APP_NAME}-${APP_VERSION}.jar"
+                
+                JAVA_OPTS="-Xms512m -Xmx2048m -XX:+UseG1GC"
+                SPRING_OPTS="--spring.profiles.active=prod"
+                
+                java $JAVA_OPTS -jar $JAR_FILE $SPRING_OPTS
+              
+            - type: "FILE_OPERATION"
+              name: "create-systemd-service"
+              operation: "CREATE"
+              path: "${project_root}/semeru-springboot/deployment/semeru.service"
+              content: |
+                [Unit]
+                Description=Semeru Spring Boot Application
+                After=network.target
+                
+                [Service]
+                User=appuser
+                WorkingDirectory=/opt/semeru
+                ExecStart=/usr/bin/java -jar /opt/semeru/semeru.jar --spring.profiles.active=prod
+                
+                [Install]
+                WantedBy=multi-user.target
+              
+            - type: "FILE_OPERATION"
+              name: "create-deployment-doc"
+              operation: "CREATE"
+              path: "${project_root}/docs/DEPLOYMENT.md"
+              content: |
+                # Spring Boot Deployment Guide
+                
+                ## Prerequisites
+                - Java ${java_version}+
+                <#if database_enabled>
+                - Database configured
+                
+                ## Environment Variables
+                - DB_URL
+                - DB_USERNAME
+                - DB_PASSWORD
+                <#else>
+                - Database operations disabled (database_enabled=false)
+                </#if>
+                
+                ## Deployment
+                1. Copy JAR to server
+                <#if database_enabled>
+                2. Set environment variables
+                3. Run: java -jar semeru.jar --spring.profiles.active=prod
+                <#else>
+                2. Run: java -jar semeru.jar --spring.profiles.active=prod
+                </#if>
+                
+                ## Systemd Service
+                sudo systemctl enable semeru
+                sudo systemctl start semeru
+              
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-integration-phases"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                Phases 4-8 (Integration & Deployment) COMPLETE!
+                
+                ✓ SOAP services migrated
+                ✓ REST APIs migrated
+                ✓ Configuration migrated
+                ✓ Test framework set up
+                ✓ Executable JAR created
+                ✓ Deployment configured
+                
+                Proceed to modernization phases (9-10)?
+              required: true
+              timeout-seconds: 1800

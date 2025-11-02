@@ -1,0 +1,57 @@
+# JBoss EJB 2 to Spring Boot Migration Plan
+# Main plan file with includes for modular organization
+#
+# This is the primary entry point for the EJB 2 to Spring Boot migration.
+# It uses the include mechanism to load common configuration and phase-specific tasks.
+#
+# Usage:
+#   analyzer apply --project /path/to/project --plan migrations/ejb2spring/jboss-to-springboot.yaml
+
+migration-plan:
+  name: "JBoss EJB 2 to Spring Boot Migration - Complete"
+  version: "2.0.0"
+  description: |
+    Comprehensive, production-ready migration from JBoss EJB 2 to Spring Boot.
+    
+    This plan covers ALL 10 migration phases (39 tasks total):
+    - Phase 0: Pre-Migration Assessment (3 tasks)
+    - Phase 1: Spring Boot Initialization (2 tasks)
+    - Phase 2: JDBC Migration (4 tasks)
+    - Phase 2B: Entity Bean Migration (4 tasks)
+    - Phase 3: Session Bean Migration (3 tasks)
+    - Phase 3B: Message-Driven Beans (2 tasks)
+    - Phase 3C: EJB Interface Removal (3 tasks)
+    - Phase 4-8: SOAP, REST, Config, Testing, Packaging (10 tasks)
+    - Phase 9: JDK Upgrade (8→21) (3 tasks)
+    - Phase 10: Legacy Antipatterns (5 tasks)
+    
+    Key Features:
+    - AI-powered code generation and analysis
+    - Pure JDBC approach (no JPA complexity)
+    - Interactive validation at critical points
+    - Optimized block type selection
+    - Production-ready output
+    
+    This plan uses modular includes for maintainability:
+    - common/: Shared metadata, variables, and templates
+    - phases/: Modular phase-specific task definitions
+  
+  # Include common configuration and phase-specific tasks
+  # Files are loaded in order and merged (later entries override earlier ones)
+  includes:
+    - "common/metadata.yaml"
+    - "common/variables.yaml"
+    - "phases/phase0-assessment.yaml"
+    - "phases/phase1-initialization.yaml"
+    - "phases/phase2-jdbc-migration.yaml"
+    - "phases/phase2b-entity-beans.yaml"
+    - "phases/phase3-session-beans.yaml"
+    - "phases/phase3b-3c-ejb-cleanup.yaml"
+    - "phases/phase4-8-integration.yaml"
+    - "phases/phase9-10-modernization.yaml"
+  
+  # Additional metadata or variables can be defined here to override includes
+  # (Currently empty - all config is in included files)
+  
+  # Phases will be loaded from the included files
+  phases: []

@@ -1,0 +1,507 @@
+# Phase 0: Pre-Migration Assessment and Preparation
+# Extracted from JBoss EJB 2 to Spring Boot Migration Plan
+
+migration-plan:
+  phases:
+    - id: "phase-0"
+      name: "Pre-Migration Assessment and Preparation"
+      description: "Environment setup and baseline establishment"
+      
+      tasks:
+        - id: "task-000"
+          name: "Project Baseline Documentation"
+          description: "Establish a clear baseline of the current application state before migration begins"
+          
+          blocks:
+            - type: "GIT"
+              name: "create-baseline-branch"
+              description: "Create Git branch for baseline documentation"
+              args: "checkout -b ${migration_branch_prefix}/springboot-baseline"
+              working-directory: "${project_root}"
+              timeout-seconds: 30
+              idempotent: true
+              
+            - type: "GRAPH_QUERY"
+              name: "query-all-ejb-components"
+              description: "Query all EJB components from analyzed codebase (tagged by EjbBinaryClassInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "ejb.sessionBean"
+                - "ejb.entityBean"
+                - "ejb.messageDrivenBean"
+              output-variable: "ejb_inventory"
+              
+            - type: "GRAPH_QUERY"
+              name: "query-stateless-beans"
+              description: "Query all stateless session beans (tagged by EjbBinaryClassInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "ejb.stateless.sessionBean"
+              output-variable: "stateless_beans"
+              
+            - type: "GRAPH_QUERY"
+              name: "query-cmp-entities"
+              description: "Query all Container Managed Persistence entities (tagged by EjbBinaryClassInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "ejb.cmp.entityBean"
+              output-variable: "cmp_entities"
+              
+            - type: "GRAPH_QUERY"
+              name: "query-message-driven-beans"
+              description: "Query all Message-Driven Beans (tagged by EjbBinaryClassInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "ejb.messageDrivenBean"
+              output-variable: "mdb_beans"
+              
+            - type: "COMMAND"
+              name: "export-database-schema"
+              description: "Export current database schema using mysqldump"
+              enable_if: "${database_enabled}"
+              command: |
+                mysqldump --no-data --skip-add-drop-table \
+                  -h ${DB_HOST} -P ${DB_PORT} -u ${DB_USER} -p${DB_PASSWORD} \
+                  ${DB_NAME} > baseline-schema.sql
+              working-directory: "${project_root}/docs/baseline"
+              timeout-seconds: 120
+              capture-output: true
+              
+            - type: "AI_PROMPT"
+              name: "generate-baseline-analysis"
+              description: "Generate comprehensive baseline documentation using AI"
+              prompt: |
+                Based on the EJB component analysis, create a comprehensive baseline documentation.
+                
+                ## EJB Inventory Summary
+                
+                Total EJB Components: ${ejb_inventory_summary.count}
+                - Stateless Session Beans: ${stateless_beans_summary.count}
+                - CMP Entities: ${cmp_entities_summary.count}
+                - Message-Driven Beans: ${mdb_beans_summary.count}
+                
+                ## Stateless Session Beans
+                <#if stateless_beans_ids?has_content>
+                <#list stateless_beans_ids as id>
+                - ${id}
+                </#list>
+                <#else>
+                No stateless session beans found
+                </#if>
+                
+                ## CMP Entities
+                <#if cmp_entities_ids?has_content>
+                <#list cmp_entities_ids as id>
+                - ${id}
+                </#list>
+                <#else>
+                No CMP entities found
+                </#if>
+                
+                ## Message-Driven Beans
+                <#if mdb_beans_ids?has_content>
+                <#list mdb_beans_ids as id>
+                - ${id}
+                </#list>
+                <#else>
+                No message-driven beans found
+                </#if>
+                
+                Please analyze this inventory and provide:
+                1. Architecture overview based on discovered components
+                2. Migration complexity assessment (High/Medium/Low)
+                3. Key migration risks identified
+                4. Recommended migration sequence for these components
+                5. Estimated effort (person-days) for each component type
+                
+                Focus on technical accuracy and actionable recommendations.
+              output-variable: "baseline_analysis"
+              temperature: 0.3
+              max-tokens: 2000
+              
+            - type: "FILE_OPERATION"
+              name: "create-baseline-document"
+              description: "Create BASELINE.md with comprehensive documentation"
+              operation: "CREATE"
+              path: "${project_root}/docs/BASELINE.md"
+              content: |
+                # Application Baseline Documentation
+                
+                **Generated:** ${current_datetime}
+                **Branch:** ${migration_branch_prefix}/springboot-baseline
+                
+                ## Executive Summary
+                
+                This document captures the baseline state of the JBoss EJB 2 application before migration to Spring Boot.
+                
+                ## EJB Component Inventory
+                
+                ### Summary Statistics
+                - **Total EJB Components:** ${ejb_inventory_summary.count}
+                - **Stateless Session Beans:** ${stateless_beans_summary.count}
+                - **CMP Entities:** ${cmp_entities_summary.count}
+                - **Message-Driven Beans:** ${mdb_beans_summary.count}
+                
+                ### Stateless Session Beans
+                
+                The following stateless session beans have been identified:
+                
+                <#if stateless_beans_ids?has_content>
+                <#list stateless_beans_ids as id>
+                - ${id}
+                </#list>
+                <#else>
+                No stateless session beans found.
+                </#if>
+                
+                These beans will be migrated to Spring @Service components with @Transactional annotations.
+                
+                ### CMP Entities
+                
+                The following Container Managed Persistence entities have been identified:
+                
+                <#if cmp_entities_ids?has_content>
+                <#list cmp_entities_ids as id>
+                - ${id}
+                </#list>
+                <#else>
+                No CMP entities found.
+                </#if>
+                
+                These entities will be migrated to JPA entities with Spring Data repositories.
+                
+                ### Message-Driven Beans
+                
+                The following Message-Driven Beans have been identified:
+                
+                <#if mdb_beans_ids?has_content>
+                <#list mdb_beans_ids as id>
+                - ${id}
+                </#list>
+                <#else>
+                No message-driven beans found.
+                </#if>
+                
+                These MDBs will be migrated to Spring JMS listeners or Spring Integration components.
+                
+                ## AI-Generated Analysis
+                
+                <#if baseline_analysis??>
+                ${baseline_analysis}
+                <#else>
+                AI analysis not available - check AI_PROMPT block configuration and ensure 'output-variable: baseline_analysis' is properly set.
+                </#if>
+                
+                <#if database_enabled?string == "true">
+                ## Database Schema
+                
+                Database schema has been exported to baseline-schema.sql
+                
+                <#else>
+                ## Database Schema
+                
+                Database operations are disabled. Set database_enabled=true to export schema.
+                
+                </#if>
+                ## Next Steps
+                
+                1. Review this baseline with technical team
+                2. Validate completeness of component inventory
+                3. Proceed to TASK-001: Create Migration Branch Structure
+              
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-baseline-documentation"
+              description: "Human verification of baseline documentation"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                Please verify the baseline documentation:
+                
+                - Git branch created: ${migration_branch_prefix}/springboot-baseline
+                - BASELINE.md created at: ${project_root}/docs/BASELINE.md
+                <#if database_enabled?string == "true">
+                - Database schema exported to: baseline-schema.sql
+                </#if>
+                - EJB inventory captured: ${ejb_inventory_summary.count} components
+                
+                Review the BASELINE.md file and confirm:
+                1. All critical EJB components are documented
+                2. Component counts match your expectations
+                3. AI analysis provides useful insights
+                <#if database_enabled?string == "true">
+                4. Database schema export is complete
+                <#else>
+                4. Database operations are disabled (set database_enabled=true to enable)
+                </#if>
+                
+                Type yes to proceed or no to abort and review.
+              required: true
+              timeout-seconds: 3600
+              
+        - id: "task-001"
+          name: "Create Migration Branch Structure"
+          description: "Set up parallel development structure to enable incremental migration"
+          
+          blocks:
+            - type: "GIT"
+              name: "create-migration-branch"
+              description: "Create main migration branch"
+              args: "checkout -b ${migration_branch_prefix}/springboot-initial"
+              working-directory: "${project_root}"
+              timeout-seconds: 30
+              idempotent: true
+              
+            - type: "COMMAND"
+              name: "create-directory-structure"
+              description: "Create complete Spring Boot directory structure"
+              command: |
+                mkdir -p semeru-springboot/src/main/java
+                mkdir -p semeru-springboot/src/main/resources
+                mkdir -p semeru-springboot/src/test/java
+                mkdir -p semeru-springboot/src/test/resources
+              working-directory: "${project_root}"
+              timeout-seconds: 30
+              
+            - type: "FILE_OPERATION"
+              name: "create-gitignore"
+              description: "Create .gitignore file for Spring Boot project"
+              operation: "CREATE"
+              path: "${project_root}/semeru-springboot/.gitignore"
+              content: |
+                # Compiled class files
+                *.class
+                
+                # Log files
+                *.log
+                logs/
+                
+                # Maven
+                target/
+                
+                # IDE
+                .idea/
+                *.iml
+                .vscode/
+                
+                # OS
+                .DS_Store
+                
+                # Application-specific
+                application-local.properties
+                
+            - type: "FILE_OPERATION"
+              name: "create-readme"
+              description: "Create README.md for Spring Boot project"
+              operation: "CREATE"
+              path: "${project_root}/semeru-springboot/README.md"
+              content: |
+                # Semeru Spring Boot Application
+                
+                This is the Spring Boot version of the Semeru application, migrated from JBoss EJB 2.
+                
+                ## Project Status
+                
+                Under Active Development - Migration in progress
+                
+                ## Prerequisites
+                
+                - Java ${java_version} or higher
+                - Maven 3.6+
+                - MySQL 8.0+
+                
+                ## Building the Application
+                
+                mvn clean package
+                
+                ## Running the Application
+                
+                mvn spring-boot:run
+                
+                ## Documentation
+                
+                - [Baseline Analysis](../docs/BASELINE.md)
+                - [Migration Strategy](../docs/MIGRATION_STRATEGY.md)
+                - [Dependency Mapping](../docs/DEPENDENCY_MAPPING.md)
+                
+            - type: "FILE_OPERATION"
+              name: "create-migration-strategy"
+              description: "Create MIGRATION_STRATEGY.md document"
+              operation: "CREATE"
+              path: "${project_root}/docs/MIGRATION_STRATEGY.md"
+              content: |
+                # Migration Strategy: JBoss EJB 2 to Spring Boot
+                
+                ## Overview
+                
+                This document outlines the strategy for migrating the Semeru application from JBoss EJB 2 to Spring Boot ${spring_boot_version}.
+                
+                ## Migration Approach
+                
+                We will use a strangler fig pattern approach:
+                1. Build new Spring Boot application in parallel
+                2. Migrate components incrementally
+                3. Maintain both versions during transition
+                4. Cut over when Spring Boot version reaches feature parity
+                
+                ## EJB to Spring Mapping
+                
+                - @Stateless → @Service + @Transactional
+                - @Entity (CMP) → @Entity (JPA) + JpaRepository
+                - @MessageDriven → @JmsListener or Spring Integration
+                - @Inject → @Autowired or Constructor Injection
+                - @Produces → @Bean
+                - persistence.xml → application.properties
+                - @Path (JAX-RS) → @RequestMapping
+                - EntityManager → JpaRepository
+                
+                ## Success Criteria
+                
+                Migration will be considered successful when:
+                - All EJB components migrated to Spring equivalents
+                - All REST endpoints functional in Spring Boot
+                - All tests passing
+                - Performance meets or exceeds baseline
+                - Zero data loss during cutover
+                - Application runs without JBoss dependencies
+                
+            - type: "GIT"
+              name: "commit-initial-structure"
+              description: "Commit initial migration structure"
+              args:
+                - "add ."
+                - "commit -m 'feat: create Spring Boot migration structure\n\n- Created semeru-springboot directory structure\n- Added .gitignore for Spring Boot project\n- Created initial README.md\n- Documented migration strategy\n\nRelated to: TASK-001'"
+              working-directory: "${project_root}"
+              timeout-seconds: 60
+              idempotent: true
+              
+            # - type: "INTERACTIVE_VALIDATION"
+            #   name: "verify-branch-structure"
+            #   description: "Verify migration branch structure"
+            #   validation-type: "MANUAL_CONFIRM"
+            #   message: |
+            #     Migration branch structure created successfully.
+                
+            #     - Branch: ${migration_branch_prefix}/springboot-initial
+            #     - Directory structure: semeru-springboot/src/{main,test}/{java,resources}
+            #     - .gitignore configured
+            #     - README.md created
+            #     - MIGRATION_STRATEGY.md documented
+            #     - Changes committed to Git
+                
+            #     Please verify the structure matches expectations and proceed.
+            #   required: true
+            #   timeout-seconds: 1800
+              
+        - id: "task-002"
+          name: "Dependency Analysis and Mapping"
+          description: "Create complete mapping of JBoss dependencies to Spring Boot equivalents"
+          
+          blocks:
+            - type: "COMMAND"
+              name: "extract-dependencies"
+              description: "Extract all dependencies from existing POMs using Maven"
+              command: |
+                JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 mvn dependency:tree -DoutputFile=docs/original-dependencies.txt
+              working-directory: "${project_root}"
+              timeout-seconds: 120
+              enable_if: "${read_dependencies}"
+              
+            - type: "AI_ASSISTED"
+              name: "generate-dependency-mapping"
+              description: "Generate Spring Boot dependency mapping using Amazon Q"
+              prompt: |
+                Analyze the JBoss EJB 2 application dependencies and create a comprehensive mapping to Spring Boot ${spring_boot_version} equivalents.
+                
+                Based on the EJB inventory analysis:
+                - Stateless Session Beans: ${stateless_beans_summary.count}
+                - CMP Entities: ${cmp_entities_summary.count}
+                - Message-Driven Beans: ${mdb_beans_summary.count}
+                
+                Provide Spring Boot dependency mappings for:
+                
+                1. EJB APIs (javax.ejb.*): Map to Spring Context and Transaction management
+                2. JPA/Hibernate: Map to spring-boot-starter-data-jpa
+                3. JAX-RS REST APIs: Map to spring-boot-starter-web
+                4. CDI (javax.inject, javax.enterprise): Map to Spring Context
+                5. JMS (if Message-Driven Beans exist): Map to spring-boot-starter-activemq
+                6. Swagger (API documentation): Map to springdoc-openapi
+                7. Validation APIs: Map to spring-boot-starter-validation
+                
+                For each mapping, provide:
+                - Maven dependency coordinates
+                - Version compatible with Spring Boot ${spring_boot_version}
+                - Migration notes
+                - Breaking changes to watch for
+                
+                Format as a markdown table for easy reference.
+              output-variable: "dependency_mapping_analysis"
+              
+            - type: "FILE_OPERATION"
+              name: "create-dependency-mapping-doc"
+              description: "Create DEPENDENCY_MAPPING.md document"
+              operation: "CREATE"
+              path: "${project_root}/docs/DEPENDENCY_MAPPING.md"
+              content: |
+                # Dependency Mapping: JBoss EJB 2 to Spring Boot
+                
+                **Generated:** ${current_datetime}
+                **Target Spring Boot Version:** ${spring_boot_version}
+                **Java Version:** ${java_version}
+                
+                ## Overview
+                
+                This document maps all JBoss/Java EE dependencies to their Spring Boot equivalents.
+                
+                ## AI-Generated Mapping Analysis
+                
+                ${dependency_mapping_analysis}
+                
+                ## Core Spring Boot Starters Required
+                
+                - spring-boot-starter-web: REST APIs, embedded Tomcat
+                - spring-boot-starter-data-jpa: JPA and Hibernate
+                - spring-boot-starter-validation: Bean Validation
+                - spring-boot-starter-actuator: Monitoring and metrics
+                - spring-boot-starter-test: Testing framework
+                
+                ## Dependencies to Remove
+                
+                - jboss-ejb-api_3.1_spec (replaced by Spring Context)
+                - cdi-api (replaced by Spring Context)
+                - jboss-jaxrs-api_1.1_spec (replaced by Spring Web)
+                - jboss-servlet-api_3.0_spec (included in Spring Boot)
+                - hibernate-jpa-2.0-api (use JPA 2.2 from Spring Boot)
+                
+                ## Migration Notes
+                
+                1. No Direct EJB Replacement: Spring doesn't have direct EJB equivalents. Use @Service for stateless beans.
+                2. Constructor Injection Preferred: Use constructor injection instead of field injection.
+                3. No beans.xml Needed: Spring Boot auto-configuration replaces CDI beans.xml.
+                4. Transaction Management: Use @Transactional instead of container-managed transactions.
+                5. API Documentation: Migrate from Swagger 1.x to SpringDoc OpenAPI 3.
+                
+                ## Next Steps
+                
+                Proceed to TASK-100: Create Spring Boot Parent POM with mapped dependencies.
+                
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-dependency-mapping"
+              description: "Review dependency mapping document"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                Dependency mapping and Spring Boot POM creation completed.
+                
+                - Original dependencies extracted to: docs/original-dependencies.txt
+                - AI dependency mapping analysis generated
+                - Spring Boot POM created at: semeru-springboot/pom.xml
+                - DEPENDENCY_MAPPING.md created
+                
+                Please review:
+                1. All critical dependencies are mapped
+                2. Spring Boot POM contains appropriate dependencies
+                3. Version compatibility is correct for Spring Boot ${spring_boot_version}
+                4. No essential dependencies are missing
+                5. Migration notes address your concerns
+                
+                Proceed to next migration phase?
+              required: true
+              timeout-seconds: 1800

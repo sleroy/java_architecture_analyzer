@@ -1,0 +1,607 @@
+# Phase 2B: Entity Bean Migration (JDBC-Based)
+# Entity Beans to POJOs + JDBC DAOs
+# Tasks: 250-253
+
+migration-plan:
+  phases:
+    - id: "phase-2b"
+      name: "Entity Bean Migration (JDBC-Based)"
+      description: "Migrate Entity Beans (CMP & BMP) to POJOs + JDBC DAOs"
+      
+      tasks:
+        - id: "task-250"
+          name: "Identify CMP Entity Beans"
+          description: "Locate all Container-Managed Persistence (CMP) Entity Beans"
+          pattern-tag: "CMP_ENTITY_BEAN_IDENTIFICATION"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-cmp-entity-beans"
+              description: "Query graph for CMP Entity Beans (tagged by EjbBinaryClassInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "ejb.cmp.entityBean"
+              output-variable: "cmp_entities"
+              
+            - type: "COMMAND"
+              name: "find-cmp-in-deployment-descriptors"
+              description: "Find CMP configuration in ejb-jar.xml"
+              command: |
+                echo "=== CMP Entity Declarations ===" && \
+                find ${project_root} -name "ejb-jar.xml" -exec grep -A 20 "<cmp-version>2.x</cmp-version>" {} \; && \
+                echo "" && \
+                echo "=== CMP Fields ===" && \
+                find ${project_root} -name "ejb-jar.xml" -exec grep -B 2 -A 2 "<cmp-field>" {} \; && \
+                echo "" && \
+                echo "=== CMR Fields (Relationships) ===" && \
+                find ${project_root} -name "ejb-jar.xml" -exec grep -B 2 -A 5 "<cmr-field>" {} \;
+              working-directory: "${project_root}"
+              timeout-seconds: 120
+              capture-output: true
+              output-variable: "cmp_xml_config"
+              
+            - type: "AI_PROMPT"
+              name: "analyze-cmp-entities"
+              description: "Comprehensive analysis of CMP entities"
+              prompt: |
+                Analyze all Container-Managed Persistence (CMP) Entity Beans found in the application.
+                
+                ## CMP Entity Beans (from graph analysis):
+                Count: ${cmp_entities.size()}
+                
+                <#list cmp_entities as node>
+                ### ${node.fullyQualifiedName}
+                - **Package:** ${node.packageName}
+                - **File:** ${node.sourceFilePath}
+                - **Migration Complexity:** ${node.properties.ejb.migration.complexity}
+                - **Is Abstract:** ${node.properties.ejb.entity.isAbstract}
+                </#list>
+                
+                ## EJB-JAR XML Configuration:
+                ${cmp_xml_config}
+                
+                For each CMP Entity Bean, provide:
+                1. **Entity Name**: Bean name from deployment descriptor
+                2. **Bean Class**: Fully qualified class name
+                3. **Primary Key**: Simple or composite key class
+                4. **CMP Fields**: List all persistent fields with types
+                5. **CMR Fields**: Document all relationships (one-to-many, many-to-one, many-to-many)
+                6. **Finder Methods**: Custom finder methods declared in Home interface
+                7. **EJB-QL Queries**: Any EJB-QL queries defined
+                8. **Database Table**: Target database table name
+                9. **Migration Complexity**: HIGH/MEDIUM/LOW based on relationships
+                10. **Dependencies**: Other beans that use this entity
+                
+                Format as structured inventory for migration planning.
+              output-variable: "cmp_analysis"
+              temperature: 0.2
+              max-tokens: 3000
+              
+            - type: "FILE_OPERATION"
+              name: "create-cmp-inventory"
+              description: "Create CMP_ENTITY_INVENTORY.md"
+              operation: "CREATE"
+              path: "${project_root}/docs/migration/CMP_ENTITY_INVENTORY.md"
+              content: |
+                # CMP Entity Bean Inventory
+                
+                **Generated:** ${current_datetime}
+                **Migration Phase:** Phase 2B - Entity Bean Migration
+                **Pattern TAG:** CMP_ENTITY_BEAN_IDENTIFICATION
+                
+                ## Overview
+                
+                Container-Managed Persistence (CMP) Entity Beans to be migrated to POJOs + JDBC DAOs.
+                
+                ## CMP Entity Beans (Graph Analysis)
+                
+                Total: ${cmp_entities.size()}
+                
+                <#list cmp_entities as node>
+                - **${node.fullyQualifiedName}**
+                  - File: ${node.sourceFilePath}
+                  - Complexity: ${node.properties.ejb.migration.complexity}
+                </#list>
+                
+                ## EJB-JAR XML Configuration
+                
+                ${cmp_xml_config}
+                
+                ## Comprehensive Analysis
+                
+                ${cmp_analysis}
+                
+                ## Migration Strategy
+                
+                For each CMP Entity Bean:
+                1. Create Plain POJO (no EJB dependencies, no JPA annotations)
+                2. Create Spring @Repository DAO with JdbcTemplate
+                3. Implement CRUD operations (create, findById, findAll, update, delete)
+                4. Migrate custom finders to DAO methods
+                5. Handle CMR relationships with explicit SQL JOINs
+                6. Update all Session Beans to use new DAOs
+                
+                ## Next Steps
+                
+                Proceed to TASK-251: Migrate CMP Entity Beans to POJOs + JDBC DAOs
+                
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-cmp-inventory"
+              description: "Review CMP entity inventory"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                CMP Entity Bean inventory completed.
+                
+                - Graph analysis: ${cmp_entities.count} CMP entities found
+                - Deployment descriptors analyzed
+                - Abstract bean classes identified
+                - Relationships documented
+                - CMP_ENTITY_INVENTORY.md created
+                
+                Review and confirm:
+                1. All CMP entities are documented
+                2. Relationships are understood
+                3. Migration complexity assessed
+                
+                Proceed to migrate CMP entities?
+              required: true
+              timeout-seconds: 1800
+              
+        - id: "task-251"
+          name: "Migrate CMP Entity Beans to POJOs + JDBC DAOs"
+          description: "Convert CMP Entity Beans to Plain Old Java Objects with JDBC DAO layer"
+          pattern-tag: "CMP_TO_JDBC_DAO"
+          
+          blocks:
+            - type: "AI_PROMPT_BATCH"
+              name: "generate-pojo-from-cmp"
+              description: "Generate POJO classes from CMP analysis"
+              items-variable: "cmp_entities"
+              prompt-template: |
+                Generate a Plain Old Java Object (POJO) from the CMP Entity Bean.
+                
+                ## CMP Entity: ${item.entity_name}
+                ## CMP Analysis:
+                ${cmp_analysis}
+                
+                Generate a complete Java POJO class that:
+                1. Has NO EJB dependencies (no EntityBean interface)
+                2. Has NO JPA annotations (pure JDBC approach)
+                3. Implements Serializable
+                4. Contains all CMP fields as private instance variables
+                5. Has a no-arg constructor
+                6. Has a constructor with all required fields
+                7. Has standard getters and setters
+                8. Implements equals() based on primary key
+                9. Implements hashCode() based on primary key
+                10. Implements toString() for debugging
+                11. Has JavaDoc comments
+                
+                For CMR relationships:
+                - Do NOT include navigation properties (no List<Order>)
+                - Relationships will be handled by DAO JOIN queries
+                
+                Package: ${package_base}.model
+                Class name: ${item.entity_name}
+                
+                Provide complete, compilable Java code.
+              output-variable: "generated_pojos"
+              temperature: 0.2
+              max-tokens: 2000
+              parallel: false
+              
+            - type: "FILE_OPERATION"
+              name: "create-pojo-classes"
+              description: "Create generated POJO classes"
+              operation: "CREATE_MULTIPLE"
+              files: "${generated_pojos}"
+              base-path: "${project_root}/semeru-springboot/src/main/java/${package_base_path}/model"
+              
+            - type: "AI_PROMPT_BATCH"
+              name: "generate-dao-from-cmp"
+              description: "Generate Spring JDBC DAO from CMP entity"
+              items-variable: "cmp_entities"
+              prompt-template: |
+                Generate a Spring JDBC DAO for the CMP Entity Bean.
+                
+                ## CMP Entity: ${item.entity_name}
+                ## CMP Analysis:
+                ${cmp_analysis}
+                ## Generated POJO:
+                ${generated_pojos[item.entity_name]}
+                
+                Generate a complete Spring @Repository DAO that:
+                
+                **Basic Structure:**
+                1. Package: ${package_base}.dao
+                2. Class name: ${item.entity_name}Dao
+                3. Inject JdbcTemplate via constructor
+                4. Use @Repository annotation
+                
+                **CRUD Operations:**
+                1. `create(${item.entity_name} entity)` - INSERT with auto-generated ID handling
+                2. `findById(Long id)` - SELECT by primary key, return Optional<>
+                3. `findAll()` - SELECT all records, return List<>
+                4. `update(${item.entity_name} entity)` - UPDATE by primary key
+                5. `delete(Long id)` - DELETE by primary key
+                
+                **Custom Finders (from CMP analysis):**
+                - Migrate each finder method from Home interface
+                - Use appropriate naming: findByEmail, findByStatus, etc.
+                - Return Optional<> for single results, List<> for multiple
+                
+                **CMR Relationship Methods:**
+                - For each CMR field, create finder method with JOIN
+                - Example: `findOrdersByCustomerId(Long customerId)`
+                - Use explicit SQL JOIN queries
+                
+                **RowMapper:**
+                - Implement private mapRow() method
+                - Map all ResultSet columns to POJO fields
+                
+                **Error Handling:**
+                - Catch EmptyResultDataAccessException for not found
+                - Use @Transactional for write operations
+                
+                **SQL Queries:**
+                - Use exact table and column names from CMP configuration
+                - Preserve any custom SQL from deployment descriptors
+                
+                Provide complete, compilable Java code with JavaDoc.
+              output-variable: "generated_cmp_daos"
+              temperature: 0.2
+              max-tokens: 3500
+              parallel: false
+              
+            - type: "FILE_OPERATION"
+              name: "create-dao-classes"
+              description: "Create generated DAO classes"
+              operation: "CREATE_MULTIPLE"
+              files: "${generated_cmp_daos}"
+              base-path: "${project_root}/semeru-springboot/src/main/java/${package_base_path}/dao"
+              
+            - type: "COMMAND"
+              name: "compile-pojos-and-daos"
+              description: "Compile POJOs and DAOs"
+              command: |
+                cd ${project_root}/semeru-springboot && mvn compile
+              working-directory: "${project_root}"
+              timeout-seconds: 180
+              capture-output: true
+              
+            - type: "AI_PROMPT"
+              name: "generate-integration-tests"
+              description: "Generate DAO integration tests"
+              prompt: |
+                Generate comprehensive integration tests for the migrated CMP DAOs.
+                
+                ## Generated DAOs:
+                ${generated_cmp_daos}
+                
+                Create JUnit 5 integration tests that:
+                1. Use @SpringBootTest
+                2. Use @Transactional for test isolation
+                3. Use @Sql to load test data
+                4. Test all CRUD operations
+                5. Test custom finder methods
+                6. Test CMR relationship queries
+                7. Test edge cases (not found, duplicates, null handling)
+                8. Verify proper Optional<> usage
+                
+                Use embedded H2 database for testing.
+                Include schema.sql and test-data.sql scripts.
+                Provide complete test classes.
+              output-variable: "cmp_dao_tests"
+              temperature: 0.2
+              max-tokens: 3000
+              
+            - type: "FILE_OPERATION"
+              name: "create-dao-tests"
+              description: "Create DAO integration tests"
+              operation: "CREATE_MULTIPLE"
+              files: "${cmp_dao_tests}"
+              base-path: "${project_root}/semeru-springboot/src/test/java/${package_base_path}/dao"
+              
+            - type: "COMMAND"
+              name: "run-integration-tests"
+              description: "Execute DAO integration tests"
+              command: |
+                cd ${project_root}/semeru-springboot && mvn test -Dtest="*DaoTest"
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+              capture-output: true
+              
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-cmp-migration"
+              description: "Verify CMP to POJO+DAO migration"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                CMP Entity Bean migration completed.
+                
+                - POJOs generated: ${generated_pojos.count}
+                - DAOs generated: ${generated_cmp_daos.count}
+                - Compilation successful
+                - Integration tests created and executed
+                
+                Verify:
+                1. All CMP entities have POJOs
+                2. All DAOs implement CRUD operations
+                3. Custom finders migrated
+                4. CMR relationships handled
+                5. Tests pass
+                
+                Proceed to BMP entity identification?
+              required: true
+              timeout-seconds: 1800
+              
+        - id: "task-252"
+          name: "Identify BMP Entity Beans"
+          description: "Locate all Bean-Managed Persistence (BMP) Entity Beans"
+          pattern-tag: "BMP_ENTITY_BEAN_IDENTIFICATION"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-bmp-entity-beans"
+              description: "Query graph for BMP Entity Beans (tagged by EjbBinaryClassInspector)"
+              query-type: "BY_TAGS"
+              tags:
+                - "ejb.bmp.entityBean"
+              output-variable: "bmp_entities"
+              
+            - type: "AI_PROMPT"
+              name: "analyze-bmp-entities"
+              description: "Analyze BMP entities and existing JDBC code"
+              prompt: |
+                Analyze all Bean-Managed Persistence (BMP) Entity Beans.
+                
+                ## BMP Entity Beans (from graph analysis):
+                Count: ${bmp_entities.size()}
+                
+                <#list bmp_entities as node>
+                ### ${node.fullyQualifiedName}
+                - **Package:** ${node.packageName}
+                - **File:** ${node.sourceFilePath}  
+                - **Migration Complexity:** ${node.properties.ejb.migration.complexity}
+                - **Has ejbLoad:** ${node.properties.ejb.entity.lifecycle.hasEjbLoad}
+                - **Has ejbStore:** ${node.properties.ejb.entity.lifecycle.hasEjbStore}
+                - **JDBC Patterns:** Review source file for manual JDBC code in lifecycle methods
+                </#list>
+                
+                **Note:** BMP entities contain manual JDBC code in ejbLoad(), ejbStore(), ejbCreate(), ejbRemove() methods.
+                Review source files to extract exact SQL queries for migration.
+                
+                For each BMP Entity Bean, extract:
+                1. **Bean Name**: Entity bean class name
+                2. **Primary Key**: Key class and fields
+                3. **ejbLoad() SQL**: SELECT queries used to load state
+                4. **ejbStore() SQL**: UPDATE queries used to persist state
+                5. **ejbCreate() SQL**: INSERT queries for new entities
+                6. **ejbRemove() SQL**: DELETE queries
+                7. **Custom Finders SQL**: All finder method SQL
+                8. **Connection Management**: How connections are obtained
+                9. **Transaction Handling**: Manual commit/rollback patterns
+                10. **Error Handling**: Exception handling patterns
+                
+                Document all existing SQL queries EXACTLY as they are.
+                These will be reused in Spring JDBC DAOs.
+              output-variable: "bmp_analysis"
+              temperature: 0.2
+              max-tokens: 3000
+              
+            - type: "FILE_OPERATION"
+              name: "create-bmp-inventory"
+              description: "Create BMP_ENTITY_INVENTORY.md"
+              operation: "CREATE"
+              path: "${project_root}/docs/migration/BMP_ENTITY_INVENTORY.md"
+              content: |
+                # BMP Entity Bean Inventory
+                
+                **Generated:** ${current_datetime}
+                **Migration Phase:** Phase 2B - Entity Bean Migration
+                **Pattern TAG:** BMP_ENTITY_BEAN_IDENTIFICATION
+                
+                ## Overview
+                
+                Bean-Managed Persistence (BMP) Entity Beans with manual JDBC code.
+                
+                ## BMP Entity Beans (Graph Analysis)
+                
+                Total: ${bmp_entities.size()}
+                
+                <#list bmp_entities as node>
+                - **${node.fullyQualifiedName}**
+                  - File: ${node.sourceFilePath}
+                  - Complexity: ${node.properties.ejb.migration.complexity}
+                  - Lifecycle Methods: Review source for ejbLoad(), ejbStore(), ejbCreate(), ejbRemove()
+                </#list>
+                
+                ## Detailed Analysis
+                
+                ${bmp_analysis}
+                
+                ## Migration Advantage
+                
+                BMP entities already have SQL queries - we will:
+                1. Extract existing SQL from ejbLoad/Store/Create/Remove
+                2. Refactor to use Spring JdbcTemplate
+                3. Remove boilerplate JDBC code (connection management)
+                4. Add Spring transaction management
+                
+                ## Next Steps
+                
+                Proceed to TASK-253: Migrate BMP to Spring JDBC DAOs
+                
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-bmp-inventory"
+              description: "Review BMP inventory"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                BMP Entity Bean inventory completed.
+                
+                - BMP entities found: ${bmp_entities.count}
+                - Manual JDBC code extracted
+                - SQL queries documented
+                - BMP_ENTITY_INVENTORY.md created
+                
+                Confirm:
+                1. All BMP entities identified
+                2. Existing SQL captured
+                3. Ready for refactoring
+                
+                Proceed to migrate BMP entities?
+              required: true
+              timeout-seconds: 1800
+              
+        - id: "task-253"
+          name: "Migrate BMP Entity Beans to Spring JDBC DAOs"
+          description: "Refactor Bean-Managed Persistence entities to use Spring JdbcTemplate"
+          pattern-tag: "BMP_TO_JDBC_DAO"
+          
+          blocks:
+            - type: "AI_PROMPT_BATCH"
+              name: "generate-pojo-from-bmp"
+              description: "Generate POJOs from BMP entities"
+              items-variable: "bmp_entities"
+              prompt-template: |
+                Generate a POJO from the BMP Entity Bean.
+                
+                ## BMP Entity: ${item.entity_name}
+                ## BMP Analysis:
+                ${bmp_analysis}
+                
+                Generate a Plain Old Java Object (same as CMP migration):
+                - NO EJB dependencies
+                - NO JPA annotations
+                - Implements Serializable
+                - All fields with getters/setters
+                - equals(), hashCode(), toString()
+                
+                Extract field names and types from the ejbLoad() method.
+                
+                Package: ${package_base}.model
+                Class name: ${item.entity_name}
+                
+                Provide complete Java code.
+              output-variable: "bmp_pojos"
+              temperature: 0.2
+              max-tokens: 2000
+              parallel: false
+              
+            - type: "FILE_OPERATION"
+              name: "create-bmp-pojos"
+              description: "Create BMP POJO classes"
+              operation: "CREATE_MULTIPLE"
+              files: "${bmp_pojos}"
+              base-path: "${project_root}/semeru-springboot/src/main/java/${package_base_path}/model"
+              
+            - type: "AI_PROMPT_BATCH"
+              name: "refactor-bmp-to-dao"
+              description: "Refactor BMP JDBC to Spring DAO"
+              items-variable: "bmp_entities"
+              prompt-template: |
+                Refactor the BMP Entity Bean to Spring JDBC DAO.
+                
+                ## BMP Entity: ${item.entity_name}
+                ## BMP Analysis (with existing SQL):
+                ${bmp_analysis}
+                ## Generated POJO:
+                ${bmp_pojos[item.entity_name]}
+                
+                Generate Spring @Repository DAO that:
+                
+                **Reuse Existing SQL:**
+                1. `findById()` - Use SQL from ejbLoad()
+                2. `update()` - Use SQL from ejbStore()
+                3. `create()` - Use SQL from ejbCreate()
+                4. `delete()` - Use SQL from ejbRemove()
+                5. Custom finders - Use SQL from finder methods
+                
+                **Refactor JDBC Code:**
+                - Replace manual connection management with JdbcTemplate
+                - Replace PreparedStatement with JdbcTemplate methods
+                - Replace ResultSet processing with RowMapper
+                - Remove try-finally blocks (Spring handles resources)
+                - Replace manual transaction code with @Transactional
+                
+                **Key Changes:**
+                ```java
+                // OLD: Manual JDBC in ejbLoad()
+                Connection conn = dataSource.getConnection();
+                try {
+                    PreparedStatement ps = conn.prepareStatement("SELECT ...");
+                    ResultSet rs = ps.executeQuery();
+                    // process ResultSet
+                } finally {
+                    conn.close();
+                }
+                
+                // NEW: Spring JdbcTemplate
+                return jdbcTemplate.queryForObject(
+                    "SELECT ...",  // SAME SQL
+                    new Object[]{id},
+                    this::mapRow
+                );
+                ```
+                
+                Provide complete Spring JDBC DAO with all methods.
+              output-variable: "bmp_daos"
+              temperature: 0.2
+              max-tokens: 3500
+              parallel: false
+              
+            - type: "FILE_OPERATION"
+              name: "create-bmp-daos"
+              description: "Create BMP DAO classes"
+              operation: "CREATE_MULTIPLE"
+              files: "${bmp_daos}"
+              base-path: "${project_root}/semeru-springboot/src/main/java/${package_base_path}/dao"
+              
+            - type: "COMMAND"
+              name: "compile-bmp-migration"
+              description: "Compile BMP POJOs and DAOs"
+              command: |
+                cd ${project_root}/semeru-springboot && mvn compile
+              working-directory: "${project_root}"
+              timeout-seconds: 180
+              capture-output: true
+              
+            - type: "COMMAND"
+              name: "run-all-dao-tests"
+              description: "Run all DAO tests (CMP + BMP)"
+              command: |
+                cd ${project_root}/semeru-springboot && mvn test
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+              capture-output: true
+              
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-bmp-migration"
+              description: "Verify BMP migration completion"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                BMP Entity Bean migration completed.
+                
+                - POJOs created: ${bmp_pojos.count}
+                - DAOs created: ${bmp_daos.count}
+                - SQL queries preserved
+                - JDBC code refactored to JdbcTemplate
+                - Compilation successful
+                - All tests pass
+                
+                Verify:
+                1. All BMP entities migrated
+                2. Existing SQL reused
+                3. Connection management removed
+                4. Spring transaction management works
+                5. No JDBC resource leaks
+                
+                Phase 2B (Entity Bean Migration) COMPLETE!
+                
+                Summary:
+                - CMP Entities: ${generated_pojos.count}
+                - BMP Entities: ${bmp_pojos.count}
+                - Total DAOs: ${generated_cmp_daos.count + bmp_daos.count}
+                
+                Proceed to Phase 3 (Session Bean Migration)?
+              required: true
+              timeout-seconds: 1800

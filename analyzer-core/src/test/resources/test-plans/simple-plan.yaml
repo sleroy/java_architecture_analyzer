@@ -1,0 +1,22 @@
+migration-plan:
+  name: "Test Migration Plan"
+  version: "1.0.0"
+  description: "A simple test plan for unit testing"
+  
+  variables:
+    test_var: "test_value"
+    project_root: "/test/project"
+  
+  phases:
+    - id: "phase-1"
+      name: "Test Phase"
+      description: "First test phase"
+      tasks:
+        - id: "task-001"
+          name: "Test Task"
+          description: "Simple test task"
+          blocks:
+            - type: "COMMAND"
+              name: "test-command"
+              command: "echo 'Hello World'"
+              timeout-seconds: 60

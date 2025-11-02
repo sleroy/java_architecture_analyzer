@@ -104,4 +104,77 @@
         SELECT COUNT(*) > 0 FROM nodes WHERE id = #{id}
     </select>
 
+    <!-- Find nodes by single tag (optimized for H2) -->
+    <select id="findByTag" parameterType="string" resultMap="NodeResultMap">
+        SELECT id, node_type, display_label, properties, metrics, tags, created_at, updated_at
+        FROM nodes
+        WHERE tags IS NOT NULL 
+        AND tags != '[]'
+        AND tags LIKE CONCAT('%"', #{tag}, '"%')
+        ORDER BY node_type, created_at DESC
+    </select>
+
+    <!-- Find nodes having any of the provided tags -->
+    <select id="findByAnyTags" resultMap="NodeResultMap">
+        SELECT id, node_type, display_label, properties, metrics, tags, created_at, updated_at
+        FROM nodes
+        WHERE tags IS NOT NULL 
+        AND tags != '[]'
+        AND (
+        <foreach collection="tags" item="tag" separator=" OR ">
+            tags LIKE CONCAT('%"', #{tag}, '"%')
+        </foreach>
+        )
+        ORDER BY node_type, created_at DESC
+    </select>
+
+    <!-- Find nodes having all of the provided tags -->
+    <select id="findByAllTags" resultMap="NodeResultMap">
+        SELECT id, node_type, display_label, properties, metrics, tags, created_at, updated_at
+        FROM nodes
+        WHERE tags IS NOT NULL 
+        AND tags != '[]'
+        <foreach collection="tags" item="tag">
+        AND tags LIKE CONCAT('%"', #{tag}, '"%')
+        </foreach>
+        ORDER BY node_type, created_at DESC
+    </select>
+
+    <!-- Find nodes by type and having any of the provided tags -->
+    <select id="findByTypeAndAnyTags" resultMap="NodeResultMap">
+        SELECT id, node_type, display_label, properties, metrics, tags, created_at, updated_at
+        FROM nodes
+        WHERE node_type = #{nodeType}
+        AND tags IS NOT NULL 
+        AND tags != '[]'
+        AND (
+        <foreach collection="tags" item="tag" separator=" OR ">
+            tags LIKE CONCAT('%"', #{tag}, '"%')
+        </foreach>
+        )
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- Find nodes by type and having all of the provided tags -->
+    <select id="findByTypeAndAllTags" resultMap="NodeResultMap">
+        SELECT id, node_type, display_label, properties, metrics, tags, created_at, updated_at
+        FROM nodes
+        WHERE node_type = #{nodeType}
+        AND tags IS NOT NULL 
+        AND tags != '[]'
+        <foreach collection="tags" item="tag">
+        AND tags LIKE CONCAT('%"', #{tag}, '"%')
+        </foreach>
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- Count nodes by tag -->
+    <select id="countByTag" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM nodes
+        WHERE tags IS NOT NULL 
+        AND tags != '[]'
+        AND tags LIKE CONCAT('%"', #{tag}, '"%')
+    </select>
+
 </mapper>
