@@ -48,6 +48,7 @@ public class Project {
     }
 
     /**
+     *
      * Get the project name
      */
     public String getProjectName() {

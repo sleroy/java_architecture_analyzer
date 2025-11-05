@@ -102,7 +102,7 @@ migration-plan:
 
             - type: "MAVEN"
               name: "validate-pom"
-              description: "Test that Spring Boot application starts successfully"
+              description: "Test that Spring Boot application starts successfully in ${project_root}/${artifact_id}"
               goals: "validate"
               java-home: "${maven_java_home}"
               maven-home: "${maven_home}"

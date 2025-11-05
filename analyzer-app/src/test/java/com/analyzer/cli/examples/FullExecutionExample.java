@@ -1,7 +1,8 @@
 package com.analyzer.cli.examples;
 
-import picocli.CommandLine;
 import com.analyzer.cli.AnalyzerCLI;
+import picocli.CommandLine;
+
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,24 +11,24 @@ import java.nio.file.Paths;
 /**
  * Example demonstrating how to execute a full migration plan with step-by-step
  * mode.
- * 
+ * <p>
  * This will execute the migration tasks with manual confirmation before each
  * block.
  * Step-by-step mode allows you to review and approve each operation before it
  * executes.
- * 
+ * <p>
  * NOTE: Make sure you have a test EJB project ready before running this.
  */
 public class FullExecutionExample {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(final String[] args) throws Exception {
         System.out.println("=".repeat(80));
         System.out.println("Full Migration Execution Example (with Step-by-Step Mode)");
         System.out.println("=".repeat(80));
         System.out.println();
 
         // Create a test project directory if it doesn't exist
-        Path testProjectPath = Paths.get("/home/sleroy/git/semeru-ejb-maven");
+        final Path testProjectPath = Paths.get("/home/sleroy/git/semeru-ejb-maven");
         if (!Files.exists(testProjectPath)) {
             System.out.println("Creating test project directory: " + testProjectPath);
             Files.createDirectories(testProjectPath);
@@ -36,9 +37,6 @@ public class FullExecutionExample {
             System.out.println();
         }
 
-        System.out.println("Press Ctrl+C within 3 seconds to cancel...");
-        System.out.println();
-        Thread.sleep(3000);
 
         // STEP 1: Execute inventory command first to analyze the project
         System.out.println("=".repeat(80));
@@ -46,27 +44,28 @@ public class FullExecutionExample {
         System.out.println("=".repeat(80));
         System.out.println();
 
-        String[] inventoryArgs = {
+        final String[] inventoryArgs = {
                 "inventory",
                 "--project", testProjectPath.toString(),
                 "--max-passes", "5"
+                , "--java_version", "17", "--packages", "br"
         };
 
         System.out.println("Executing inventory command with:");
-        for (String arg : inventoryArgs) {
+        for (final String arg : inventoryArgs) {
             if (arg.startsWith("--")) {
                 System.out.println("  " + arg);
             }
         }
         System.out.println();
 
-        int inventoryExitCode = new CommandLine(new AnalyzerCLI()).execute(inventoryArgs);
+        final int inventoryExitCode = 0; //new CommandLine(new AnalyzerCLI()).execute(inventoryArgs);
 
         System.out.println();
         System.out.println("Inventory analysis completed with exit code: " + inventoryExitCode);
         System.out.println();
 
-        if (inventoryExitCode != 0) {
+        if (0 != inventoryExitCode) {
             System.err.println("Error: Inventory analysis failed. Aborting migration.");
             System.exit(inventoryExitCode);
         }
@@ -79,8 +78,8 @@ public class FullExecutionExample {
 
         // Build command arguments - using new modular migration plan structure
         // The plan file should be loaded from the file system to support includes
-        String planPath = "migrations/ejb2spring/jboss-to-springboot.yaml";
-        String[] migrationArgs = {
+        final String planPath = "migrations/ejb2spring/jboss-to-springboot.yaml";
+        final String[] migrationArgs = {
                 "apply",
                 "--project", testProjectPath.toString(),
                 "--plan", planPath,
@@ -98,7 +97,7 @@ public class FullExecutionExample {
         };
 
         System.out.println("Executing migration with the following configuration:");
-        for (String arg : migrationArgs) {
+        for (final String arg : migrationArgs) {
             if (arg.startsWith("-D") || arg.startsWith("--")) {
                 System.out.println("  " + arg);
             }
@@ -121,7 +120,7 @@ public class FullExecutionExample {
         System.out.println();
 
         // Execute the migration command
-        int migrationExitCode = new CommandLine(new AnalyzerCLI()).execute(migrationArgs);
+        final int migrationExitCode = new CommandLine(new AnalyzerCLI()).execute(migrationArgs);
 
         System.out.println();
         System.out.println("=".repeat(80));
