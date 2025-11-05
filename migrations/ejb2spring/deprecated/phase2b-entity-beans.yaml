@@ -260,14 +260,14 @@ migration-plan:
               files: "${generated_cmp_daos}"
               base-path: "${project_root}/semeru-springboot/src/main/java/${package_base_path}/dao"
               
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "compile-pojos-and-daos"
               description: "Compile POJOs and DAOs"
-              command: |
-                cd ${project_root}/semeru-springboot && mvn compile
-              working-directory: "${project_root}"
+              goals: "compile"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 180
-              capture-output: true
               
             - type: "AI_PROMPT"
               name: "generate-integration-tests"
@@ -302,14 +302,16 @@ migration-plan:
               files: "${cmp_dao_tests}"
               base-path: "${project_root}/semeru-springboot/src/test/java/${package_base_path}/dao"
               
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "run-integration-tests"
               description: "Execute DAO integration tests"
-              command: |
-                cd ${project_root}/semeru-springboot && mvn test -Dtest="*DaoTest"
-              working-directory: "${project_root}"
+              goals: "test"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
+              properties:
+                test: "*DaoTest"
               timeout-seconds: 300
-              capture-output: true
               
             - type: "INTERACTIVE_VALIDATION"
               name: "verify-cmp-migration"
@@ -556,23 +558,23 @@ migration-plan:
               files: "${bmp_daos}"
               base-path: "${project_root}/semeru-springboot/src/main/java/${package_base_path}/dao"
               
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "compile-bmp-migration"
               description: "Compile BMP POJOs and DAOs"
-              command: |
-                cd ${project_root}/semeru-springboot && mvn compile
-              working-directory: "${project_root}"
+              goals: "compile"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 180
-              capture-output: true
               
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "run-all-dao-tests"
               description: "Run all DAO tests (CMP + BMP)"
-              command: |
-                cd ${project_root}/semeru-springboot && mvn test
-              working-directory: "${project_root}"
+              goals: "test"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 300
-              capture-output: true
               
             - type: "INTERACTIVE_VALIDATION"
               name: "verify-bmp-migration"

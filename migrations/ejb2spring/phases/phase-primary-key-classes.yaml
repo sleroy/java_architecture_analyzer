@@ -1,0 +1,134 @@
+# Phase: Primary Key Class Migration
+# Migrates EJB primary key classes to JPA embeddable or ID classes
+
+migration-plan:
+  phases:
+    - id: "phase-primary-keys"
+      name: "Primary Key Class Migration"
+      description: "Migrate EJB primary key classes to JPA @Embeddable or @IdClass"
+      
+      tasks:
+        - id: "task-primary-key-migration"
+          name: "Migrate Primary Key Classes"
+          description: "Convert EJB primary key classes to JPA-compatible ID classes"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-primary-key-classes"
+              description: "Query all EJB primary key classes"
+              query-type: "BY_TAGS"
+              tags:
+                - "EJB_PRIMARY_KEY_CLASS"
+              output-variable: "primary_key_classes"
+            
+            - type: "OPENREWRITE"
+              name: "refactor-primary-keys"
+              description: "Update primary key class structure"
+              recipe: "com.analyzer.ejb2spring.MigratePrimaryKeyClass"
+              file-pattern: "**/*.java"
+              base-directory: "${project_root}/src/main/java"
+            
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-migrate-primary-keys"
+              description: "AI-assisted migration for each primary key class"
+              input-nodes: "${primary_key_classes}"
+              prompt: |
+                You are migrating an EJB primary key class to a JPA-compatible ID class.
+                
+                **Current Primary Key Class:**
+                - Node ID: ${current_node_id}
+                - Class Name: ${current_node.className}
+                - Package: ${current_node.packageName}
+                
+                **Migration Tasks:**
+                
+                1. **Choose ID Strategy:**
+                   - For single-field keys: Use @Id directly on entity field (no separate class needed)
+                   - For composite keys: Use @Embeddable (preferred) or @IdClass
+                
+                2. **If Using @Embeddable (Preferred for Composite Keys):**
+                   - Add @Embeddable annotation to the key class
+                   - Ensure class implements Serializable
+                   - Override equals() and hashCode() methods
+                   - Make fields correspond to entity @Id fields
+                   - In entity: Use @EmbeddedId for the composite key
+                
+                3. **If Using @IdClass (Alternative):**
+                   - Keep key class as-is with proper equals/hashCode
+                   - Implement Serializable
+                   - In entity: Add @IdClass(KeyClass.class) and individual @Id fields
+                
+                4. **Migration Guidelines:**
+                   - Use Jakarta namespace (jakarta.persistence.*)
+                   - Ensure proper equals/hashCode implementation
+                   - Make class Serializable
+                   - Remove any EJB-specific methods
+                   - Update entity class to use the key properly
+                
+                5. **Update Entity Class:**
+                   - Add @EmbeddedId or @IdClass annotation
+                   - Ensure key fields match primary key class
+                   - Update repository to use correct key type
+                
+                **Expected Output:**
+                - JPA-compatible primary key class with @Embeddable or plain class for @IdClass
+                - Updated entity class with proper @Id annotations
+                - equals() and hashCode() properly implemented
+                - Serializable interface implemented
+                
+                Please migrate this primary key class.
+              working-directory: "${project_root}"
+              progress-message: "Migrating primary key class"
+              timeout-seconds: 600
+            
+            - type: "AI_ASSISTED"
+              name: "compile-primary-keys"
+              description: "Compile and validate primary key migrations"
+              prompt: |
+                All primary key classes have been migrated.
+                
+                **Summary:**
+                - Keys processed: ${node_count}
+                - Successful: ${success_count}
+                - Failed: ${failure_count}
+                
+                **Tasks:**
+                1. Compile project to check for errors
+                2. Verify all @Embeddable or @IdClass annotations are correct
+                3. Check equals() and hashCode() implementations
+                4. Ensure Serializable is implemented
+                5. Verify entity classes use keys correctly
+                6. Test repository operations with composite keys
+                
+                Please compile the project and fix any errors related to primary key migration.
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+            
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-primary-key-migration"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                Primary Key Class migration completed.
+                
+                **Migration Summary:**
+                - Primary key classes processed: ${node_count}
+                - Successful migrations: ${success_count}
+                - Failed migrations: ${failure_count}
+                
+                **Review Checklist:**
+                1. All primary key classes converted to JPA format
+                2. @Embeddable or @IdClass used appropriately
+                3. Serializable interface implemented
+                4. equals() and hashCode() properly overridden
+                5. Entity classes updated to use keys correctly
+                6. No EJB imports remaining
+                7. All code compiles successfully
+                
+                **Next Steps:**
+                - Test composite key queries
+                - Verify JPQL queries work with new keys
+                - Test repository findById with composite keys
+                
+                Please verify the primary key migration and confirm to proceed.
+              required: true
+              timeout-seconds: 1800

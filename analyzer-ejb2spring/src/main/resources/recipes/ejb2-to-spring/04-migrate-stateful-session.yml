@@ -1,0 +1,31 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.analyzer.ejb2spring.MigrateStatefulSession
+displayName: Migrate Stateful Session Bean to Spring Component
+description: Replace @Stateful with @Component and add session scope
+recipeList:
+  # Replace @Stateful with @Component
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: javax.ejb.Stateful
+      newAnnotation: org.springframework.stereotype.Component
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: jakarta.ejb.Stateful
+      newAnnotation: org.springframework.stereotype.Component
+  
+  # Remove stateful-specific annotations
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.ejb.Remove"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@jakarta.ejb.Remove"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.ejb.PrePassivate"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@jakarta.ejb.PrePassivate"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.ejb.PostActivate"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@jakarta.ejb.PostActivate"
+  
+  # Change @EJB to @Autowired
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: javax.ejb.EJB
+      newAnnotation: org.springframework.beans.factory.annotation.Autowired

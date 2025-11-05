@@ -1,13 +1,16 @@
 package com.analyzer.migration.loader;
 
 import com.analyzer.core.db.H2GraphStorageRepository;
+import com.analyzer.migration.blocks.ai.AiAssistedBatchBlock;
 import com.analyzer.migration.blocks.ai.AiAssistedBlock;
 import com.analyzer.migration.blocks.ai.AiPromptBatchBlock;
 import com.analyzer.migration.blocks.ai.AiPromptBlock;
 import com.analyzer.migration.blocks.analysis.GraphQueryBlock;
 import com.analyzer.migration.blocks.automated.CommandBlock;
 import com.analyzer.migration.blocks.automated.FileOperationBlock;
+import com.analyzer.migration.blocks.automated.GitCheckpointBlock;
 import com.analyzer.migration.blocks.automated.GitCommandBlock;
+import com.analyzer.migration.blocks.automated.MavenBlock;
 import com.analyzer.migration.blocks.automated.OpenRewriteBlock;
 import com.analyzer.migration.blocks.validation.InteractiveValidationBlock;
 import com.analyzer.migration.loader.dto.BlockDTO;
@@ -19,6 +22,7 @@ import com.analyzer.migration.plan.Task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -88,7 +92,8 @@ public class MigrationPlanConverter {
                 .map(this::convertTask)
                 .collect(Collectors.toList());
 
-        Phase.Builder phaseBuilder = Phase.builder(dto.getName());
+        Phase.Builder phaseBuilder = Phase.builder(dto.getName())
+                .id(dto.getId());
 
         if (dto.getDescription() != null) {
             phaseBuilder.description(dto.getDescription());
@@ -136,6 +141,8 @@ public class MigrationPlanConverter {
                 return convertCommandBlock(dto);
             case "GIT":
                 return convertGitCommandBlock(dto);
+            case "MAVEN":
+                return convertMavenBlock(dto);
             case "FILE_OPERATION":
                 return convertFileOperationBlock(dto);
             case "OPENREWRITE":
@@ -148,8 +155,12 @@ public class MigrationPlanConverter {
                 return convertAiPromptBatchBlock(dto);
             case "AI_ASSISTED":
                 return convertAiAssistedBlock(dto);
+            case "AI_ASSISTED_BATCH":
+                return convertAiAssistedBatchBlock(dto);
             case "INTERACTIVE_VALIDATION":
                 return convertInteractiveValidationBlock(dto);
+            case "CHECKPOINT":
+                return convertCheckpointBlock(dto);
             default:
                 throw new IllegalArgumentException("Unknown block type: " + dto.getType());
         }
@@ -176,6 +187,11 @@ public class MigrationPlanConverter {
         // Add enable_if condition if present
         if (props.containsKey("enable_if")) {
             builder.enableIf(getString(props, "enable_if"));
+        }
+
+        // Add output-variable for custom output variable name
+        if (props.containsKey("output-variable")) {
+            builder.outputVariableName(getString(props, "output-variable"));
         }
 
         return builder.build();
@@ -219,6 +235,65 @@ public class MigrationPlanConverter {
 
         if (props.containsKey("capture-output")) {
             builder.captureOutput(getBoolean(props, "capture-output", true));
+        }
+
+        return builder.build();
+    }
+
+    /**
+     * Converts BlockDTO to MavenBlock.
+     */
+    private MavenBlock convertMavenBlock(BlockDTO dto) {
+        Map<String, Object> props = dto.getProperties();
+
+        MavenBlock.Builder builder = MavenBlock.builder()
+                .name(dto.getName())
+                .goals(getRequiredString(props, "goals", dto.getName()));
+
+        if (props.containsKey("java-home")) {
+            builder.javaHome(getString(props, "java-home"));
+        }
+
+        if (props.containsKey("maven-home")) {
+            builder.mavenHome(getString(props, "maven-home"));
+        }
+
+        if (props.containsKey("working-directory")) {
+            builder.workingDirectory(getString(props, "working-directory"));
+        }
+
+        if (props.containsKey("timeout-seconds")) {
+            builder.timeoutSeconds(getInteger(props, "timeout-seconds", 300));
+        }
+
+        if (props.containsKey("properties")) {
+            Object propsObj = props.get("properties");
+            if (propsObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, String> mavenProps = new HashMap<>();
+                ((Map<?, ?>) propsObj).forEach((k, v) -> mavenProps.put(k.toString(), v != null ? v.toString() : ""));
+                builder.properties(mavenProps);
+            }
+        }
+
+        if (props.containsKey("profiles")) {
+            builder.profiles(getString(props, "profiles"));
+        }
+
+        if (props.containsKey("maven-opts")) {
+            builder.mavenOpts(getString(props, "maven-opts"));
+        }
+
+        if (props.containsKey("offline")) {
+            builder.offline(getBoolean(props, "offline", false));
+        }
+
+        if (props.containsKey("capture-output")) {
+            builder.captureOutput(getBoolean(props, "capture-output", true));
+        }
+
+        if (props.containsKey("enable_if")) {
+            builder.enableIf(getString(props, "enable_if"));
         }
 
         return builder.build();
@@ -273,9 +348,39 @@ public class MigrationPlanConverter {
                 .name(dto.getName())
                 .recipeName(getRequiredString(props, "recipe", dto.getName()));
 
-        // Note: OpenRewriteBlock doesn't support recipe-options in the current
-        // implementation
-        // Recipe configuration should be done in OpenRewrite configuration files
+        // Handle file-paths (supports both "file-paths" and "files")
+        Object filesObj = props.get("file-paths");
+        if (filesObj == null) {
+            filesObj = props.get("files");
+        }
+
+        if (filesObj != null) {
+            if (filesObj instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<String> filesList = (List<String>) filesObj;
+                builder.filePaths(filesList);
+            } else if (filesObj instanceof String) {
+                builder.addFilePath((String) filesObj);
+            }
+        }
+
+        // Handle file-pattern (supports both "file-pattern" and "pattern")
+        String pattern = getString(props, "file-pattern");
+        if (pattern == null) {
+            pattern = getString(props, "pattern");
+        }
+        if (pattern != null) {
+            builder.filePattern(pattern);
+        }
+
+        // Handle base-directory (supports both "base-directory" and "base-path")
+        String baseDir = getString(props, "base-directory");
+        if (baseDir == null) {
+            baseDir = getString(props, "base-path");
+        }
+        if (baseDir != null) {
+            builder.baseDirectory(baseDir);
+        }
 
         return builder.build();
     }
@@ -398,6 +503,51 @@ public class MigrationPlanConverter {
             builder.timeoutSeconds(getInteger(props, "timeout-seconds", 300));
         }
 
+        // Working directory is required for AiAssistedBlock
+        if (props.containsKey("working-directory")) {
+            String workingDirTemplate = getString(props, "working-directory");
+            builder.workingDirectoryTemplate(workingDirTemplate);
+        } else {
+            throw new IllegalArgumentException(
+                    "Required property 'working-directory' missing in AI_ASSISTED block: " + dto.getName());
+        }
+
+        return builder.build();
+    }
+
+    /**
+     * Converts BlockDTO to AiAssistedBatchBlock.
+     */
+    private AiAssistedBatchBlock convertAiAssistedBatchBlock(BlockDTO dto) {
+        Map<String, Object> props = dto.getProperties();
+
+        // AiAssistedBatchBlock requires input-nodes and prompt
+        String inputNodes = getRequiredString(props, "input-nodes", dto.getName());
+        String promptTemplate = getRequiredString(props, "prompt", dto.getName());
+        String workingDirectory = getRequiredString(props, "working-directory", dto.getName());
+
+        AiAssistedBatchBlock.Builder builder = AiAssistedBatchBlock.builder()
+                .name(dto.getName())
+                .inputNodesVariableName(inputNodes)
+                .promptTemplate(promptTemplate)
+                .workingDirectoryTemplate(workingDirectory);
+
+        if (props.containsKey("description")) {
+            builder.description(getString(props, "description"));
+        }
+
+        if (props.containsKey("progress-message")) {
+            builder.progressMessage(getString(props, "progress-message"));
+        }
+
+        if (props.containsKey("timeout-seconds")) {
+            builder.timeoutSeconds(getInteger(props, "timeout-seconds", 600));
+        }
+
+        if (props.containsKey("max-nodes")) {
+            builder.maxNodes(getInteger(props, "max-nodes", -1));
+        }
+
         return builder.build();
     }
 
@@ -430,6 +580,38 @@ public class MigrationPlanConverter {
 
         if (props.containsKey("required")) {
             builder.required(getBoolean(props, "required", true));
+        }
+
+        return builder.build();
+    }
+
+    /**
+     * Converts BlockDTO to GitCheckpointBlock.
+     */
+    private GitCheckpointBlock convertCheckpointBlock(BlockDTO dto) {
+        Map<String, Object> props = dto.getProperties();
+
+        GitCheckpointBlock.Builder builder = GitCheckpointBlock.builder()
+                .name(dto.getName())
+                .commitMessage(getRequiredString(props, "commit-message", dto.getName()));
+
+        if (props.containsKey("working-directory")) {
+            builder.workingDirectory(getString(props, "working-directory"));
+        }
+
+        if (props.containsKey("include-untracked")) {
+            builder.includeUntracked(getBoolean(props, "include-untracked", true));
+        }
+
+        if (props.containsKey("force-commit")) {
+            builder.forceCommit(getBoolean(props, "force-commit", false));
+        }
+        if (props.containsKey("commit-message")) {
+            builder.commitMessage(getString(props, "commit-message"));
+        }
+
+        if (props.containsKey("timeout-seconds")) {
+            builder.timeoutSeconds(getInteger(props, "timeout-seconds", 60));
         }
 
         return builder.build();

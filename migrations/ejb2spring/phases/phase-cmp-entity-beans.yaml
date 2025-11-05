@@ -1,0 +1,129 @@
+# Phase: CMP Entity Bean Migration
+# Migrates Container Managed Persistence entity beans to JPA entities with Spring Data repositories
+
+migration-plan:
+  phases:
+    - id: "phase-cmp-entities"
+      name: "CMP Entity Bean Migration"
+      description: "Migrate Container Managed Persistence (CMP) entity beans to JPA entities with Spring Data repositories"
+      
+      tasks:
+        - id: "task-cmp-migration"
+          name: "Migrate CMP Entities to JPA"
+          description: "Convert CMP entity beans to modern JPA entities with proper annotations and relationships"
+          
+          blocks:
+            # Step 1: GRAPH_QUERY - Find all CMP entity beans
+            - type: "GRAPH_QUERY"
+              name: "query-cmp-entities"
+              description: "Query all Container Managed Persistence entity beans"
+              query-type: "BY_TAGS"
+              tags:
+                - "EJB_CMP_ENTITY"
+              output-variable: "cmp_entities"
+            
+            # Step 2: OPENREWRITE - Apply automated refactorings
+            - type: "OPENREWRITE"
+              name: "refactor-cmp-annotations"
+              description: "Remove EJB-specific annotations and add JPA annotations"
+              recipe: "com.analyzer.ejb2spring.MigrateCMPEntity"
+              file-pattern: "**/*.java"
+              base-directory: "${project_root}/src/main/java"
+            
+            # Step 3: AI_ASSISTED_BATCH - Process each CMP entity with Amazon Q
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-migrate-cmp-entities"
+              description: "AI-assisted migration for each CMP entity bean"
+              input-nodes: "${cmp_entities}"
+              prompt: |
+                You are migrating a Container Managed Persistence (CMP) EJB entity bean to a modern JPA entity with Spring Data repository.
+                
+                **Current CMP Entity:**
+                - Node ID: ${current_node_id}
+                - Class Name: ${current_node.className}
+                - Package: ${current_node.packageName}
+                
+                **Migration Tasks:**
+                
+                1. **Convert CMP Entity to JPA Entity:**
+                   - Replace @Entity (javax.ejb) with @Entity (jakarta.persistence)
+                   - Add @Table annotation with table name
+                   - Convert CMP fields to JPA fields with @Column annotations
+                   - Add @Id and @GeneratedValue for primary key
+                   - Convert CMR relationships to JPA relationships (@OneToMany, @ManyToOne, @ManyToMany)
+                   - Remove EJB-specific methods (ejbCreate, ejbPostCreate, ejbLoad, ejbStore)
+                
+                2. **Create Spring Data JPA Repository:**
+                   - Create a repository interface extending JpaRepository<EntityName, PrimaryKeyType>
+                   - Add custom query methods if needed (derived from CMP finder methods)
+                   - Place repository in appropriate package (e.g., com.example.repository)
+                
+                3. **Migration Guidelines:**
+                   - Preserve all business logic in the entity
+                   - Use proper JPA cascade types for relationships
+                   - Add @JsonIgnore or @JsonManagedReference/@JsonBackReference for bidirectional relationships to avoid circular dependencies
+                   - Use Jakarta namespace (jakarta.persistence.*) not javax
+                   - Follow Spring Data naming conventions for query methods
+                
+                **Expected Output:**
+                - Updated JPA entity class with all proper annotations
+                - New Spring Data repository interface
+                - Update any service classes that reference this entity
+                
+                Please migrate this CMP entity bean following these guidelines.
+              working-directory: "${project_root}"
+              progress-message: "Migrating CMP entity"
+              timeout-seconds: 600
+            
+            # Step 4: AI_ASSISTED - Compile and validate all changes
+            - type: "AI_ASSISTED"
+              name: "compile-cmp-entities"
+              description: "Compile all migrated CMP entities and fix any compilation errors"
+              prompt: |
+                All CMP entities have been migrated to JPA entities with Spring Data repositories.
+                
+                **Summary:**
+                - Total entities processed: ${node_count}
+                - Successful migrations: ${success_count}
+                - Failed migrations: ${failure_count}
+                
+                **Tasks:**
+                1. Run Maven compile to check for compilation errors
+                2. Fix any import issues (ensure using jakarta.persistence.* not javax.persistence.*)
+                3. Resolve any missing dependencies in pom.xml
+                4. Fix any JPA relationship issues
+                5. Verify all repository interfaces are properly configured
+                
+                Please compile the project and fix any errors related to the CMP-to-JPA migration.
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+            
+            # Step 5: INTERACTIVE_VALIDATION - Human checkpoint
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-cmp-migration"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                CMP Entity Bean migration completed.
+                
+                **Migration Summary:**
+                - CMP entities processed: ${node_count}
+                - Successful migrations: ${success_count}
+                - Failed migrations: ${failure_count}
+                
+                **Review Checklist:**
+                1. All CMP entities converted to JPA entities
+                2. Spring Data repositories created for each entity
+                3. JPA relationships properly configured (@OneToMany, @ManyToOne, etc.)
+                4. All entity classes compile successfully
+                5. No javax.* imports remaining (all using jakarta.*)
+                6. Primary keys properly annotated with @Id and @GeneratedValue
+                7. Table names specified with @Table annotation
+                
+                **Next Steps:**
+                - Review the migrated entities
+                - Test repository methods
+                - Verify database schema generation
+                
+                Please verify the CMP entity migration and confirm to proceed.
+              required: true
+              timeout-seconds: 1800

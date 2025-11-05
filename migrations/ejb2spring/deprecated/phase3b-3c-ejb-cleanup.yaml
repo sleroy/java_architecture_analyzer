@@ -120,11 +120,13 @@ migration-plan:
                 spring.activemq.broker-url=tcp://localhost:61616
                 spring.jms.listener.concurrency=1-10
                 
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "compile-jms"
               description: "Compile JMS listeners"
-              command: "cd ${project_root}/semeru-springboot && mvn compile"
-              working-directory: "${project_root}"
+              goals: "compile"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 180
               
             - type: "INTERACTIVE_VALIDATION"
@@ -231,11 +233,13 @@ migration-plan:
                 remove-jndi: true
                 replace-with-spring-di: true
                 
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "final-compile"
-              description: "Final compilation"
-              command: "cd ${project_root}/semeru-springboot && mvn clean compile"
-              working-directory: "${project_root}"
+              description: "Final compilation after EJB cleanup"
+              goals: "clean compile"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 300
               
             - type: "INTERACTIVE_VALIDATION"

@@ -72,10 +72,13 @@ migration-plan:
               temperature: 0.2
               max-tokens: 3000
               
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "compile-ws-endpoints"
-              command: "cd ${project_root}/semeru-springboot && mvn compile"
-              working-directory: "${project_root}"
+              description: "Compile Spring Web Service endpoints"
+              goals: "compile"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 180
               
     - id: "phase-5"
@@ -146,10 +149,13 @@ migration-plan:
               files: "${rest_controllers}"
               base-path: "${project_root}/semeru-springboot/src/main/java/${package_base_path}/controller"
               
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "compile-controllers"
-              command: "cd ${project_root}/semeru-springboot && mvn compile"
-              working-directory: "${project_root}"
+              description: "Compile REST controllers"
+              goals: "compile"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 180
               
     - id: "phase-6"
@@ -279,12 +285,14 @@ migration-plan:
               search: "<packaging>war</packaging>"
               replace: "<packaging>jar</packaging>"
               
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "build-executable-jar"
-              command: "cd ${project_root}/semeru-springboot && mvn clean package"
-              working-directory: "${project_root}"
+              description: "Build Spring Boot executable JAR"
+              goals: "clean package"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 300
-              capture-output: true
               
             - type: "COMMAND"
               name: "test-jar-execution"

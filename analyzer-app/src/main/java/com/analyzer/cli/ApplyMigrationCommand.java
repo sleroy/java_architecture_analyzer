@@ -12,6 +12,7 @@ import com.analyzer.migration.loader.MigrationPlanConverter;
 import com.analyzer.migration.loader.YamlMigrationPlanLoader;
 import com.analyzer.migration.loader.dto.MigrationPlanDTO;
 import com.analyzer.migration.plan.MigrationPlan;
+import com.analyzer.migration.plan.Phase;
 import com.analyzer.migration.state.MigrationStateManager;
 import com.analyzer.migration.state.StateFileListener;
 import com.analyzer.migration.state.model.MigrationExecutionState;
@@ -789,6 +790,23 @@ public class ApplyMigrationCommand implements Callable<Integer> {
             result = engine.executeTaskById(plan, taskId, context);
         } else if (phaseId != null) {
             logger.info("Executing single phase: {}", phaseId);
+
+            // Validate phase exists (search by ID first, then by name)
+            boolean phaseExists = plan.getPhases().stream()
+                    .anyMatch(p -> (p.getId() != null && p.getId().equalsIgnoreCase(phaseId))
+                            || p.getName().equalsIgnoreCase(phaseId));
+
+            if (!phaseExists) {
+                logger.error("\n❌ Phase not found: {}", phaseId);
+                logger.error("\nAvailable phases in plan:");
+                for (int i = 0; i < plan.getPhases().size(); i++) {
+                    Phase p = plan.getPhases().get(i);
+                    logger.error("  {}. [{}] {}", i + 1, p.getId() != null ? p.getId() : "no-id", p.getName());
+                }
+                logger.error("\nTip: Use 'analyzer list-phases --plan {}' to see all phases", planPath);
+                return 1;
+            }
+
             result = engine.executePhaseById(plan, phaseId, context);
         } else if (resume) {
             logger.info("Resuming from checkpoint");

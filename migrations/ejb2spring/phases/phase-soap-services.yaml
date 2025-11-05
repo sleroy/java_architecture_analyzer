@@ -1,0 +1,149 @@
+# Phase: SOAP Service Migration
+# Migrates JAX-WS SOAP endpoints to Spring Web Services
+
+migration-plan:
+  phases:
+    - id: "phase-soap-services"
+      name: "SOAP Service Migration"
+      description: "Migrate JAX-WS SOAP endpoints to Spring Web Services"
+      
+      tasks:
+        - id: "task-soap-migration"
+          name: "Migrate JAX-WS to Spring WS"
+          description: "Convert JAX-WS endpoints to Spring Web Services"
+          
+          blocks:
+            # Step 1: GRAPH_QUERY - Find JAX-WS endpoints
+            - type: "GRAPH_QUERY"
+              name: "query-soap-endpoints"
+              description: "Query all JAX-WS SOAP endpoint classes"
+              query-type: "BY_TAGS"
+              tags:
+                - "WEBSERVICE_JAX_WS"
+              output-variable: "soap_endpoints"
+            
+            # Step 2: OPENREWRITE - Apply automated refactorings
+            - type: "OPENREWRITE"
+              name: "refactor-jaxws-annotations"
+              description: "Remove JAX-WS annotations"
+              recipe: "com.analyzer.ejb2spring.MigrateJaxWsToSpringWs"
+              file-pattern: "**/*.java"
+              base-directory: "${project_root}/src/main/java"
+            
+            # Step 3: AI_ASSISTED_BATCH - Process each endpoint
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-migrate-soap-endpoints"
+              description: "AI-assisted migration for each SOAP endpoint"
+              input-nodes: "${soap_endpoints}"
+              prompt: |
+                You are migrating a JAX-WS SOAP endpoint to Spring Web Services.
+                
+                **Current JAX-WS Endpoint:**
+                - Node ID: ${current_node_id}
+                - Class Name: ${current_node.className}
+                - Package: ${current_node.packageName}
+                
+                **Migration Tasks:**
+                
+                1. **Create XSD Schema:**
+                   - Extract request/response types from @WebService
+                   - Create XSD file in src/main/resources/xsd/
+                   - Define all complex types used
+                   - Define request/response elements
+                
+                2. **Generate JAXB Classes:**
+                   - Use jaxb2-maven-plugin to generate from XSD
+                   - Place in generated package
+                
+                3. **Create Spring WS Endpoint:**
+                   ```java
+                   // OLD: JAX-WS
+                   @WebService(serviceName = "CustomerService")
+                   public class CustomerServiceImpl {
+                       @WebMethod
+                       public Customer getCustomer(@WebParam Long id) {...}
+                   }
+                   
+                   // NEW: Spring WS
+                   @Endpoint
+                   public class CustomerEndpoint {
+                       private static final String NAMESPACE = "http://example.com/customer";
+                       
+                       @PayloadRoot(namespace = NAMESPACE, localPart = "getCustomerRequest")
+                       @ResponsePayload
+                       public GetCustomerResponse getCustomer(@RequestPayload GetCustomerRequest request) {
+                           // Map request to domain
+                           // Call service
+                           // Map domain to response
+                       }
+                   }
+                   ```
+                
+                4. **Create Web Service Configuration:**
+                   - Configure MessageDispatcherServlet
+                   - Define WSDL definition bean
+                   - Set up XSD schema bean
+                
+                5. **Create Mapper Classes:**
+                   - Map JAXB types to domain objects
+                   - Map domain objects to JAXB responses
+                
+                6. **Migration Guidelines:**
+                   - Use contract-first approach (XSD → Java)
+                   - Endpoint methods map to operations
+                   - Preserve all business logic
+                   - Test with SoapUI or similar
+                
+                **Expected Output:**
+                - XSD schema file
+                - Spring @Endpoint class
+                - JAXB↔Domain mappers
+                - Web service configuration
+                - WSDL accessible
+                
+                Please migrate this SOAP endpoint.
+              working-directory: "${project_root}"
+              progress-message: "Migrating SOAP endpoint"
+              timeout-seconds: 600
+            
+            # Step 4: AI_ASSISTED - Compile and validate
+            - type: "AI_ASSISTED"
+              name: "compile-soap-endpoints"
+              description: "Compile and test SOAP endpoints"
+              prompt: |
+                All JAX-WS endpoints migrated to Spring WS.
+                
+                **Summary:**
+                - Endpoints processed: ${node_count}
+                - Successful: ${success_count}
+                - Failed: ${failure_count}
+                
+                **Tasks:**
+                1. Compile project
+                2. Generate JAXB classes from XSD
+                3. Verify WSDL accessible
+                4. Test SOAP requests
+                5. Check namespace mappings
+                
+                Please compile and test.
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+            
+            # Step 5: INTERACTIVE_VALIDATION
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-soap-migration"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                SOAP service migration completed.
+                
+                **Summary:** ${node_count} services (${success_count} successful)
+                
+                **Review:**
+                1. All endpoints migrated
+                2. WSDL accessible
+                3. SOAP requests work
+                4. Schemas valid
+                
+                Test and confirm.
+              required: true
+              timeout-seconds: 1800

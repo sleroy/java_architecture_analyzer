@@ -1,0 +1,24 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.analyzer.ejb2spring.MigrateMessageDriven
+displayName: Migrate Message-Driven Bean to Spring JMS
+description: Replace @MessageDriven with @Component for JMS listener
+recipeList:
+  # Replace @MessageDriven with @Component
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: javax.ejb.MessageDriven
+      newAnnotation: org.springframework.stereotype.Component
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: jakarta.ejb.MessageDriven
+      newAnnotation: org.springframework.stereotype.Component
+  
+  # Remove MessageListener interface
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: javax.jms.MessageListener
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: jakarta.jms.MessageListener
+  
+  # Remove activation config
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.ejb.ActivationConfigProperty"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@jakarta.ejb.ActivationConfigProperty"

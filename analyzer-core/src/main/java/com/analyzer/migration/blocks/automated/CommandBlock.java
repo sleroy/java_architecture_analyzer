@@ -30,6 +30,7 @@ public class CommandBlock implements MigrationBlock {
     private final long timeoutSeconds;
     private final boolean captureOutput;
     private final String enableIf;
+    private final String outputVariableName;
 
     private CommandBlock(Builder builder) {
         this.name = builder.name;
@@ -38,6 +39,7 @@ public class CommandBlock implements MigrationBlock {
         this.timeoutSeconds = builder.timeoutSeconds;
         this.captureOutput = builder.captureOutput;
         this.enableIf = builder.enableIf;
+        this.outputVariableName = builder.outputVariableName;
     }
 
     public static Builder builder() {
@@ -107,7 +109,12 @@ public class CommandBlock implements MigrationBlock {
                     .outputVariable("command", processedCommand);
 
             if (captureOutput && !outputLines.isEmpty()) {
-                resultBuilder.outputVariable("output", String.join("\n", outputLines));
+                String joinedOutput = String.join("\n", outputLines);
+                // Use custom output variable name if specified, otherwise default to "output"
+                String varName = (outputVariableName != null && !outputVariableName.trim().isEmpty())
+                        ? outputVariableName
+                        : "output";
+                resultBuilder.outputVariable(varName, joinedOutput);
                 resultBuilder.outputVariable("output_lines", outputLines);
             }
 
@@ -196,6 +203,7 @@ public class CommandBlock implements MigrationBlock {
         private long timeoutSeconds = DEFAULT_TIMEOUT_SECONDS;
         private boolean captureOutput = true;
         private String enableIf;
+        private String outputVariableName;
 
         public Builder name(String name) {
             this.name = name;
@@ -224,6 +232,11 @@ public class CommandBlock implements MigrationBlock {
 
         public Builder enableIf(String enableIf) {
             this.enableIf = enableIf;
+            return this;
+        }
+
+        public Builder outputVariableName(String outputVariableName) {
+            this.outputVariableName = outputVariableName;
             return this;
         }
 

@@ -1,0 +1,38 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.analyzer.ejb2spring.MigrateStatelessSession
+displayName: Migrate Stateless Session Bean to Spring Service
+description: Replace @Stateless with @Service and update DI
+recipeList:
+  # Replace @Stateless with @Service
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: javax.ejb.Stateless
+      newAnnotation: org.springframework.stereotype.Service
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: jakarta.ejb.Stateless
+      newAnnotation: org.springframework.stereotype.Service
+  
+  # Remove @Local and @Remote
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.ejb.Local"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@jakarta.ejb.Local"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.ejb.Remote"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@jakarta.ejb.Remote"
+  
+  # Change @EJB to @Autowired
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: javax.ejb.EJB
+      newAnnotation: org.springframework.beans.factory.annotation.Autowired
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: jakarta.ejb.EJB
+      newAnnotation: org.springframework.beans.factory.annotation.Autowired
+  
+  # Change @TransactionAttribute to @Transactional
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: javax.ejb.TransactionAttribute
+      newFullyQualifiedTypeName: org.springframework.transaction.annotation.Transactional
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: jakarta.ejb.TransactionAttribute
+      newFullyQualifiedTypeName: org.springframework.transaction.annotation.Transactional

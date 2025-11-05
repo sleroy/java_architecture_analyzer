@@ -1,0 +1,21 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.analyzer.ejb2spring.MigrateJaxWsToSpringWs
+displayName: Migrate JAX-WS to Spring Web Services
+description: Remove JAX-WS annotations for Spring WS endpoint migration
+recipeList:
+  # Remove JAX-WS annotations (Spring WS uses different approach)
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.jws.WebService"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.jws.WebMethod"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.jws.WebParam"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.jws.WebResult"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.jws.soap.SOAPBinding"
+  
+  # Change to jakarta namespace if present
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: javax.jws.WebService
+      newFullyQualifiedTypeName: jakarta.jws.WebService

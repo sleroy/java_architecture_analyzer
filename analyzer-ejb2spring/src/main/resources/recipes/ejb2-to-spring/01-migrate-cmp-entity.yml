@@ -1,0 +1,43 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.analyzer.ejb2spring.MigrateCMPEntity
+displayName: Migrate CMP Entity Bean to JPA
+description: Remove EJB CMP annotations and prepare for JPA migration
+recipeList:
+  # Remove EJB-specific annotations
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.ejb.Entity"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.persistence.Entity"
+  
+  # Remove EJB lifecycle methods
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbCreate(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbPostCreate(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbLoad(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbStore(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbRemove(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbActivate(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbPassivate(..)"
+  
+  # Change javax to jakarta imports
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: javax.persistence.Entity
+      newFullyQualifiedTypeName: jakarta.persistence.Entity
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: javax.persistence.Table
+      newFullyQualifiedTypeName: jakarta.persistence.Table
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: javax.persistence.Column
+      newFullyQualifiedTypeName: jakarta.persistence.Column
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: javax.persistence.Id
+      newFullyQualifiedTypeName: jakarta.persistence.Id
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: javax.persistence.GeneratedValue
+      newFullyQualifiedTypeName: jakarta.persistence.GeneratedValue

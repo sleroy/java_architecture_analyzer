@@ -84,13 +84,15 @@ public class FullExecutionExample {
                 "apply",
                 "--project", testProjectPath.toString(),
                 "--plan", planPath,
-                //"--step-by-step", // Enable step-by-step mode for manual control
+                // "--step-by-step", // Enable step-by-step mode for manual control
                 // "--dry-run", // Use dry-run to safely demonstrate step-by-step mode
+                // "--resume", // Resume from last checkpoint (if migration was interrupted)
                 "--verbose",
                 // Variables are defined in migrations/ejb2spring/common/variables.yaml
                 // Override them here if needed for your specific project
-                "-Dspring_boot_version=2.7.18",
-                "-Djava_version=11",
+                "-Dspring_boot_version=3.5.7",
+                // Note: java_version is auto-detected from system, don't override unless needed
+                // "-Djava_version=21", // Uncomment to override detected version
                 "-Dbase_package=com.example.app",
                 "-Dtarget_database=h2"
         };
@@ -149,6 +151,18 @@ public class FullExecutionExample {
         System.out.println("  Step 2: analyzer apply --project /path/to/project \\");
         System.out.println("                         --plan migrations/ejb2spring/jboss-to-springboot.yaml \\");
         System.out.println("                         --step-by-step");
+        System.out.println();
+        System.out.println("To resume after crash or interruption:");
+        System.out.println("  analyzer apply --project /path/to/project \\");
+        System.out.println("                 --plan migrations/ejb2spring/jboss-to-springboot.yaml \\");
+        System.out.println("                 --resume");
+        System.out.println();
+        System.out.println("Resume Features:");
+        System.out.println("  - Skips completed phases/tasks automatically");
+        System.out.println("  - Restores ALL variables from saved state");
+        System.out.println("  - Includes runtime-generated variables (e.g., detected_java_version)");
+        System.out.println("  - CLI -D flags can still override saved variables if needed");
+        System.out.println("  - State saved to: <project>/.analysis/migration-state.json");
         System.out.println("=".repeat(80));
     }
 }

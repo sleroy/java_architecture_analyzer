@@ -87,6 +87,8 @@ public class AiPromptBatchBlock implements MigrationBlock {
                 try {
                     // Set current item in context for template processing
                     context.setVariable("current_item", item);
+                    context.setVariable("item", item);
+                    context.setVariable("item_index", item);
                     context.setVariable("current_index", i);
                     context.setVariable("total_items", items.size());
 

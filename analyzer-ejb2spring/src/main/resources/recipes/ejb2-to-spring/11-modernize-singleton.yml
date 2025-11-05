@@ -1,0 +1,10 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.analyzer.ejb2spring.ModernizeSingleton
+displayName: Modernize Singleton Pattern
+description: Convert manual Singleton patterns to Spring dependency injection
+recipeList:
+  # Remove common Singleton patterns (these will be handled mostly by AI)
+  # This recipe provides basic cleanup
+  
+  # Change getInstance() pattern (requires custom recipe for full conversion)
+  # Placeholder for manual Singleton refactoring steps

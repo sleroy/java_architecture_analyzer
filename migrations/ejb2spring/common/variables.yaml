@@ -3,12 +3,17 @@
 
 migration-plan:
   variables:
-    spring_boot_version: "2.7.18"
-    java_version: "8"
+    spring_boot_version: "3.5.7"
+    java_version: "21"
     group_id: "br.com.semeru"
     artifact_id: "semeru-springboot"
     package_base: "br.com.semeru"
     migration_branch_prefix: "migration"
+    
+    # Maven Environment Configuration
+    maven_java_home: "/usr/lib/jvm/java-21-openjdk-amd64/"
+    maven_home: "/home/sleroy/mvn/bin"
+    maven_opts: "-Xmx1024m"
     
     # Database Configuration (disabled by default)
     # Set database_enabled: true to enable database operations

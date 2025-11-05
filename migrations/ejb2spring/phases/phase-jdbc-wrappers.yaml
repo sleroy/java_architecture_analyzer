@@ -1,0 +1,138 @@
+# Phase: JDBC Wrapper Migration
+# Migrates custom JDBC wrapper classes to Spring JdbcTemplate
+
+migration-plan:
+  phases:
+    - id: "phase-jdbc-wrappers"
+      name: "JDBC Wrapper Migration"
+      description: "Migrate custom JDBC wrapper classes to Spring JdbcTemplate"
+      
+      tasks:
+        - id: "task-jdbc-wrapper-migration"
+          name: "Migrate JDBC Wrappers to Spring JdbcTemplate"
+          description: "Convert custom JDBC wrappers to Spring-managed DAOs with JdbcTemplate"
+          
+          blocks:
+            # Step 1: GRAPH_QUERY - Find JDBC wrapper classes
+            - type: "GRAPH_QUERY"
+              name: "query-jdbc-wrappers"
+              description: "Query all classes with JDBC wrapper patterns"
+              query-type: "BY_TAGS"
+              tags:
+                - "jdbc.data.access.pattern"
+              output-variable: "jdbc_wrappers"
+            
+            # Step 2: OPENREWRITE - Apply automated refactorings
+            - type: "OPENREWRITE"
+              name: "refactor-jdbc-wrappers"
+              description: "Remove manual connection management"
+              recipe: "com.analyzer.ejb2spring.MigrateJdbcWrapper"
+              file-pattern: "**/*.java"
+              base-directory: "${project_root}/src/main/java"
+            
+            # Step 3: AI_ASSISTED_BATCH - Process each wrapper
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-migrate-jdbc-wrappers"
+              description: "AI-assisted migration for each JDBC wrapper"
+              input-nodes: "${jdbc_wrappers}"
+              prompt: |
+                You are migrating a custom JDBC wrapper class to use Spring JdbcTemplate.
+                
+                **Current JDBC Wrapper:**
+                - Node ID: ${current_node_id}
+                - Class Name: ${current_node.className}
+                - Package: ${current_node.packageName}
+                
+                **Migration Tasks:**
+                
+                1. **Convert to Spring Repository:**
+                   - Add @Repository annotation
+                   - Inject JdbcTemplate via constructor
+                   - Remove manual connection management
+                   - Remove try-catch-finally blocks for connection cleanup
+                
+                2. **Migrate Query Methods:**
+                   - Replace Connection/PreparedStatement with JdbcTemplate.query()
+                   - Use RowMapper for result set processing
+                   - Use queryForObject() for single results
+                   - Use query() for list results
+                   - Handle EmptyResultDataAccessException for not found cases
+                
+                3. **Migrate Update/Insert Methods:**
+                   - Use jdbcTemplate.update() for INSERT/UPDATE/DELETE
+                   - Use KeyHolder for auto-generated IDs
+                   - Add @Transactional annotations
+                   - Remove manual transaction management
+                
+                4. **Migrate Batch Operations:**
+                   - Use jdbcTemplate.batchUpdate() for batch operations
+                   - Remove manual batch handling
+                
+                5. **Preserve All SQL:**
+                   - Keep all SQL queries exactly as-is
+                   - Only change the JDBC API calls
+                   - Maintain parameter binding order
+                   - Preserve error handling logic (convert to Spring exceptions)
+                
+                6. **Migration Guidelines:**
+                   - Use constructor injection for JdbcTemplate
+                   - Create private RowMapper methods for result mapping
+                   - Use @Transactional for write operations
+                   - Let Spring handle connection lifecycle
+                   - Convert SQLException to DataAccessException (Spring does this automatically)
+                
+                **Expected Output:**
+                - @Repository class with JdbcTemplate
+                - All SQL preserved
+                - No manual connection management
+                - Proper transaction boundaries
+                - Updated calling classes
+                
+                Please migrate this JDBC wrapper class.
+              working-directory: "${project_root}"
+              progress-message: "Migrating JDBC wrapper"
+              timeout-seconds: 600
+            
+            # Step 4: AI_ASSISTED - Compile and validate
+            - type: "AI_ASSISTED"
+              name: "compile-jdbc-daos"
+              description: "Compile all migrated JDBC DAOs"
+              prompt: |
+                All JDBC wrappers migrated to Spring JdbcTemplate.
+                
+                **Summary:**
+                - Wrappers processed: ${node_count}
+                - Successful: ${success_count}
+                - Failed: ${failure_count}
+                
+                **Tasks:**
+                1. Run Maven compile
+                2. Verify JdbcTemplate properly injected
+                3. Check @Transactional annotations
+                4. Ensure no manual connection management remains
+                5. Fix any DataAccessException handling
+                6. Verify SQL queries still correct
+                
+                Please compile and fix errors.
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+            
+            # Step 5: INTERACTIVE_VALIDATION
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-jdbc-migration"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                JDBC Wrapper migration completed.
+                
+                **Summary:** ${node_count} wrappers (${success_count} successful)
+                
+                **Review:**
+                1. All wrappers use JdbcTemplate
+                2. No manual connection management
+                3. SQL queries preserved
+                4. @Transactional added
+                5. All DAOs compile
+                
+                Confirm to proceed.
+              required: true
+              timeout-seconds: 1800

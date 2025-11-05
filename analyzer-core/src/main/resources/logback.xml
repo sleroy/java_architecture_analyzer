@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console Appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Suppress FreeMarker template errors when they are expected -->
+    <!-- These occur when output variables contain ${...} that aren't template variables -->
+    <!-- (e.g., Maven properties in POM files) - the exception is caught and handled -->
+    <logger name="freemarker.log" level="OFF" />
+    <logger name="freemarker" level="OFF" />
+
+    <!-- Root logger -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+</configuration>

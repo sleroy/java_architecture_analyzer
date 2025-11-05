@@ -95,7 +95,7 @@ public class DryRunFunctionalTest {
         // Add custom variables via -D flags
         java.util.Map<String, String> systemProps = new java.util.LinkedHashMap<>();
         systemProps.put("custom_var", "test-value");
-        systemProps.put("spring_boot_version", "2.7.18");
+        systemProps.put("spring_boot_version", "3.5.7");
         setField(command, "systemProperties", systemProps);
 
         Integer exitCode = command.call();

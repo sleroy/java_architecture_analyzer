@@ -219,14 +219,14 @@ migration-plan:
                 source-pattern: "@EJB"
                 target-pattern: "@Autowired"
                 
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "compile-services"
               description: "Compile Spring Services"
-              command: |
-                cd ${project_root}/semeru-springboot && mvn compile
-              working-directory: "${project_root}"
+              goals: "compile"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 180
-              capture-output: true
               
             - type: "AI_PROMPT"
               name: "generate-service-tests"
@@ -390,14 +390,14 @@ migration-plan:
                 server.servlet.session.cookie.http-only=true
                 server.servlet.session.cookie.secure=true
                 
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "compile-session-scoped-beans"
               description: "Compile session-scoped beans"
-              command: |
-                cd ${project_root}/semeru-springboot && mvn compile
-              working-directory: "${project_root}"
+              goals: "compile"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 180
-              capture-output: true
               
             - type: "AI_PROMPT"
               name: "generate-session-tests"
@@ -427,14 +427,14 @@ migration-plan:
               files: "${session_tests}"
               base-path: "${project_root}/semeru-springboot/src/test/java/${package_base_path}/service"
               
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "run-all-service-tests"
               description: "Run all service tests"
-              command: |
-                cd ${project_root}/semeru-springboot && mvn test
-              working-directory: "${project_root}"
+              goals: "test"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 300
-              capture-output: true
               
             - type: "INTERACTIVE_VALIDATION"
               name: "verify-stateful-migration"

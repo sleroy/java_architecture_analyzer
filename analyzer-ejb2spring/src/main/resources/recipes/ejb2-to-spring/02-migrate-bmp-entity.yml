@@ -1,0 +1,40 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.analyzer.ejb2spring.MigrateBMPEntity
+displayName: Migrate BMP Entity Bean to JPA
+description: Remove EJB BMP-specific code and prepare for JPA with custom SQL
+recipeList:
+  # Remove EntityBean interface
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: javax.ejb.EntityBean
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: jakarta.ejb.EntityBean
+  
+  # Remove EJB lifecycle methods (BMP-specific)
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbCreate(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbPostCreate(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbLoad(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbStore(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbRemove(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbActivate(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbPassivate(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* setEntityContext(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* unsetEntityContext(..)"
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejbFindByPrimaryKey(..)"
+  
+  # Change javax to jakarta imports
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: javax.persistence.Entity
+      newFullyQualifiedTypeName: jakarta.persistence.Entity
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: javax.ejb.EntityContext
+      newFullyQualifiedTypeName: jakarta.ejb.EntityContext

@@ -1,0 +1,301 @@
+# Phase 1B: Refactoring Setup and Prioritization
+# Pre-refactoring analysis and planning for copied EJB components
+
+migration-plan:
+  phases:
+    - id: "phase-1b"
+      name: "Migration Refactoring Setup"
+      description: "Prepare for systematic refactoring of copied EJB components"
+      
+      tasks:
+        - id: "task-150"
+          name: "Analyze Copied EJB Components"
+          description: "Re-run analysis on copied code to create refactoring priority"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "analyze-copied-ejb-components"
+              description: "Analyze EJB components in Spring Boot project directory"
+              query-type: "BY_TAGS"
+              tags: 
+                - "ejb.sessionBean"
+                - "ejb.entityBean"
+                - "ejb.messageDrivenBean"
+              output-variable: "springboot_ejb_inventory"
+              
+            - type: "COMMAND"
+              name: "scan-copied-ejb-files"
+              description: "Scan copied files for EJB annotations and patterns"
+              command: |
+                echo "# EJB Component Analysis in Spring Boot Project" > ejb-analysis.md
+                echo "Generated: $(date)" >> ejb-analysis.md
+                echo "" >> ejb-analysis.md
+                
+                # Find EJB annotated classes
+                echo "## EJB Annotated Classes:" >> ejb-analysis.md
+                find semeru-springboot/src/main/java -name "*.java" -exec grep -l "@Stateless\|@Stateful\|@MessageDriven\|@Entity" {} \; | sort >> ejb-analysis.md
+                
+                echo "" >> ejb-analysis.md
+                echo "## EJB Dependency Analysis:" >> ejb-analysis.md
+                
+                # Find classes importing EJB packages
+                find semeru-springboot/src/main/java -name "*.java" -exec grep -l "import javax.ejb\|import javax.persistence\|import javax.jms" {} \; | sort >> ejb-analysis.md
+              working-directory: "${project_root}"
+              timeout-seconds: 60
+              capture-output: true
+              
+            - type: "AI_PROMPT_BATCH"
+              name: "prioritize-migration-order"
+              description: "AI-assisted migration prioritization for each EJB component"
+              items-variable: "springboot_ejb_inventory"
+              prompt-template: |
+                Analyze this EJB component for Spring Boot migration priority and complexity:
+                
+                **Component Details:**
+                Class: ${current_item.className}
+                Package: ${current_item.package}
+                EJB Type: ${current_item.ejbType}
+                Dependencies: ${current_item.dependencies}
+                
+                **Analysis Required:**
+                1. Migration Priority (HIGH/MEDIUM/LOW):
+                   - HIGH: Core business logic, minimal dependencies, straightforward conversion
+                   - MEDIUM: Important functionality, moderate complexity
+                   - LOW: Complex dependencies, should migrate after prerequisites
+                
+                2. Spring Boot Equivalent:
+                   - @Stateless → @Service + @Transactional
+                   - @Entity (CMP) → @Entity (JPA) + JpaRepository
+                   - @MessageDriven → @JmsListener or @EventListener
+                
+                3. Dependencies to resolve first
+                4. Estimated effort in hours
+                5. Potential migration risks
+                
+                **Output Format:**
+                Priority: [HIGH/MEDIUM/LOW]
+                Spring Equivalent: [specific annotations and patterns]
+                Prerequisites: [list of dependencies to migrate first]
+                Effort Estimate: [hours]
+                Risks: [potential issues]
+                Migration Notes: [specific guidance]
+              max-prompts: 50
+              parallel: true
+              output-variable: "migration_priorities"
+              temperature: 0.2
+              
+        - id: "task-151"
+          name: "Create Refactoring Plan"
+          description: "Generate systematic refactoring plan based on priorities and dependencies"
+          
+          blocks:
+            - type: "AI_PROMPT"
+              name: "generate-refactoring-roadmap"
+              description: "Create detailed refactoring roadmap with waves and dependencies"
+              prompt: |
+                Based on the EJB migration priority analysis, create a comprehensive refactoring roadmap.
+                
+                **Input Data:**
+                Migration Priorities Analysis: ${migration_priorities}
+                Total EJB Components: ${springboot_ejb_inventory_summary.count}
+                
+                **Roadmap Requirements:**
+                
+                1. **Migration Waves** - Group components into 3 waves:
+                   - Wave 1 (HIGH Priority): Core business services, utilities, simple entities
+                   - Wave 2 (MEDIUM Priority): Controllers, complex business logic
+                   - Wave 3 (LOW Priority): Integration points, complex dependencies
+                
+                2. **Dependency Ordering** - Within each wave, order by:
+                   - Utility classes first (used by others)
+                   - Entities before services that use them
+                   - Services before controllers that use them
+                
+                3. **Timeline Estimation** - Provide realistic estimates:
+                   - Consider developer skill level with Spring Boot
+                   - Include time for testing each component
+                   - Add buffer for unexpected issues
+                
+                4. **Success Criteria** - Define what "done" means for each component:
+                   - Compiles without EJB dependencies
+                   - Unit tests passing
+                   - Integration tests working
+                   - Same functionality as original
+                   
+                5. **Risk Mitigation** - Address identified risks:
+                   - Complex transaction scenarios
+                   - JNDI lookups to Spring configuration
+                   - JMS/messaging patterns
+                   - Security model changes
+                
+                **Output as structured markdown with:**
+                - Executive summary
+                - Wave breakdown with component lists
+                - Timeline with milestones
+                - Resource requirements
+                - Risk mitigation strategies
+                - Success criteria checklist
+              output-variable: "refactoring_roadmap"
+              temperature: 0.3
+              max-tokens: 4000
+              
+            - type: "FILE_OPERATION"
+              name: "create-refactoring-roadmap"
+              description: "Save comprehensive refactoring roadmap document"
+              operation: "CREATE"
+              path: "${project_root}/docs/REFACTORING_ROADMAP.md"
+              content: |
+                # EJB to Spring Boot Refactoring Roadmap
+                
+                **Generated:** ${current_datetime}
+                **Total Components:** ${springboot_ejb_inventory_summary.count}
+                **Project:** ${project_root}
+                **Target:** Spring Boot ${spring_boot_version}
+                
+                ---
+                
+                ${refactoring_roadmap}
+                
+                ---
+                
+                ## Implementation Strategy
+                
+                **Compile-Safe Approach:**
+                1. Use Maven profiles to exclude failing classes during migration
+                2. Migrate components in dependency order (utilities → entities → services → controllers)
+                3. Use AI-assisted refactoring for each component
+                4. Test after each component migration
+                5. Switch to full compilation profile once all EJB dependencies removed
+                
+                **Validation Process:**
+                - Component compiles without EJB dependencies
+                - Unit tests pass (create if missing)
+                - Integration tests work correctly
+                - Functionality matches original EJB component
+                - Performance is acceptable
+                
+                **Tools and Resources:**
+                - Spring Boot ${spring_boot_version} Reference Guide
+                - Spring Data JPA documentation
+                - Spring Security migration guide (if applicable)
+                - AI assistance for annotation mapping
+                - Code review checklist
+                
+                ## Next Steps
+                
+                1. Review and approve this roadmap
+                2. Begin Wave 1 migration (HIGH priority components)
+                3. Execute systematic refactoring following dependency order
+                4. Validate each component before proceeding to next
+                5. Monitor progress against timeline estimates
+                
+                ---
+                *This roadmap will be updated as migration progresses and new insights emerge.*
+                
+            - type: "FILE_OPERATION"
+              name: "create-migration-checklist"
+              description: "Create detailed migration checklist for systematic execution"
+              operation: "CREATE"
+              path: "${project_root}/docs/MIGRATION_CHECKLIST.md"
+              content: |
+                # EJB to Spring Boot Migration Checklist
+                
+                **Generated:** ${current_datetime}
+                **Status:** Ready for Wave 1 execution
+                
+                ## Pre-Migration Setup ✅
+                
+                - [x] EJB inventory analysis completed
+                - [x] Spring Boot project initialized
+                - [x] All source files copied with same package structure
+                - [x] Maven profiles configured for safe compilation
+                - [x] Migration priorities assigned by AI analysis
+                - [x] Refactoring roadmap created
+                
+                ## Wave 1: HIGH Priority Components (Start Here)
+                
+                Based on AI analysis, migrate these components first:
+                
+                ### Utility Classes
+                - [ ] Common utilities and helper classes
+                - [ ] Constants and configuration classes
+                - [ ] Exception classes
+                
+                ### Simple Entities
+                - [ ] Basic @Entity classes with minimal relationships
+                - [ ] Value objects and DTOs
+                
+                ### Core Services
+                - [ ] @Stateless session beans with simple business logic
+                - [ ] Data access services
+                
+                **For each component:**
+                1. [ ] Remove EJB annotations (@Stateless, @EJB, etc.)
+                2. [ ] Add Spring annotations (@Service, @Component, @Autowired)
+                3. [ ] Update transaction management (@Transactional)
+                4. [ ] Replace JNDI lookups with Spring configuration
+                5. [ ] Update imports (javax.ejb → org.springframework)
+                6. [ ] Test compilation
+                7. [ ] Run unit tests
+                8. [ ] Update integration tests if needed
+                
+                ## Wave 2: MEDIUM Priority Components
+                
+                - [ ] Complex business services
+                - [ ] REST controllers (JAX-RS → Spring MVC)
+                - [ ] JMS message listeners
+                - [ ] Security components
+                
+                ## Wave 3: LOW Priority Components
+                
+                - [ ] Complex integration components
+                - [ ] Legacy compatibility layers
+                - [ ] Administrative and monitoring services
+                
+                ## Final Validation
+                
+                - [ ] All EJB annotations removed
+                - [ ] Application compiles with full profile
+                - [ ] All tests passing
+                - [ ] Application starts successfully
+                - [ ] Core functionality validated
+                - [ ] Performance benchmarks met
+                - [ ] Documentation updated
+                
+                ## Success Criteria
+                
+                - Zero EJB dependencies in final application
+                - Same or better performance than original
+                - All critical functionality preserved
+                - Comprehensive test coverage maintained
+                - Clean, maintainable Spring Boot code
+                
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-refactoring-setup"
+              description: "Verify refactoring setup and plan approval"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                Refactoring setup completed successfully! 
+                
+                **Generated Documents:**
+                - REFACTORING_ROADMAP.md: Comprehensive migration strategy
+                - MIGRATION_CHECKLIST.md: Step-by-step execution guide
+                - ejb-analysis.md: EJB component analysis
+                - migration-inventory.md: Complete file inventory
+                
+                **AI Analysis:**
+                - ${springboot_ejb_inventory_summary.count} EJB components analyzed
+                - Migration priorities assigned (HIGH/MEDIUM/LOW)
+                - Dependencies mapped for proper ordering
+                - Effort estimates provided
+                
+                **Ready for Implementation:**
+                - Maven profiles configured for safe compilation
+                - Systematic migration approach defined
+                - Success criteria established
+                
+                Review the generated roadmap and checklist, then proceed to begin Wave 1 migrations.
+                
+                Continue to Phase 2: Begin EJB Component Refactoring?
+              required: true
+              timeout-seconds: 1800

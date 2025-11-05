@@ -1,0 +1,34 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.analyzer.ejb2spring.RemoveEJBHomeInterface
+displayName: Remove EJB Home and Interface implementations
+description: Remove EJB Home, Remote, Local, and LocalHome interface implementations
+recipeList:
+  # Remove Home interfaces
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: javax.ejb.EJBHome
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: jakarta.ejb.EJBHome
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: javax.ejb.EJBLocalHome
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: jakarta.ejb.EJBLocalHome
+  
+  # Remove Remote/Local interfaces
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: javax.ejb.EJBObject
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: jakarta.ejb.EJBObject
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: javax.ejb.EJBLocalObject
+  - org.openrewrite.java.RemoveImplements:
+      interfacePattern: jakarta.ejb.EJBLocalObject
+  
+  # Remove @Local and @Remote annotations
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.ejb.Local"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@jakarta.ejb.Local"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.ejb.Remote"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@jakarta.ejb.Remote"

@@ -1,0 +1,19 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.analyzer.ejb2spring.MigratePrimaryKeyClass
+displayName: Migrate EJB Primary Key Classes to JPA
+description: Update primary key classes for JPA compatibility
+recipeList:
+  # Change javax to jakarta for persistence
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: javax.persistence.Embeddable
+      newFullyQualifiedTypeName: jakarta.persistence.Embeddable
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: javax.persistence.IdClass
+      newFullyQualifiedTypeName: jakarta.persistence.IdClass
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: javax.persistence.EmbeddedId
+      newFullyQualifiedTypeName: jakarta.persistence.EmbeddedId
+  
+  # Remove EJB-specific methods if any
+  - org.openrewrite.java.DeleteMethodArgument:
+      methodPattern: "* ejb*(..)"
