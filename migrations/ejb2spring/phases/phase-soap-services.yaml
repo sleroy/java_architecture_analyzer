@@ -28,7 +28,7 @@ migration-plan:
               description: "Remove JAX-WS annotations"
               recipe: "com.analyzer.ejb2spring.MigrateJaxWsToSpringWs"
               file-pattern: "**/*.java"
-              base-directory: "${project_root}/src/main/java"
+              base-directory: "${project_root}/${artifact_id}/src/main/java"
             
             # Step 3: AI_ASSISTED_BATCH - Process each endpoint
             - type: "AI_ASSISTED_BATCH"

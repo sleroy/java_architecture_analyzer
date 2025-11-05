@@ -1,14 +1,14 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
+import com.analyzer.api.resource.ResourceResolver;
+import com.analyzer.core.cache.LocalCache;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractJavaClassInspector;
-import com.analyzer.api.resource.ResourceResolver;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.Expression;
 import com.github.javaparser.ast.expr.LiteralExpr;
@@ -43,7 +43,7 @@ import java.util.List;
  * "https://docs.spring.io/spring-boot/docs/current/reference/html/features.html#features.external-config">Spring
  * Boot External Configuration</a>
  */
-@InspectorDependencies(requires = {InspectorTags.TAG_JAVA_IS_SOURCE}, produces = {
+@InspectorDependencies(requires = InspectorTags.TAG_JAVA_IS_SOURCE, produces = {
         EjbMigrationTags.TAG_SPRING_CONFIG_CONVERSION,
         EjbMigrationTags.TAG_CODE_MODERNIZATION,
 })
@@ -59,7 +59,7 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
             "CONNECTION", "RETRY", "BUFFER", "CACHE", "THRESHOLD");
 
     @Inject
-    public ConfigurationConstantsInspector(ResourceResolver resourceResolver, ClassNodeRepository classNodeRepository, LocalCache localCache) {
+    public ConfigurationConstantsInspector(final ResourceResolver resourceResolver, final ClassNodeRepository classNodeRepository, final LocalCache localCache) {
         super(resourceResolver, classNodeRepository, localCache);
     }
 
@@ -69,19 +69,18 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
     }
 
     @Override
-    protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-                                NodeDecorator<ProjectFile> nodeDecorator) {
+    protected void analyzeClass(final ProjectFile projectFile, final JavaClassNode classNode, final TypeDeclaration<?> type,
+                                final NodeDecorator<ProjectFile> nodeDecorator) {
 
-        if (!(type instanceof ClassOrInterfaceDeclaration)) {
+        if (!(type instanceof final ClassOrInterfaceDeclaration classDecl)) {
             return;
         }
 
-        ClassOrInterfaceDeclaration classDecl = (ClassOrInterfaceDeclaration) type;
-        ConfigConstantsDetector detector = new ConfigConstantsDetector();
+        final ConfigConstantsDetector detector = new ConfigConstantsDetector();
         type.accept(detector, null);
 
         if (detector.isConfigConstants()) {
-            ConfigConstantsInfo info = detector.getConfigConstantsInfo();
+            final ConfigConstantsInfo info = detector.getConfigConstantsInfo();
 
             // Set tags according to the produces contract
             nodeDecorator.enableTag(EjbMigrationTags.TAG_SPRING_CONFIG_CONVERSION);
@@ -92,15 +91,15 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
             nodeDecorator.setProperty("config.constants.detected", true);
             nodeDecorator.setProperty("spring.target.application_yml", true);
 
-            if (info.configRelatedNamePercentage > 0.5) {
+            if (0.5 < info.configRelatedNamePercentage) {
                 nodeDecorator.setProperty("config.naming.consistent", true);
             }
 
-            if (info.stringConstantsCount > 5) {
+            if (5 < info.stringConstantsCount) {
                 nodeDecorator.setProperty("config.string_heavy", true);
             }
 
-            if (info.nestedConstantCount > 0) {
+            if (0 < info.nestedConstantCount) {
                 nodeDecorator.setProperty("config.hierarchical", true);
             }
 
@@ -121,11 +120,11 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
      */
     private static class ConfigConstantsDetector extends VoidVisitorAdapter<Void> {
         private final ConfigConstantsInfo info = new ConfigConstantsInfo();
-        private boolean isConfigConstants = false;
-        private int totalFieldCount = 0;
-        private int nonConstantFieldCount = 0;
-        private int methodCount = 0;
-        private int configRelatedNameCount = 0;
+        private boolean isConfigConstants;
+        private int totalFieldCount;
+        private int nonConstantFieldCount;
+        private int methodCount;
+        private int configRelatedNameCount;
 
         public boolean isConfigConstants() {
             return isConfigConstants;
@@ -136,12 +135,12 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
         }
 
         @Override
-        public void visit(ClassOrInterfaceDeclaration classDecl, Void arg) {
+        public void visit(final ClassOrInterfaceDeclaration classDecl, final Void arg) {
             super.visit(classDecl, arg);
 
             // Check if class name indicates a config/constants class
-            String className = classDecl.getNameAsString();
-            for (String pattern : CONFIG_CLASS_NAME_PATTERNS) {
+            final String className = classDecl.getNameAsString();
+            for (final String pattern : CONFIG_CLASS_NAME_PATTERNS) {
                 if (className.contains(pattern)) {
                     info.hasConfigNamePattern = true;
                     break;
@@ -149,41 +148,41 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
             }
 
             // Analyze the results
-            if (totalFieldCount > 0) {
+            if (0 < totalFieldCount) {
                 // Calculate constants percentage
-                double constantPercentage = (totalFieldCount - nonConstantFieldCount) / (double) totalFieldCount;
+                final double constantPercentage = (totalFieldCount - nonConstantFieldCount) / (double) totalFieldCount;
                 info.constantPercentage = constantPercentage;
 
                 // Calculate config-related name percentage
                 info.configRelatedNamePercentage = configRelatedNameCount / (double) totalFieldCount;
 
                 // Determine if this is a configuration constants class
-                if ((constantPercentage >= 0.8 && totalFieldCount >= 3) ||
-                        (info.hasConfigNamePattern && constantPercentage >= 0.5) ||
-                        (info.configRelatedNamePercentage > 0.4 && constantPercentage >= 0.7)) {
+                if ((0.8 <= constantPercentage && 3 <= totalFieldCount) ||
+                        (info.hasConfigNamePattern && 0.5 <= constantPercentage) ||
+                        (0.4 < info.configRelatedNamePercentage && 0.7 <= constantPercentage)) {
                     isConfigConstants = true;
                 }
             }
         }
 
         @Override
-        public void visit(FieldDeclaration field, Void arg) {
+        public void visit(final FieldDeclaration field, final Void arg) {
             super.visit(field, arg);
 
-            for (VariableDeclarator var : field.getVariables()) {
+            for (final VariableDeclarator var : field.getVariables()) {
                 totalFieldCount++;
 
                 // Check if it's a constant (static final)
-                boolean isConstant = field.isStatic() && field.isFinal();
+                final boolean isConstant = field.isStatic() && field.isFinal();
                 if (!isConstant) {
                     nonConstantFieldCount++;
                     continue;
                 }
 
-                String fieldName = var.getNameAsString();
+                final String fieldName = var.getNameAsString();
 
                 // Check if field name is config-related
-                for (String pattern : CONFIG_FIELD_NAME_PATTERNS) {
+                for (final String pattern : CONFIG_FIELD_NAME_PATTERNS) {
                     if (fieldName.toUpperCase().contains(pattern)) {
                         configRelatedNameCount++;
                         info.configFields.add(fieldName);
@@ -193,7 +192,7 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
 
                 // Analyze constant value if present
                 if (var.getInitializer().isPresent()) {
-                    Expression expr = var.getInitializer().get();
+                    final Expression expr = var.getInitializer().get();
 
                     // Count different types of constants
                     info.totalConstantsCount++;
@@ -201,17 +200,17 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
                     if (expr instanceof StringLiteralExpr) {
                         info.stringConstantsCount++;
                         // Check for nested config paths in strings (e.g., "app.config.timeout")
-                        String value = ((StringLiteralExpr) expr).getValue();
+                        final String value = ((StringLiteralExpr) expr).getValue();
                         if (value.contains(".") && !value.startsWith("http") && !value.startsWith("jdbc")) {
-                            String[] parts = value.split("\\.");
-                            if (parts.length > 2) {
+                            final String[] parts = value.split("\\.");
+                            if (2 < parts.length) {
                                 info.nestedConstantCount++;
                                 info.nestedPaths.add(value);
                             }
                         }
                     } else if (expr instanceof LiteralExpr) {
-                        String exprStr = expr.toString().toLowerCase();
-                        if (exprStr.equals("true") || exprStr.equals("false")) {
+                        final String exprStr = expr.toString().toLowerCase();
+                        if ("true".equals(exprStr) || "false".equals(exprStr)) {
                             info.booleanConstantsCount++;
                         } else if (exprStr.matches("\\d+(\\.\\d+)?[lfd]?")) {
                             info.numericConstantsCount++;
@@ -222,12 +221,12 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
         }
 
         @Override
-        public void visit(MethodDeclaration method, Void arg) {
+        public void visit(final MethodDeclaration method, final Void arg) {
             super.visit(method, arg);
             methodCount++;
 
             // Check if this is a utility method to get configuration
-            String methodName = method.getNameAsString().toLowerCase();
+            final String methodName = method.getNameAsString().toLowerCase();
             if (methodName.startsWith("get") || methodName.startsWith("is") ||
                     methodName.contains("config") || methodName.contains("property")) {
                 info.configAccessMethodCount++;
@@ -239,15 +238,15 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
      * Data class to hold Configuration Constants pattern analysis information
      */
     public static class ConfigConstantsInfo {
-        public int totalConstantsCount = 0;
-        public int stringConstantsCount = 0;
-        public int numericConstantsCount = 0;
-        public int booleanConstantsCount = 0;
-        public int nestedConstantCount = 0;
-        public int configAccessMethodCount = 0;
-        public double constantPercentage = 0.0;
-        public double configRelatedNamePercentage = 0.0;
-        public boolean hasConfigNamePattern = false;
+        public int totalConstantsCount;
+        public int stringConstantsCount;
+        public int numericConstantsCount;
+        public int booleanConstantsCount;
+        public int nestedConstantCount;
+        public int configAccessMethodCount;
+        public double constantPercentage;
+        public double configRelatedNamePercentage;
+        public boolean hasConfigNamePattern;
         public List<String> configFields = new ArrayList<>();
         public List<String> nestedPaths = new ArrayList<>();
 

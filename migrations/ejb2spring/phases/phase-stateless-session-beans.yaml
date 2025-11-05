@@ -28,20 +28,22 @@ migration-plan:
               description: "Replace @Stateless with @Service and update injections"
               recipe: "com.analyzer.ejb2spring.MigrateStatelessSession"
               file-pattern: "**/*.java"
-              base-directory: "${project_root}/src/main/java"
+              base-directory: "${project_root}/${artifact_id}/src/main/java"
             
             # Step 3: AI_ASSISTED_BATCH - Process each stateless bean
             - type: "AI_ASSISTED_BATCH"
               name: "ai-migrate-stateless-beans"
               description: "AI-assisted migration for each stateless session bean"
-              input-nodes: "${stateless_beans}"
+              input-nodes: stateless_beans
               prompt: |
                 You are migrating a Stateless Session Bean to a Spring @Service component.
                 
                 **Current Stateless Session Bean:**
                 - Node ID: ${current_node_id}
-                - Class Name: ${current_node.className}
+                - Class Name: ${current_node.simpleName}
+                - Fully Qualified Name: ${current_node.fullyQualifiedName}
                 - Package: ${current_node.packageName}
+                - Source File Path: ${current_node.sourceFilePath}
                 
                 **Migration Tasks:**
                 
@@ -84,7 +86,7 @@ migration-plan:
                 - No EJB-specific code remaining
                 
                 Please migrate this stateless session bean to a Spring service.
-              working-directory: "${project_root}"
+              working-directory: "${project_root}/${artifact_id}/src/main/java"
               progress-message: "Migrating stateless session bean"
               timeout-seconds: 600
             
@@ -97,8 +99,17 @@ migration-plan:
                 
                 **Summary:**
                 - Total beans processed: ${node_count}
-                - Successful migrations: ${success_count}
-                - Failed migrations: ${failure_count}
+                
+                **Class IDs:**
+                <#list stateless_beans as bean>
+                - ${bean}
+                </#list>
+                
+                **Classes:**
+                <#list stateless_beans_names as className>
+                - ${className}
+                </#list>
+                
                 
                 **Tasks:**
                 1. Run Maven compile to check for errors
@@ -108,7 +119,7 @@ migration-plan:
                 5. Verify Spring context configuration is correct
                 6. Fix any circular dependency issues
                 
-                Please compile the project and fix any errors.
+                Please compile ONLY the classes that were migrated, and fix any errors.
               working-directory: "${project_root}"
               timeout-seconds: 300
             
@@ -121,8 +132,6 @@ migration-plan:
                 
                 **Migration Summary:**
                 - Beans processed: ${node_count}
-                - Successful: ${success_count}
-                - Failed: ${failure_count}
                 
                 **Review Checklist:**
                 1. All @Stateless replaced with @Service

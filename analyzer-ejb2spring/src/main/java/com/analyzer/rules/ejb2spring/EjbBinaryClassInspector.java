@@ -263,8 +263,7 @@ public class EjbBinaryClassInspector extends AbstractASMClassInspector {
 
             for (String annotation : ejbAnnotations) {
                 switch (annotation) {
-                    case "Ljavax/ejb/Stateless;":
-                    case "Ljakarta/ejb/Stateless;":
+                    case "Ljavax/ejb/Stateless;", "Ljakarta/ejb/Stateless;":
                         setProperty("ejb.stateless.detected", true);
                         setProperty("ejb.session.bean.type", "stateless");
                         setProperty("ejb.version", "3.x");

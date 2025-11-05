@@ -1,11 +1,13 @@
 package com.analyzer.cli;
 
+import com.analyzer.api.graph.GraphRepository;
+import com.analyzer.core.db.GraphDatabase;
+import com.analyzer.core.db.H2GraphDatabase;
+import com.analyzer.core.db.loader.LoadOptions;
+import com.analyzer.core.serialization.JsonSerializationService;
 import com.analyzer.migration.context.MigrationContext;
-import com.analyzer.migration.engine.Checkpoint;
 import com.analyzer.migration.engine.ExecutionResult;
 import com.analyzer.migration.engine.MigrationEngine;
-import com.analyzer.migration.engine.ProgressInfo;
-import com.analyzer.migration.engine.ProgressTracker;
 import com.analyzer.migration.engine.listeners.ConsoleProgressListener;
 import com.analyzer.migration.loader.IncludeResolver;
 import com.analyzer.migration.loader.MigrationPlanConverter;
@@ -16,19 +18,16 @@ import com.analyzer.migration.plan.Phase;
 import com.analyzer.migration.state.MigrationStateManager;
 import com.analyzer.migration.state.StateFileListener;
 import com.analyzer.migration.state.model.MigrationExecutionState;
-import com.analyzer.core.db.H2GraphDatabase;
-import com.analyzer.core.db.H2GraphStorageRepository;
-import com.analyzer.core.db.loader.LoadOptions;
-import com.analyzer.core.serialization.JsonSerializationService;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
+import picocli.CommandLine;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,7 +43,7 @@ import java.util.regex.Pattern;
  * Executes EJB-to-Spring Boot migration plans from YAML files with full
  * variable support.
  */
-@Command(name = "apply", description = "Apply migration plan to transform EJB project to Spring Boot")
+@CommandLine.Command(name = "apply", description = "Apply migration plan to transform EJB project to Spring Boot")
 public class ApplyMigrationCommand implements Callable<Integer> {
 
     private static final Logger logger = LoggerFactory.getLogger(ApplyMigrationCommand.class);
@@ -55,67 +54,69 @@ public class ApplyMigrationCommand implements Callable<Integer> {
     // Required Parameters
     // ========================================================================
 
-    @Option(names = { "--project" }, description = "Path to the EJB project directory to migrate", required = true)
+    @CommandLine.Option(names = "--project", description = "Path to the EJB project directory to migrate", required = true)
     private String projectPath;
 
-    @Option(names = {
-            "--plan" }, description = "Path to migration plan YAML file or classpath resource (e.g., migration-plans/jboss-to-springboot-phase0-1.yaml)", required = true)
+    @CommandLine.Option(names = "--plan", description = "Path to migration plan YAML file or classpath resource (e.g., migration-plans/jboss-to-springboot-phase0-1.yaml)", required = true)
     private String planPath;
 
     // ========================================================================
     // Variable Parameters
     // ========================================================================
 
-    @Option(names = {
-            "-D" }, description = "Define variables (Maven-style): -Dkey=value. Highest priority.", mapFallbackValue = "")
-    private Map<String, String> systemProperties = new LinkedHashMap<>();
+    @CommandLine.Option(names = "-D", description = "Define variables (Maven-style): -Dkey=value. Highest priority.", mapFallbackValue = "")
+    private final Map<String, String> systemProperties = new LinkedHashMap<>();
 
-    @Option(names = { "--variable" }, description = "Define variables: --variable key=value", mapFallbackValue = "")
-    private Map<String, String> cliVariables = new LinkedHashMap<>();
+    @CommandLine.Option(names = "--variable", description = "Define variables: --variable key=value", mapFallbackValue = "")
+    private final Map<String, String> cliVariables = new LinkedHashMap<>();
 
-    @Option(names = { "--variables" }, description = "Path to properties file containing variables")
+    @CommandLine.Option(names = "--variables", description = "Path to properties file containing variables")
     private String variablesFile;
 
-    @Option(names = { "--list-variables" }, description = "List all variables required by the migration plan and exit")
+    @CommandLine.Option(names = "--list-variables", description = "List all variables required by the migration plan and exit")
     private boolean listVariables;
 
     // ========================================================================
     // Execution Control Parameters
     // ========================================================================
 
-    @Option(names = { "--task" }, description = "Execute only specific task by ID (e.g., task-000)")
+    @CommandLine.Option(names = "--task", description = "Execute only specific task by ID (e.g., task-000)")
     private String taskId;
 
-    @Option(names = { "--phase" }, description = "Execute only specific phase by ID (e.g., phase-0)")
+    @CommandLine.Option(names = "--phase", description = "Execute only specific phase by ID (e.g., phase-0)")
     private String phaseId;
 
-    @Option(names = { "--resume" }, description = "Resume execution from last checkpoint")
+    @CommandLine.Option(names = "--resume", description = "Resume execution from last checkpoint")
     private boolean resume;
 
-    @Option(names = { "--dry-run" }, description = "Validate plan and variables without executing")
+    @CommandLine.Option(names = "--dry-run", description = "Validate plan and variables without executing")
     private boolean dryRun;
 
-    @Option(names = {
-            "--interactive" }, description = "Enable interactive mode with validation prompts", defaultValue = "true")
+    @CommandLine.Option(names = "--interactive", description = "Enable interactive mode with validation prompts", defaultValue = "true")
     private boolean interactive;
 
-    @Option(names = {
-            "--step-by-step" }, description = "Enable step-by-step mode - press Enter to proceed between each block")
+    @CommandLine.Option(names = "--step-by-step", description = "Enable step-by-step mode - press Enter to proceed between each block")
     private boolean stepByStep;
 
-    @Option(names = { "--status" }, description = "Show migration progress status and exit")
+    @CommandLine.Option(names = "--status", description = "Show migration progress status and exit")
     private boolean statusOnly;
 
     // ========================================================================
     // Optional Parameters
     // ========================================================================
 
-    @Option(names = {
-            "--database" }, description = "Path to H2 database for progress tracking (default: project/.analysis/migration.db)")
+    @CommandLine.Option(names = "--database", description = "Path to H2 database for progress tracking (default: project/.analysis/migration.db)")
     private String databasePath;
 
-    @Option(names = { "--verbose" }, description = "Enable verbose output")
+    @CommandLine.Option(names = "--verbose", description = "Enable verbose output")
     private boolean verbose;
+
+    // ========================================================================
+    // Cached Infrastructure (initialized once, reused)
+    // ========================================================================
+
+    private GraphDatabase cachedGraphDatabase;
+    private YamlMigrationPlanLoader cachedLoader;
 
     // ========================================================================
     // Main Execution Method
@@ -142,16 +143,16 @@ public class ApplyMigrationCommand implements Callable<Integer> {
             }
 
             // 4. Load migration plan
-            MigrationPlan plan = loadMigrationPlan();
-            if (plan == null) {
+            final MigrationPlan plan = loadMigrationPlan();
+            if (null == plan) {
                 return 1;
             }
 
             // 5. Build variable map with priority resolution
-            Map<String, String> variables = buildVariableMap(plan);
+            final Map<String, String> variables = buildVariableMap(plan);
 
             // 6. Validate variables (check for unresolved placeholders)
-            if (!validateVariables(variables, plan)) {
+            if (!areVariablesValid(variables)) {
                 return 1;
             }
 
@@ -161,7 +162,7 @@ public class ApplyMigrationCommand implements Callable<Integer> {
             // 8. Execute migration (including dry-run mode)
             return executeMigration(plan, variables);
 
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.error("Migration execution failed: {}", e.getMessage(), e);
             return 1;
         }
@@ -174,53 +175,53 @@ public class ApplyMigrationCommand implements Callable<Integer> {
     private Integer handleListVariables() throws Exception {
         logger.info("Listing variables required by migration plan: {}", planPath);
 
-        MigrationPlan plan = loadMigrationPlan();
-        if (plan == null) {
+        final MigrationPlan plan = loadMigrationPlan();
+        if (null == plan) {
             return 1;
         }
 
-        System.out.println("\n=== Migration Plan Variables ===");
-        System.out.println("Plan: " + plan.getName());
-        System.out.println("Version: " + plan.getVersion());
+        logger.info("\n=== Migration Plan Variables ===");
+        logger.info("Plan: {}", plan.getName());
+        logger.info("Version: {}", plan.getVersion());
         System.out.println();
 
         // Get variables from YAML plan
-        Map<String, String> planVariables = loadPlanVariables();
+        final Map<String, String> planVariables = loadPlanVariables();
 
-        if (planVariables == null || planVariables.isEmpty()) {
-            System.out.println("No variables defined in migration plan.");
+        if (null == planVariables || planVariables.isEmpty()) {
+            logger.info("No variables defined in migration plan.");
         } else {
-            System.out.println("Defined Variables:");
-            System.out.println("-----------------");
+            logger.info("Defined Variables:");
+            logger.info("-----------------");
 
             // Sort variables alphabetically
-            List<String> sortedKeys = new ArrayList<>(planVariables.keySet());
+            final List<String> sortedKeys = new ArrayList<>(planVariables.keySet());
             Collections.sort(sortedKeys);
 
-            for (String key : sortedKeys) {
-                String value = planVariables.get(key);
+            for (final String key : sortedKeys) {
+                final String value = planVariables.get(key);
                 System.out.printf("  %-30s = %s%n", key, value);
             }
 
             System.out.println();
-            System.out.println("Auto-Derived Variables:");
-            System.out.println("----------------------");
-            System.out.println("  project.root                   = <project path>");
-            System.out.println("  project.name                   = <project directory name>");
-            System.out.println("  plan.name                      = <migration plan name>");
-            System.out.println("  current_date                   = <current date ISO format>");
-            System.out.println("  current_datetime               = <current datetime ISO format>");
-            System.out.println("  user.name                      = <system user name>");
-            System.out.println("  user.home                      = <user home directory>");
+            logger.info("Auto-Derived Variables:");
+            logger.info("----------------------");
+            logger.info("  project.root                   = <project path>");
+            logger.info("  project.name                   = <project directory name>");
+            logger.info("  plan.name                      = <migration plan name>");
+            logger.info("  current_date                   = <current date/time>");
+            logger.info("  current_datetime               = <current datetime ISO format>");
+            logger.info("  user.name                      = <system user name>");
+            logger.info("  user.home                      = <user home directory>");
 
             System.out.println();
-            System.out.println("Variable Override Options:");
-            System.out.println("-------------------------");
-            System.out.println("  1. Command-line -D flags:        -Dkey=value (highest priority)");
-            System.out.println("  2. Command-line --variable:      --variable key=value");
-            System.out.println("  3. Properties file:              --variables /path/to/file.properties");
-            System.out.println("  4. Plan defaults:                (values shown above)");
-            System.out.println("  5. Environment variables:        ${env.VAR_NAME} or ${env.VAR_NAME:-default}");
+            logger.info("Variable Override Options:");
+            logger.info("-------------------------");
+            logger.info("  1. Command-line -D flags:        -Dkey=value (highest priority)");
+            logger.info("  2. Command-line --variable:      --variable key=value");
+            logger.info("  3. Properties file:              --variables /path/to/file.properties");
+            logger.info("  4. Plan defaults:                (values shown above)");
+            logger.info("  5. Environment variables:        ${env.VAR_NAME} or ${env.VAR_NAME:-default}");
         }
 
         System.out.println();
@@ -235,40 +236,40 @@ public class ApplyMigrationCommand implements Callable<Integer> {
         logger.info("Checking migration status for project: {}", projectPath);
 
         // Validate project path
-        Path projectDir = Paths.get(projectPath);
+        final Path projectDir = Paths.get(projectPath);
         if (!Files.exists(projectDir) || !Files.isDirectory(projectDir)) {
             logger.error("Project directory does not exist or is not a directory: {}", projectPath);
             return 1;
         }
 
         // Check state file
-        MigrationStateManager stateManager = new MigrationStateManager(projectDir);
+        final MigrationStateManager stateManager = new MigrationStateManager(projectDir);
         if (!stateManager.exists()) {
-            System.out.println("\n=== Migration Status ===");
-            System.out.println("Status: No migration executed yet");
-            System.out.println("State File: Not found at " + stateManager.getStateFilePath());
-            System.out.println("\nUse 'apply --project " + projectPath + " --plan <plan>' to start migration");
+            logger.info("\n=== Migration Status ===");
+            logger.info("Status: No migration executed yet");
+            logger.info("State File: Not found at {}", stateManager.getStateFilePath());
+            logger.info("\nUse 'apply --project {} --plan <plan>' to start migration", projectPath);
             System.out.println();
             return 0;
         }
 
         // Load and display status
         try {
-            com.analyzer.migration.state.model.MigrationState state = stateManager.loadState();
+            final com.analyzer.migration.state.model.MigrationState state = stateManager.loadState();
 
-            System.out.println("\n=== Migration Status ===");
-            System.out.println("Project:      " + state.getProjectRoot());
-            System.out.println("Last Updated: " + state.getLastUpdated());
-            System.out.println("Migrations:   " + state.getMigrations().size());
+            logger.info("\n=== Migration Status ===");
+            logger.info("Project:      {}", state.getProjectRoot());
+            logger.info("Last Updated: {}", state.getLastUpdated());
+            logger.info("Migrations:   {}", state.getMigrations().size());
             System.out.println();
 
             if (state.getMigrations().isEmpty()) {
-                System.out.println("No migrations found in state file.");
+                logger.info("No migrations found in state file.");
             } else {
-                System.out.println("Active Migrations:");
-                System.out.println("─────────────────────────────────────────────");
-                for (String planKey : state.getMigrations().keySet()) {
-                    MigrationExecutionState migState = state.getMigration(planKey);
+                logger.info("Active Migrations:");
+                logger.info("─────────────────────────────────────────────");
+                for (final String planKey : state.getMigrations().keySet()) {
+                    final MigrationExecutionState migState = state.getMigration(planKey);
                     System.out.printf("  %s%n", migState.getPlanName());
                     System.out.printf("    Status:       %s%n", migState.getStatus());
                     System.out.printf("    Started:      %s%n", migState.getStartedAt());
@@ -282,7 +283,7 @@ public class ApplyMigrationCommand implements Callable<Integer> {
 
             return 0;
 
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.error("Failed to read migration status: {}", e.getMessage());
             return 1;
         }
@@ -296,7 +297,7 @@ public class ApplyMigrationCommand implements Callable<Integer> {
         boolean valid = true;
 
         // Validate project path
-        Path projectDir = Paths.get(projectPath);
+        final Path projectDir = Paths.get(projectPath);
         if (!Files.exists(projectDir)) {
             logger.error("Project directory does not exist: {}", projectPath);
             valid = false;
@@ -306,8 +307,8 @@ public class ApplyMigrationCommand implements Callable<Integer> {
         }
 
         // Validate variables file if provided
-        if (variablesFile != null && !variablesFile.isEmpty()) {
-            Path varsFile = Paths.get(variablesFile);
+        if (null != variablesFile && !variablesFile.isEmpty()) {
+            final Path varsFile = Paths.get(variablesFile);
             if (!Files.exists(varsFile)) {
                 logger.error("Variables file does not exist: {}", variablesFile);
                 valid = false;
@@ -319,14 +320,14 @@ public class ApplyMigrationCommand implements Callable<Integer> {
 
         // Validate mutually exclusive options
         int executionModes = 0;
-        if (taskId != null)
+        if (null != taskId)
             executionModes++;
-        if (phaseId != null)
+        if (null != phaseId)
             executionModes++;
         if (resume)
             executionModes++;
 
-        if (executionModes > 1) {
+        if (1 < executionModes) {
             logger.error(
                     "Cannot specify multiple execution modes: --task, --phase, and --resume are mutually exclusive");
             valid = false;
@@ -339,23 +340,20 @@ public class ApplyMigrationCommand implements Callable<Integer> {
     // Migration Plan Loading
     // ========================================================================
 
-    private MigrationPlan loadMigrationPlan() throws Exception {
+    private @Nullable MigrationPlan loadMigrationPlan() {
         logger.info("Loading migration plan from: {}", planPath);
 
         try {
-            // Initialize H2 database and repository for GRAPH_QUERY blocks
-            H2GraphStorageRepository repository = initializeGraphRepository();
-
-            // Load and convert plan
-            MigrationPlanConverter converter = new MigrationPlanConverter(repository);
-            YamlMigrationPlanLoader loader = new YamlMigrationPlanLoader(converter);
+            // Get or initialize loader infrastructure (cached to avoid expensive
+            // re-initialization)
+            final YamlMigrationPlanLoader loader = getOrCreateLoader();
 
             // Try to load from file system first (supports includes)
-            File planFile = new File(planPath);
+            final File planFile = new File(planPath);
 
             if (planFile.exists() && planFile.isFile()) {
                 logger.debug("Loading plan from file system: {}", planFile.getAbsolutePath());
-                MigrationPlan plan = loader.loadFromFile(planFile);
+                final MigrationPlan plan = loader.loadFromFile(planFile);
                 logger.info("Successfully loaded migration plan: {} (version: {})",
                         plan.getName(), plan.getVersion());
                 return plan;
@@ -363,20 +361,20 @@ public class ApplyMigrationCommand implements Callable<Integer> {
 
             // Fall back to classpath loading
             logger.debug("File not found on file system, trying classpath: {}", planPath);
-            InputStream planStream = getClass().getClassLoader().getResourceAsStream(planPath);
+            final InputStream planStream = getClass().getClassLoader().getResourceAsStream(planPath);
 
-            if (planStream == null) {
+            if (null == planStream) {
                 logger.error("Migration plan not found: {} (searched file system and classpath)", planPath);
                 return null;
             }
 
             // Use try-with-resources to ensure stream is closed
-            try (InputStream stream = planStream) {
+            try (final InputStream stream = planStream) {
                 // For classpath resources, try to determine a base path for includes
                 // by looking for the plan in known locations
-                Path basePath = detectClasspathBasePath(planPath);
+                final Path basePath = detectClasspathBasePath(planPath);
 
-                MigrationPlan plan = loader.loadFromInputStream(stream, basePath);
+                final MigrationPlan plan = loader.loadFromInputStream(stream, basePath);
 
                 logger.info("Successfully loaded migration plan: {} (version: {})",
                         plan.getName(), plan.getVersion());
@@ -384,7 +382,7 @@ public class ApplyMigrationCommand implements Callable<Integer> {
                 return plan;
             }
 
-        } catch (IOException e) {
+        } catch (final IOException e) {
             logger.error("Failed to load migration plan: {}", e.getMessage(), e);
             return null;
         }
@@ -397,13 +395,13 @@ public class ApplyMigrationCommand implements Callable<Integer> {
      * @param resourcePath the classpath resource path
      * @return detected base path, or null if detection fails
      */
-    private Path detectClasspathBasePath(String resourcePath) {
+    private @Nullable Path detectClasspathBasePath(final String resourcePath) {
         try {
             // Try to find the resource on the file system via the classpath
-            java.net.URL resourceUrl = getClass().getClassLoader().getResource(resourcePath);
+            final java.net.URL resourceUrl = getClass().getClassLoader().getResource(resourcePath);
 
-            if (resourceUrl != null && "file".equals(resourceUrl.getProtocol())) {
-                Path resourceFilePath = Path.of(resourceUrl.toURI());
+            if (null != resourceUrl && "file".equals(resourceUrl.getProtocol())) {
+                final Path resourceFilePath = Path.of(resourceUrl.toURI());
                 logger.debug("Detected file system path for classpath resource: {}", resourceFilePath);
                 return resourceFilePath;
             }
@@ -412,7 +410,10 @@ public class ApplyMigrationCommand implements Callable<Integer> {
             logger.debug("Could not detect file system path for classpath resource: {}", resourcePath);
             return null;
 
-        } catch (Exception e) {
+        } catch (URISyntaxException e) {
+            logger.error("Could not detect file system path for classpath resource: {}", resourcePath, e);
+            return null;
+        } catch (final Exception e) {
             logger.warn("Failed to detect base path for resource: {}", resourcePath, e);
             return null;
         }
@@ -423,35 +424,70 @@ public class ApplyMigrationCommand implements Callable<Integer> {
     // ========================================================================
 
     /**
-     * Initializes the H2 graph database and repository for GRAPH_QUERY blocks.
-     * Creates an empty database if one doesn't exist at the project location.
+     * Gets or creates the YamlMigrationPlanLoader, caching it for reuse.
+     * This avoids expensive database initialization on every call.
      *
-     * @return Initialized H2GraphStorageRepository instance
+     * @return Cached or newly created YamlMigrationPlanLoader instance
      * @throws RuntimeException if initialization fails
      */
-    private H2GraphStorageRepository initializeGraphRepository() {
+    private YamlMigrationPlanLoader getOrCreateLoader() {
+        if (null != cachedLoader) {
+            return cachedLoader;
+        }
+
         try {
-            Path projectDir = Paths.get(projectPath).toAbsolutePath();
+            // Initialize H2 database and repository for GRAPH_QUERY blocks
+            final GraphDatabase graphDB = initializeGraphDatabase();
+
+            // Load and convert plan
+            final GraphRepository repository = graphDB.snapshot();
+            final MigrationPlanConverter converter = new MigrationPlanConverter(repository);
+            cachedLoader = new YamlMigrationPlanLoader(converter);
+
+            return cachedLoader;
+
+        } catch (final Exception e) {
+            logger.error("Failed to initialize loader: {}", e.getMessage(), e);
+            throw new RuntimeException("Loader initialization failed", e);
+        }
+    }
+
+    /**
+     * Initializes the H2 graph database and repository for GRAPH_QUERY blocks.
+     * Creates an empty database if one doesn't exist at the project location.
+     * Caches the result to avoid expensive re-initialization.
+     *
+     * @return Initialized H2GraphDatabase instance
+     * @throws RuntimeException if initialization fails
+     */
+    private GraphDatabase initializeGraphDatabase() {
+        if (null != cachedGraphDatabase) {
+            return cachedGraphDatabase;
+        }
+
+        try {
+            final Path projectDir = Paths.get(projectPath).toAbsolutePath();
 
             // Create LoadOptions with project root (automatically sets database path)
-            LoadOptions options = LoadOptions.builder()
-                    .withProjectRoot(projectDir)
-                    .loadAllNodes()
-                    .loadAllEdges()
-                    .build();
+            final LoadOptions options = LoadOptions.builder()
+                                                   .withProjectRoot(projectDir)
+                                                   .loadAllNodes()
+                                                   .loadAllEdges()
+                                                   .build();
 
             // Create JSON serialization service
-            JsonSerializationService jsonSerializer = new JsonSerializationService();
+            final JsonSerializationService jsonSerializer = new JsonSerializationService();
 
             // Create and initialize H2 database
-            H2GraphDatabase database = new H2GraphDatabase(options, jsonSerializer);
+            final H2GraphDatabase database = new H2GraphDatabase(options, jsonSerializer);
             database.load(); // Initializes/creates database if needed
 
             logger.info("Graph database initialized at: {}", options.getDatabasePath());
 
-            return database.getRepository();
+            cachedGraphDatabase = database;
+            return database;
 
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.error("Failed to initialize graph repository: {}", e.getMessage(), e);
             throw new RuntimeException("Graph repository initialization failed", e);
         }
@@ -461,30 +497,30 @@ public class ApplyMigrationCommand implements Callable<Integer> {
     // Variable Resolution
     // ========================================================================
 
-    private Map<String, String> buildVariableMap(MigrationPlan plan) throws Exception {
+    private Map<String, String> buildVariableMap(final MigrationPlan plan) throws Exception {
         Map<String, String> variables = new LinkedHashMap<>();
 
         // Priority 4: Load plan variables from YAML (lowest priority)
         // Note: Variables are stored in the DTO during loading, not in the plan object
         // We need to reload to get the variables
-        Map<String, String> planVariables = loadPlanVariables();
-        if (planVariables != null && !planVariables.isEmpty()) {
+        final Map<String, String> planVariables = loadPlanVariables();
+        if (null != planVariables && !planVariables.isEmpty()) {
             variables.putAll(planVariables);
         }
 
         // Priority 3: Properties file
-        if (variablesFile != null && !variablesFile.isEmpty()) {
-            Map<String, String> fileVars = loadPropertiesFile(variablesFile);
+        if (null != variablesFile && !variablesFile.isEmpty()) {
+            final Map<String, String> fileVars = loadPropertiesFile(variablesFile);
             variables.putAll(fileVars);
         }
 
         // Priority 2: CLI --variable flags
-        if (cliVariables != null && !cliVariables.isEmpty()) {
+        if (!cliVariables.isEmpty()) {
             variables.putAll(cliVariables);
         }
 
         // Priority 1: CLI -D flags (highest priority)
-        if (systemProperties != null && !systemProperties.isEmpty()) {
+        if (!systemProperties.isEmpty()) {
             variables.putAll(systemProperties);
         }
 
@@ -498,93 +534,71 @@ public class ApplyMigrationCommand implements Callable<Integer> {
     }
 
     /**
-     * Load variables from the migration plan using proper include processing.
-     * This method loads the plan with all includes resolved, then extracts
-     * variables.
+     * Load variables from the migration plan using YamlMigrationPlanLoader.
+     * This method reuses the cached loader infrastructure from loadMigrationPlan()
+     * to avoid expensive database re-initialization.
      */
-    private Map<String, String> loadPlanVariables() throws Exception {
+    private Map<String, String> loadPlanVariables() {
         try {
-            // Initialize H2 database and repository for GRAPH_QUERY blocks
-            H2GraphStorageRepository repository = initializeGraphRepository();
-
-            // Load and convert plan using proper loader with include processing
-            MigrationPlanConverter converter = new MigrationPlanConverter(repository);
-            YamlMigrationPlanLoader loader = new YamlMigrationPlanLoader(converter);
+            // Reuse cached loader infrastructure (same as loadMigrationPlan)
+            final YamlMigrationPlanLoader loader = getOrCreateLoader();
 
             // Try to load from file system first (supports includes)
-            File planFile = new File(planPath);
+            final File planFile = new File(planPath);
 
             if (planFile.exists() && planFile.isFile()) {
                 logger.debug("Loading plan variables from file system: {}", planFile.getAbsolutePath());
-                // Load the DTO with includes processed to get merged variables
-                return loadVariablesFromFile(planFile);
+                // Use the loader's ObjectMapper to parse DTO (same as loader does internally)
+                MigrationPlanDTO dto = loader.getYamlMapper().readValue(planFile, MigrationPlanDTO.class);
+
+                // Process includes using IncludeResolver (same as loader does)
+                if (null != dto.getPlanRoot().getIncludes() && !dto.getPlanRoot().getIncludes().isEmpty()) {
+                    final IncludeResolver resolver = new IncludeResolver(planFile.toPath());
+                    dto = resolver.mergeIncludes(dto);
+                }
+
+                return dto.getPlanRoot().getVariables();
             }
 
             // Fall back to classpath loading
             logger.debug("File not found on file system, trying classpath: {}", planPath);
-            InputStream planStream = getClass().getClassLoader().getResourceAsStream(planPath);
+            final InputStream planStream = getClass().getClassLoader().getResourceAsStream(planPath);
 
-            if (planStream == null) {
+            if (null == planStream) {
                 logger.warn("Migration plan not found: {} (searched file system and classpath)", planPath);
                 return new HashMap<>();
             }
 
             // Use try-with-resources to ensure stream is closed
-            try (InputStream stream = planStream) {
+            try (final InputStream stream = planStream) {
+                // Parse DTO using loader's ObjectMapper
+                MigrationPlanDTO dto = loader.getYamlMapper().readValue(stream, MigrationPlanDTO.class);
+
                 // For classpath resources, try to determine a base path for includes
-                Path basePath = detectClasspathBasePath(planPath);
-                return loadVariablesFromStream(stream, basePath);
+                final Path basePath = detectClasspathBasePath(planPath);
+
+                // Process includes if basePath is available
+                if (null != basePath && null != dto.getPlanRoot().getIncludes()
+                        && !dto.getPlanRoot().getIncludes().isEmpty()) {
+                    final IncludeResolver resolver = new IncludeResolver(basePath);
+                    dto = resolver.mergeIncludes(dto);
+                } else if (null != dto.getPlanRoot().getIncludes() && !dto.getPlanRoot().getIncludes().isEmpty()) {
+                    logger.warn(
+                            "Migration plan contains {} include(s) but no base path available - includes will not be resolved",
+                            dto.getPlanRoot().getIncludes().size());
+                }
+
+                return dto.getPlanRoot().getVariables();
             }
 
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.warn("Failed to load plan variables: {}", e.getMessage());
             return new HashMap<>();
         }
     }
 
-    /**
-     * Load variables from a file using proper include processing.
-     */
-    private Map<String, String> loadVariablesFromFile(File planFile) throws Exception {
-        // Use YamlMigrationPlanLoader's DTO loading logic with include processing
-        com.fasterxml.jackson.databind.ObjectMapper yamlMapper = new com.fasterxml.jackson.databind.ObjectMapper(
-                new com.fasterxml.jackson.dataformat.yaml.YAMLFactory());
-
-        MigrationPlanDTO dto = yamlMapper.readValue(planFile, MigrationPlanDTO.class);
-
-        // Process includes if present - this is the key fix!
-        if (dto.getPlanRoot().getIncludes() != null && !dto.getPlanRoot().getIncludes().isEmpty()) {
-            IncludeResolver resolver = new IncludeResolver(planFile.toPath());
-            dto = resolver.mergeIncludes(dto);
-        }
-
-        return dto.getPlanRoot().getVariables();
-    }
-
-    /**
-     * Load variables from a stream using proper include processing.
-     */
-    private Map<String, String> loadVariablesFromStream(InputStream stream, Path basePath) throws Exception {
-        com.fasterxml.jackson.databind.ObjectMapper yamlMapper = new com.fasterxml.jackson.databind.ObjectMapper(
-                new com.fasterxml.jackson.dataformat.yaml.YAMLFactory());
-
-        MigrationPlanDTO dto = yamlMapper.readValue(stream, MigrationPlanDTO.class);
-
-        // Process includes if present and basePath is available
-        if (basePath != null && dto.getPlanRoot().getIncludes() != null && !dto.getPlanRoot().getIncludes().isEmpty()) {
-            IncludeResolver resolver = new IncludeResolver(basePath);
-            dto = resolver.mergeIncludes(dto);
-        } else if (dto.getPlanRoot().getIncludes() != null && !dto.getPlanRoot().getIncludes().isEmpty()) {
-            logger.warn(
-                    "Migration plan contains {} include(s) but no base path available - includes will not be resolved",
-                    dto.getPlanRoot().getIncludes().size());
-        }
-
-        return dto.getPlanRoot().getVariables();
-    }
-
-    private void addAutoDerivedVariables(Map<String, String> variables, MigrationPlan plan) {
-        Path projectDir = Paths.get(projectPath).toAbsolutePath();
+    private void addAutoDerivedVariables(final Map<String, String> variables, final MigrationPlan plan) {
+        final Path projectDir = Paths.get(projectPath).toAbsolutePath();
 
         // Auto-derived variables (these override any user-provided values)
         variables.put("project_root", projectDir.toString());
@@ -598,18 +612,18 @@ public class ApplyMigrationCommand implements Callable<Integer> {
         if (verbose) {
             logger.debug("Auto-derived variables:");
             variables.entrySet().stream()
-                    .filter(e -> e.getKey().startsWith("project.") || e.getKey().startsWith("plan.")
-                            || e.getKey().startsWith("current_") || e.getKey().startsWith("user."))
-                    .forEach(e -> logger.debug("  {} = {}", e.getKey(), e.getValue()));
+                     .filter(e -> e.getKey().startsWith("project.") || e.getKey().startsWith("plan.")
+                             || e.getKey().startsWith("current_") || e.getKey().startsWith("user."))
+                     .forEach(e -> logger.debug("  {} = {}", e.getKey(), e.getValue()));
         }
     }
 
-    private Map<String, String> resolveEnvironmentVariables(Map<String, String> variables) {
-        Map<String, String> resolved = new LinkedHashMap<>();
+    private static Map<String, String> resolveEnvironmentVariables(final Map<String, String> variables) {
+        final Map<String, String> resolved = new LinkedHashMap<>();
 
-        for (Map.Entry<String, String> entry : variables.entrySet()) {
+        for (final Map.Entry<String, String> entry : variables.entrySet()) {
             String value = entry.getValue();
-            if (value != null) {
+            if (null != value) {
                 value = substituteEnvironmentVariables(value);
             }
             resolved.put(entry.getKey(), value);
@@ -618,25 +632,25 @@ public class ApplyMigrationCommand implements Callable<Integer> {
         return resolved;
     }
 
-    private String substituteEnvironmentVariables(String value) {
-        if (value == null || !value.contains("${env.")) {
+    private static String substituteEnvironmentVariables(final String value) {
+        if (null == value || !value.contains("${env.")) {
             return value;
         }
 
-        Matcher matcher = ENV_VAR_PATTERN.matcher(value);
-        StringBuffer result = new StringBuffer();
+        final Matcher matcher = ENV_VAR_PATTERN.matcher(value);
+        final StringBuilder result = new StringBuilder();
 
         while (matcher.find()) {
-            String envVarName = matcher.group(1);
-            String defaultValue = matcher.group(2);
+            final String envVarName = matcher.group(1);
+            final String defaultValue = matcher.group(2);
 
-            String envValue = System.getenv(envVarName);
+            final String envValue = System.getenv(envVarName);
 
-            if (envValue != null) {
+            if (null != envValue) {
                 matcher.appendReplacement(result, Matcher.quoteReplacement(envValue));
-            } else if (defaultValue != null) {
+            } else if (null != defaultValue) {
                 // Remove leading ":-" from default value
-                String actualDefault = defaultValue.substring(2);
+                final String actualDefault = defaultValue.substring(2);
                 matcher.appendReplacement(result, Matcher.quoteReplacement(actualDefault));
             } else {
                 // Leave unresolved if no default provided
@@ -648,14 +662,14 @@ public class ApplyMigrationCommand implements Callable<Integer> {
         return result.toString();
     }
 
-    private Map<String, String> loadPropertiesFile(String filePath) throws IOException {
-        Map<String, String> props = new LinkedHashMap<>();
+    private static Map<String, String> loadPropertiesFile(final String filePath) throws IOException {
+        final Map<String, String> props = new LinkedHashMap<>();
 
-        try (FileInputStream fis = new FileInputStream(filePath)) {
-            Properties properties = new Properties();
+        try (final FileInputStream fis = new FileInputStream(filePath)) {
+            final Properties properties = new Properties();
             properties.load(fis);
 
-            for (String key : properties.stringPropertyNames()) {
+            for (final String key : properties.stringPropertyNames()) {
                 props.put(key, properties.getProperty(key));
             }
 
@@ -669,14 +683,14 @@ public class ApplyMigrationCommand implements Callable<Integer> {
     // Variable Validation
     // ========================================================================
 
-    private boolean validateVariables(Map<String, String> variables, MigrationPlan plan) {
+    private static boolean areVariablesValid(final Map<String, String> variables) {
         boolean valid = true;
-        List<String> unresolvedVars = new ArrayList<>();
+        final List<String> unresolvedVars = new ArrayList<>();
 
         // Check for unresolved placeholders in variable values
-        for (Map.Entry<String, String> entry : variables.entrySet()) {
-            String value = entry.getValue();
-            if (value != null && containsUnresolvedPlaceholder(value)) {
+        for (final Map.Entry<String, String> entry : variables.entrySet()) {
+            final String value = entry.getValue();
+            if (null != value && containsUnresolvedPlaceholder(value)) {
                 unresolvedVars.add(entry.getKey() + " = " + value);
                 valid = false;
             }
@@ -684,8 +698,8 @@ public class ApplyMigrationCommand implements Callable<Integer> {
 
         if (!unresolvedVars.isEmpty()) {
             logger.error("Found {} unresolved variable placeholders:", unresolvedVars.size());
-            for (String var : unresolvedVars) {
-                logger.error("  {}", var);
+            for (final String variable : unresolvedVars) {
+                logger.error("  {}", variable);
             }
             logger.error("");
             logger.error("Solutions:");
@@ -698,7 +712,7 @@ public class ApplyMigrationCommand implements Callable<Integer> {
         return valid;
     }
 
-    private boolean containsUnresolvedPlaceholder(String value) {
+    private static boolean containsUnresolvedPlaceholder(final String value) {
         // Check for ${...} patterns that weren't resolved
         return value.contains("${") && !value.contains("${project.") && !value.contains("${plan.");
     }
@@ -707,34 +721,34 @@ public class ApplyMigrationCommand implements Callable<Integer> {
     // Execution Configuration Display
     // ========================================================================
 
-    private void displayExecutionConfiguration(MigrationPlan plan, Map<String, String> variables) {
-        System.out.println("\n=== Migration Execution Configuration ===");
-        System.out.println("Migration Plan:    " + plan.getName());
-        System.out.println("Version:           " + plan.getVersion());
-        System.out.println("Project Path:      " + projectPath);
-        System.out.println("Database Path:     " + (databasePath != null ? databasePath : "default"));
-        System.out.println("Interactive Mode:  " + (interactive ? "enabled" : "disabled"));
-        System.out.println("Step-by-Step Mode: " + (stepByStep ? "enabled" : "disabled"));
+    private void displayExecutionConfiguration(final MigrationPlan plan, final Map<String, String> variables) {
+        logger.info("\n=== Migration Execution Configuration ===");
+        logger.info("Migration Plan:    {}", plan.getName());
+        logger.info("Version:           {}", plan.getVersion());
+        logger.info("Project Path:      {}", projectPath);
+        logger.info("Database Path:     {}", null != databasePath ? databasePath : "default");
+        logger.info("Interactive Mode:  {}", interactive ? "enabled" : "disabled");
+        logger.info("Step-by-Step Mode: {}", stepByStep ? "enabled" : "disabled");
 
-        if (taskId != null) {
-            System.out.println("Execution Mode:    Single Task (" + taskId + ")");
-        } else if (phaseId != null) {
-            System.out.println("Execution Mode:    Single Phase (" + phaseId + ")");
+        if (null != taskId) {
+            logger.info("Execution Mode:    Single Task ({})", taskId);
+        } else if (null != phaseId) {
+            logger.info("Execution Mode:    Single Phase ({})", phaseId);
         } else if (resume) {
-            System.out.println("Execution Mode:    Resume from checkpoint");
+            logger.info("Execution Mode:    Resume from checkpoint");
         } else {
-            System.out.println("Execution Mode:    Full plan");
+            logger.info("Execution Mode:    Full plan");
         }
 
         if (verbose) {
-            System.out.println("\nVariables (" + variables.size() + "):");
-            List<String> sortedKeys = new ArrayList<>(variables.keySet());
+            logger.info("\nVariables ({}):", variables.size());
+            final List<String> sortedKeys = new ArrayList<>(variables.keySet());
             Collections.sort(sortedKeys);
-            for (String key : sortedKeys) {
-                System.out.printf("  %-30s = %s%n", key, variables.get(key));
+            for (final String key : sortedKeys) {
+                logger.info("  %-30s = %s", key, variables.get(key));
             }
         } else {
-            System.out.println("\nVariables:         " + variables.size() + " defined (use --verbose to see all)");
+            logger.info("\nVariables:         {} defined (use --verbose to see all)", variables.size());
         }
 
         System.out.println();
@@ -744,64 +758,64 @@ public class ApplyMigrationCommand implements Callable<Integer> {
     // Migration Execution
     // ========================================================================
 
-    private Integer executeMigration(MigrationPlan plan, Map<String, String> variables) throws Exception {
+    private Integer executeMigration(final MigrationPlan plan, final Map<String, String> variables) throws Exception {
         if (dryRun) {
             logger.info("DRY-RUN MODE: Simulating migration plan execution: {}", plan.getName());
-            System.out.println("\n=== DRY-RUN MODE ===");
-            System.out.println("Simulating execution without making actual changes");
+            logger.info("\n=== DRY-RUN MODE ===");
+            logger.info("Simulating execution without making actual changes");
             System.out.println();
         } else {
             logger.info("Executing migration plan: {}", plan.getName());
         }
 
         // Create migration context with all variables
-        Path projectDir = Paths.get(projectPath).toAbsolutePath();
-        MigrationContext context = new MigrationContext(projectDir, dryRun);
+        final Path projectDir = Paths.get(projectPath).toAbsolutePath();
+        final MigrationContext context = new MigrationContext(projectDir, dryRun);
 
         // Set execution modes
         context.setStepByStepMode(stepByStep);
 
-        for (Map.Entry<String, String> entry : variables.entrySet()) {
+        for (final Map.Entry<String, String> entry : variables.entrySet()) {
             context.setVariable(entry.getKey(), entry.getValue());
         }
 
         // Determine database path for progress tracking
-        Path dbPath = determineDatabasePath(projectDir);
+        final Path dbPath = determineDatabasePath(projectDir);
         logger.info("Progress tracking database: {}", dbPath);
 
         // Create migration engine
-        MigrationEngine engine = new MigrationEngine(plan.getName());
+        final MigrationEngine engine = new MigrationEngine(plan.getName());
 
         // Add console progress listener
-        ConsoleProgressListener progressListener = new ConsoleProgressListener();
+        final ConsoleProgressListener progressListener = new ConsoleProgressListener();
         engine.addListener(progressListener);
 
         // Add state file listener for persistent tracking
-        String planKey = Paths.get(planPath).getFileName().toString();
-        StateFileListener stateListener = new StateFileListener(projectDir, planKey, verbose);
+        final String planKey = Paths.get(planPath).getFileName().toString();
+        final StateFileListener stateListener = new StateFileListener(projectDir, planKey, verbose);
         engine.addListener(stateListener);
         logger.info("State tracking enabled at: {}", stateListener.getStateManager().getStateFilePath());
 
         // Execute based on mode
-        ExecutionResult result;
+        final ExecutionResult result;
 
-        if (taskId != null) {
+        if (null != taskId) {
             logger.info("Executing single task: {}", taskId);
             result = engine.executeTaskById(plan, taskId, context);
-        } else if (phaseId != null) {
+        } else if (null != phaseId) {
             logger.info("Executing single phase: {}", phaseId);
 
             // Validate phase exists (search by ID first, then by name)
-            boolean phaseExists = plan.getPhases().stream()
-                    .anyMatch(p -> (p.getId() != null && p.getId().equalsIgnoreCase(phaseId))
-                            || p.getName().equalsIgnoreCase(phaseId));
+            final boolean phaseExists = plan.getPhases().stream()
+                                            .anyMatch(p -> (null != p.getId() && p.getId().equalsIgnoreCase(phaseId))
+                                                    || p.getName().equalsIgnoreCase(phaseId));
 
             if (!phaseExists) {
                 logger.error("\n❌ Phase not found: {}", phaseId);
                 logger.error("\nAvailable phases in plan:");
                 for (int i = 0; i < plan.getPhases().size(); i++) {
-                    Phase p = plan.getPhases().get(i);
-                    logger.error("  {}. [{}] {}", i + 1, p.getId() != null ? p.getId() : "no-id", p.getName());
+                    final Phase p = plan.getPhases().get(i);
+                    logger.error("  {}. [{}] {}", i + 1, null != p.getId() ? p.getId() : "no-id", p.getName());
                 }
                 logger.error("\nTip: Use 'analyzer list-phases --plan {}' to see all phases", planPath);
                 return 1;
@@ -820,17 +834,17 @@ public class ApplyMigrationCommand implements Callable<Integer> {
         displayExecutionResults(result);
 
         if (dryRun) {
-            System.out.println("\n=== DRY-RUN COMPLETED ===");
-            System.out.println("No actual changes were made to the system");
-            System.out.println("Remove --dry-run flag to execute for real");
+            logger.info("\n=== DRY-RUN COMPLETED ===");
+            logger.info("No actual changes were made to the system");
+            logger.info("Remove --dry-run flag to execute for real");
             System.out.println();
         }
 
         return result.isSuccess() ? 0 : 1;
     }
 
-    private Path determineDatabasePath(Path projectDir) {
-        if (databasePath != null && !databasePath.isEmpty()) {
+    private Path determineDatabasePath(final Path projectDir) {
+        if (null != databasePath && !databasePath.isEmpty()) {
             return Paths.get(databasePath);
         } else {
             // Default: project/.analysis/migration.db
@@ -838,23 +852,21 @@ public class ApplyMigrationCommand implements Callable<Integer> {
         }
     }
 
-    private void displayExecutionResults(ExecutionResult result) {
-        System.out.println("\n=== Migration Execution Results ===");
-        System.out.println("Status:            " + (result.isSuccess() ? "SUCCESS" : "FAILED"));
-        System.out.println("Total Duration:    " + result.getDuration().toMillis() + "ms");
+    private void displayExecutionResults(final ExecutionResult result) {
+        logger.info("\n=== Migration Execution Results ===");
+        logger.info("Status:            {}", result.isSuccess() ? "SUCCESS" : "FAILED");
+        logger.info("Total Duration:    {}ms", result.getDuration().toMillis());
 
-        if (!result.isSuccess() && result.getFailureReason() != null) {
-            System.out.println("Error:             " + result.getFailureReason());
-            if (result.getFailurePhase() != null) {
-                System.out.println("Failed at Phase:   " + result.getFailurePhase());
+        if (!result.isSuccess() && null != result.getFailureReason()) {
+            logger.info("Error:             {}", result.getFailureReason());
+            if (null != result.getFailurePhase()) {
+                logger.info("Failed at Phase:   {}", result.getFailurePhase());
             }
         }
 
-        System.out.println("\nPhase Results:");
+        logger.info("\nPhase Results:");
         result.getPhaseResults().forEach(phase -> {
-            System.out.println("  " + phase.getPhaseName() + ": " +
-                    (phase.isSuccess() ? "SUCCESS" : "FAILED") +
-                    " (" + phase.getDuration().toMillis() + "ms)");
+            logger.info("  {}: {} ({}ms)", phase.getPhaseName(), phase.isSuccess() ? "SUCCESS" : "FAILED", phase.getDuration().toMillis());
         });
 
         System.out.println();

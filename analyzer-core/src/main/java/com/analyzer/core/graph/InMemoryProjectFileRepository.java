@@ -48,14 +48,14 @@ public class InMemoryProjectFileRepository implements ProjectFileRepository {
     @Override
     public List<ProjectFile> findAll() {
         return graphRepository.getNodesByClass(ProjectFile.class).stream()
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     public List<ProjectFile> findByTag(String tag) {
         return graphRepository.getNodesByClass(ProjectFile.class).stream()
                 .filter(file -> file.hasTag(tag))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -67,7 +67,7 @@ public class InMemoryProjectFileRepository implements ProjectFileRepository {
     public List<ProjectFile> findByExtension(String extension) {
         return graphRepository.getNodesByClass(ProjectFile.class).stream()
                 .filter(file -> file.hasFileExtension(extension))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

@@ -258,7 +258,7 @@ private HomeCreateMethodInfo analyzeHomeCreateMethod(MethodNode method, ClassNod
     if (method.exceptions != null) {
         List<String> exceptions = method.exceptions.stream()
             .map(String::valueOf)
-            .collect(Collectors.toList());
+            .toList();
         builder.declaredExceptions(exceptions);
     }
     

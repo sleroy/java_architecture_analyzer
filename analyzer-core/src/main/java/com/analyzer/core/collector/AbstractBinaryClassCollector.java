@@ -3,23 +3,18 @@ package com.analyzer.core.collector;
 import com.analyzer.api.collector.ClassNodeCollector;
 import com.analyzer.api.collector.Collector;
 import com.analyzer.api.graph.JavaClassNode;
-import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.api.resource.ResourceResolver;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.ResourceLocation;
-import com.analyzer.api.resource.ResourceResolver;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.Opcodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-
-import static com.analyzer.core.inspector.InspectorTags.*;
-import static com.analyzer.core.inspector.InspectorTags.FORMAT_BINARY;
-import static com.analyzer.core.inspector.InspectorTags.LANGUAGE_JAVA;
-import static com.analyzer.core.inspector.InspectorTags.TAG_LANGUAGE;
 
 /**
  * Abstract base class for collectors that create JavaClassNode objects from binary .class files.
@@ -40,12 +35,12 @@ import static com.analyzer.core.inspector.InspectorTags.TAG_LANGUAGE;
  * Example implementation:
  * <pre>{@code
  * public class BinaryClassNodeCollector extends AbstractBinaryClassCollector {
- *     
+ *
  *     @Inject
  *     public BinaryClassNodeCollector(ResourceResolver resourceResolver) {
  *         super(resourceResolver);
  *     }
- *     
+ *
  *     @Override
  *     public String getName() {
  *         return "BinaryClassNodeCollector";
@@ -60,7 +55,7 @@ import static com.analyzer.core.inspector.InspectorTags.TAG_LANGUAGE;
 public abstract class AbstractBinaryClassCollector implements ClassNodeCollector {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractBinaryClassCollector.class);
-    
+
     protected final ResourceResolver resourceResolver;
 
     /**
@@ -68,7 +63,7 @@ public abstract class AbstractBinaryClassCollector implements ClassNodeCollector
      *
      * @param resourceResolver resolver for accessing file content
      */
-    protected AbstractBinaryClassCollector(ResourceResolver resourceResolver) {
+    protected AbstractBinaryClassCollector(final ResourceResolver resourceResolver) {
         this.resourceResolver = resourceResolver;
     }
 
@@ -82,8 +77,8 @@ public abstract class AbstractBinaryClassCollector implements ClassNodeCollector
      * @return true if the file has .class extension
      */
     @Override
-    public boolean canCollect(ProjectFile source) {
-        return source != null && source.hasFileExtension("class");
+    public boolean canCollect(final ProjectFile source) {
+        return null != source && source.hasFileExtension("class");
     }
 
     /**
@@ -103,18 +98,13 @@ public abstract class AbstractBinaryClassCollector implements ClassNodeCollector
      * @param context the collection context
      */
     @Override
-    public void collect(ProjectFile source, CollectionContext context) {
-        if (!canCollect(source)) {
-            logger.debug("Collector {} cannot process file: {}", 
-                        getName(), source.getRelativePath());
-            return;
-        }
+    public void collect(final ProjectFile source, final CollectionContext context) {
 
         try {
             // Extract FQN from bytecode
-            String fqn = extractFQNFromBytecode(source);
-            
-            if (fqn == null || fqn.isEmpty()) {
+            final String fqn = extractFQNFromBytecode(source);
+
+            if (null == fqn || fqn.isEmpty()) {
                 logger.warn("Could not extract FQN from {}", source.getRelativePath());
                 return;
             }
@@ -126,17 +116,17 @@ public abstract class AbstractBinaryClassCollector implements ClassNodeCollector
             }
 
             // Create JavaClassNode
-            JavaClassNode classNode = createClassNode(fqn, source);
-            
+            final JavaClassNode classNode = createClassNode(fqn, source);
+
             // Store via context
             context.addClassNode(classNode);
             context.linkClassNodeToFile(classNode, source);
-            
+
             logger.debug("Created JavaClassNode for {} from {}", fqn, source.getRelativePath());
-            
-        } catch (Exception e) {
-            logger.error("Error collecting class node from {}: {}", 
-                        source.getRelativePath(), e.getMessage(), e);
+
+        } catch (final RuntimeException e) {
+            logger.error("Error collecting class node from {}: {}",
+                    source.getRelativePath(), e.getMessage(), e);
         }
     }
 
@@ -149,37 +139,37 @@ public abstract class AbstractBinaryClassCollector implements ClassNodeCollector
      * @param source the .class file
      * @return the fully qualified name, or null if extraction fails
      */
-    protected String extractFQNFromBytecode(ProjectFile source) {
+    protected String extractFQNFromBytecode(final ProjectFile source) {
         try {
             // Create ResourceLocation from file path
-            ResourceLocation location = ResourceLocation.file(source.getFilePath().toString());
-            
+            final ResourceLocation location = ResourceLocation.file(source.getFilePath().toString());
+
             // Check if resource exists
             if (!resourceResolver.exists(location)) {
                 logger.warn("Resource does not exist: {}", source.getRelativePath());
-                return null;
+                throw new InvalidResourceException("Resource does not exist: " + source.getRelativePath());
             }
-            
+
             // Open stream and read bytecode
-            try (InputStream inputStream = resourceResolver.openStream(location)) {
-                if (inputStream == null) {
+            try (final InputStream inputStream = resourceResolver.openStream(location)) {
+                if (null == inputStream) {
                     logger.warn("Could not open input stream for {}", source.getRelativePath());
-                    return null;
+                    throw new InvalidResourceException("Could not open input stream for " + source.getRelativePath());
                 }
 
-                ClassReader classReader = new ClassReader(inputStream);
-                
+                final ClassReader classReader = new ClassReader(inputStream);
+
                 // Use simple visitor to extract class name
-                FQNExtractorVisitor visitor = new FQNExtractorVisitor();
+                final FQNExtractorVisitor visitor = new FQNExtractorVisitor();
                 classReader.accept(visitor, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-                
+
                 return visitor.getFqn();
             }
-            
-        } catch (IOException e) {
-            logger.error("Failed to read bytecode from {}: {}", 
-                        source.getRelativePath(), e.getMessage());
-            return null;
+
+        } catch (final IOException e) {
+            logger.error("Failed to read bytecode from {}: {}",
+                    source.getRelativePath(), e.getMessage());
+            throw new InvalidResourceException("Failed to read bytecode from " + source.getRelativePath(), e);
         }
     }
 
@@ -192,8 +182,8 @@ public abstract class AbstractBinaryClassCollector implements ClassNodeCollector
      * @param source the source ProjectFile
      * @return the created JavaClassNode
      */
-    protected JavaClassNode createClassNode(String fqn, ProjectFile source) {
-        JavaClassNode classNode = new JavaClassNode(fqn);
+    protected static JavaClassNode createClassNode(final String fqn, final ProjectFile source) {
+        final JavaClassNode classNode = new JavaClassNode(fqn);
         classNode.setSourceFilePath(source.getFilePath().toString());
 
         return classNode;
@@ -210,11 +200,11 @@ public abstract class AbstractBinaryClassCollector implements ClassNodeCollector
         }
 
         @Override
-        public void visit(int version, int access, String name, String signature,
-                         String superName, String[] interfaces) {
+        public void visit(final int version, final int access, final String name, final String signature,
+                          final String superName, final String[] interfaces) {
             // Convert internal name (e.g., "com/example/MyClass") to FQN (e.g., "com.example.MyClass")
-            if (name != null) {
-                this.fqn = name.replace('/', '.');
+            if (null != name) {
+                fqn = name.replace(File.separatorChar, '.');
             }
             super.visit(version, access, name, signature, superName, interfaces);
         }

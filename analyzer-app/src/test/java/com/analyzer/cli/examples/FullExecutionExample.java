@@ -60,7 +60,7 @@ public class FullExecutionExample {
         }
         System.out.println();
 
-        int inventoryExitCode = 0; // new CommandLine(new AnalyzerCLI()).execute(inventoryArgs);
+        int inventoryExitCode = new CommandLine(new AnalyzerCLI()).execute(inventoryArgs);
 
         System.out.println();
         System.out.println("Inventory analysis completed with exit code: " + inventoryExitCode);

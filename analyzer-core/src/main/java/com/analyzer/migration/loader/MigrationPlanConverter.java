@@ -1,17 +1,13 @@
 package com.analyzer.migration.loader;
 
-import com.analyzer.core.db.H2GraphStorageRepository;
+
+import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.migration.blocks.ai.AiAssistedBatchBlock;
 import com.analyzer.migration.blocks.ai.AiAssistedBlock;
 import com.analyzer.migration.blocks.ai.AiPromptBatchBlock;
 import com.analyzer.migration.blocks.ai.AiPromptBlock;
 import com.analyzer.migration.blocks.analysis.GraphQueryBlock;
-import com.analyzer.migration.blocks.automated.CommandBlock;
-import com.analyzer.migration.blocks.automated.FileOperationBlock;
-import com.analyzer.migration.blocks.automated.GitCheckpointBlock;
-import com.analyzer.migration.blocks.automated.GitCommandBlock;
-import com.analyzer.migration.blocks.automated.MavenBlock;
-import com.analyzer.migration.blocks.automated.OpenRewriteBlock;
+import com.analyzer.migration.blocks.automated.*;
 import com.analyzer.migration.blocks.validation.InteractiveValidationBlock;
 import com.analyzer.migration.loader.dto.BlockDTO;
 import com.analyzer.migration.loader.dto.MigrationPlanDTO;
@@ -22,8 +18,9 @@ import com.analyzer.migration.plan.Task;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Paths;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -34,14 +31,14 @@ public class MigrationPlanConverter {
 
     private static final Logger logger = LoggerFactory.getLogger(MigrationPlanConverter.class);
 
-    private final H2GraphStorageRepository repository;
+    private final GraphRepository repository;
 
     /**
      * Creates a new converter with the specified repository for GraphQueryBlocks.
      *
      * @param repository the graph storage repository
      */
-    public MigrationPlanConverter(H2GraphStorageRepository repository) {
+    public MigrationPlanConverter(GraphRepository repository) {
         this.repository = repository;
     }
 
@@ -60,7 +57,7 @@ public class MigrationPlanConverter {
         // Convert phases
         List<Phase> phases = root.getPhases().stream()
                 .map(this::convertPhase)
-                .collect(Collectors.toList());
+                .toList();
 
         // Build the plan
         MigrationPlan.Builder planBuilder = MigrationPlan.builder(root.getName())
@@ -90,7 +87,7 @@ public class MigrationPlanConverter {
 
         List<Task> tasks = dto.getTasks().stream()
                 .map(this::convertTask)
-                .collect(Collectors.toList());
+                .toList();
 
         Phase.Builder phaseBuilder = Phase.builder(dto.getName())
                 .id(dto.getId());
@@ -112,7 +109,7 @@ public class MigrationPlanConverter {
 
         List<MigrationBlock> blocks = dto.getBlocks().stream()
                 .map(this::convertBlock)
-                .collect(Collectors.toList());
+                .toList();
 
         Task.Builder taskBuilder = Task.builder(dto.getId());
 

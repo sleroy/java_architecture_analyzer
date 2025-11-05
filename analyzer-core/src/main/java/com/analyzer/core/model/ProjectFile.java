@@ -5,7 +5,9 @@ import com.analyzer.core.inspector.InspectorTags;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.commons.io.FilenameUtils;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,11 +36,11 @@ public class ProjectFile extends BaseGraphNode {
     @JsonIgnore
     private LocalDateTime cachedFileModificationTime;
 
-    public ProjectFile(Path filePath, Path projectRoot) {
+    public ProjectFile(final Path filePath, final Path projectRoot) {
         this(filePath, projectRoot, null, null);
     }
 
-    public ProjectFile(Path filePath, Path projectRoot, String sourceJarPath, String jarEntryPath) {
+    public ProjectFile(final Path filePath, final Path projectRoot, final String sourceJarPath, final String jarEntryPath) {
         this(filePath, projectRoot, sourceJarPath, jarEntryPath, new Date());
     }
 
@@ -46,35 +48,35 @@ public class ProjectFile extends BaseGraphNode {
     // Public to allow GraphDatabaseLoader (different package) to use it for
     // deserialization
     public ProjectFile(
-            @JsonProperty("filePath") String filePathStr,
-            @JsonProperty("relativePath") String relativePath,
-            @JsonProperty("fileName") String fileName,
-            @JsonProperty("fileExtension") String fileExtension,
-            @JsonProperty("discoveredAt") Date discoveredAt,
-            @JsonProperty("sourceJarPath") String sourceJarPath,
-            @JsonProperty("jarEntryPath") String jarEntryPath,
-            @JsonProperty("virtual") boolean isVirtual,
-            @JsonProperty("tags") Set<String> tags,
-            @JsonProperty("allProperties") Map<String, Object> allProperties) {
+            @JsonProperty("filePath") final String filePathStr,
+            @JsonProperty("relativePath") final String relativePath,
+            @JsonProperty("fileName") final String fileName,
+            @JsonProperty("fileExtension") final String fileExtension,
+            @JsonProperty("discoveredAt") final Date discoveredAt,
+            @JsonProperty("sourceJarPath") final String sourceJarPath,
+            @JsonProperty("jarEntryPath") final String jarEntryPath,
+            @JsonProperty("virtual") final boolean isVirtual,
+            @JsonProperty("tags") final Set<String> tags,
+            @JsonProperty("allProperties") final Map<String, Object> allProperties) {
         super(Objects.requireNonNull(filePathStr, "File path cannot be null"), "file");
 
         // Store file metadata in properties
         setProperty(PROP_FILE_PATH, filePathStr);
-        setProperty(PROP_RELATIVE_PATH, relativePath != null ? relativePath : "");
-        setProperty(PROP_FILE_NAME, fileName != null ? fileName : "");
-        setProperty(PROP_FILE_EXTENSION, fileExtension != null ? fileExtension : "");
-        setProperty(PROP_DISCOVERED_AT, discoveredAt != null ? discoveredAt : new Date());
+        setProperty(PROP_RELATIVE_PATH, null != relativePath ? relativePath : "");
+        setProperty(PROP_FILE_NAME, null != fileName ? fileName : "");
+        setProperty(PROP_FILE_EXTENSION, null != fileExtension ? fileExtension : "");
+        setProperty(PROP_DISCOVERED_AT, null != discoveredAt ? discoveredAt : new Date());
         setProperty(PROP_SOURCE_JAR_PATH, sourceJarPath);
         setProperty(PROP_JAR_ENTRY_PATH, jarEntryPath);
         setProperty(PROP_IS_VIRTUAL, isVirtual);
 
         // Restore tags from deserialization
-        if (tags != null) {
+        if (null != tags) {
             tags.forEach(this::enableTag);
         }
 
         // Restore properties from deserialization
-        if (allProperties != null) {
+        if (null != allProperties) {
             allProperties.forEach(this::setProperty);
         }
 
@@ -91,16 +93,14 @@ public class ProjectFile extends BaseGraphNode {
         }
     }
 
-    private ProjectFile(Path filePath, Path projectRoot, String sourceJarPath, String jarEntryPath, Date discoveredAt) {
+    private ProjectFile(final Path filePath, final Path projectRoot, final String sourceJarPath, final String jarEntryPath, final Date discoveredAt) {
         super(Objects.requireNonNull(filePath, "File path cannot be null").toString(), "file");
         Objects.requireNonNull(projectRoot, "Project root cannot be null");
 
-        String relativePath = projectRoot.relativize(filePath).toString();
-        String fileName = filePath.getFileName().toString();
-        String name = fileName;
-        int lastDot = name.lastIndexOf('.');
-        String fileExtension = lastDot != -1 ? name.substring(lastDot + 1).toLowerCase() : "";
-        boolean isVirtual = (sourceJarPath != null);
+        final String relativePath = projectRoot.relativize(filePath).toString();
+        final String fileName = filePath.getFileName().toString();
+        final String fileExtension = FilenameUtils.getExtension(fileName);
+        final boolean isVirtual = (null != sourceJarPath);
 
         // Store all metadata in properties
         setProperty(PROP_FILE_PATH, filePath.toString());
@@ -125,9 +125,10 @@ public class ProjectFile extends BaseGraphNode {
         }
     }
 
+    @Nullable
     public Path getFilePath() {
-        String filePathStr = getStringProperty(PROP_FILE_PATH, null);
-        return filePathStr != null ? Paths.get(filePathStr) : null;
+        final String filePathStr = getStringProperty(PROP_FILE_PATH, null);
+        return null != filePathStr ? Paths.get(filePathStr) : null;
     }
 
     public String getRelativePath() {
@@ -142,16 +143,16 @@ public class ProjectFile extends BaseGraphNode {
         return getStringProperty(PROP_FILE_EXTENSION, "");
     }
 
-    public boolean hasFileExtension(String extension) {
-        String fileExtension = getFileExtension();
-        if (extension == null) {
+    public boolean hasFileExtension(final String extension) {
+        final String fileExtension = getFileExtension();
+        if (null == extension) {
             return fileExtension.isEmpty();
         }
         return fileExtension.equalsIgnoreCase(extension);
     }
 
     public Date getDiscoveredAt() {
-        Object value = getProperty(PROP_DISCOVERED_AT);
+        final Object value = getProperty(PROP_DISCOVERED_AT);
         if (value instanceof Date) {
             return new Date(((Date) value).getTime());
         }
@@ -178,21 +179,21 @@ public class ProjectFile extends BaseGraphNode {
     // ==================== Property Methods ====================
     // Note: setProperty() and basic getProperty() inherited from BaseGraphNode
 
-    public String getStringProperty(String propertyName) {
+    public String getStringProperty(final String propertyName) {
         return getStringProperty(propertyName, null);
     }
 
-    public Integer getIntegerProperty(String propertyName) {
+    public Integer getIntegerProperty(final String propertyName) {
         return getIntProperty(propertyName, null);
     }
 
-    public Integer getIntegerProperty(String propertyName, Integer defaultValue) {
+    public Integer getIntegerProperty(final String propertyName, final Integer defaultValue) {
         return getIntProperty(propertyName, defaultValue);
     }
 
-    private Integer getIntProperty(String propertyName, Integer defaultValue) {
-        Object value = getProperty(propertyName);
-        if (value == null)
+    private Integer getIntProperty(final String propertyName, final Integer defaultValue) {
+        final Object value = getProperty(propertyName);
+        if (null == value)
             return defaultValue;
         if (value instanceof Integer)
             return (Integer) value;
@@ -200,14 +201,14 @@ public class ProjectFile extends BaseGraphNode {
             return ((Number) value).intValue();
         try {
             return Integer.parseInt(value.toString());
-        } catch (NumberFormatException e) {
+        } catch (final NumberFormatException e) {
             return defaultValue;
         }
     }
 
-    public Long getLongProperty(String propertyName) {
-        Object value = getProperty(propertyName);
-        if (value == null)
+    public Long getLongProperty(final String propertyName) {
+        final Object value = getProperty(propertyName);
+        if (null == value)
             return null;
         if (value instanceof Long)
             return (Long) value;
@@ -215,19 +216,19 @@ public class ProjectFile extends BaseGraphNode {
             return ((Number) value).longValue();
         try {
             return Long.parseLong(value.toString());
-        } catch (NumberFormatException e) {
+        } catch (final NumberFormatException e) {
             return null;
         }
     }
 
-    public Long getLongProperty(String propertyName, Long defaultValue) {
-        Long value = getLongProperty(propertyName);
-        return value != null ? value : defaultValue;
+    public Long getLongProperty(final String propertyName, final Long defaultValue) {
+        final Long value = getLongProperty(propertyName);
+        return null != value ? value : defaultValue;
     }
 
-    public Double getDoubleProperty(String propertyName) {
-        Object value = getProperty(propertyName);
-        if (value == null)
+    public Double getDoubleProperty(final String propertyName) {
+        final Object value = getProperty(propertyName);
+        if (null == value)
             return null;
         if (value instanceof Double)
             return (Double) value;
@@ -235,23 +236,23 @@ public class ProjectFile extends BaseGraphNode {
             return ((Number) value).doubleValue();
         try {
             return Double.parseDouble(value.toString());
-        } catch (NumberFormatException e) {
+        } catch (final NumberFormatException e) {
             return null;
         }
     }
 
-    public Double getDoubleProperty(String propertyName, Double defaultValue) {
-        Double value = getDoubleProperty(propertyName);
-        return value != null ? value : defaultValue;
+    public Double getDoubleProperty(final String propertyName, final Double defaultValue) {
+        final Double value = getDoubleProperty(propertyName);
+        return null != value ? value : defaultValue;
     }
 
-    public Boolean getBooleanProperty(String propertyName) {
-        Object value = getProperty(propertyName);
-        if (value == null)
+    public Boolean getBooleanProperty(final String propertyName) {
+        final Object value = getProperty(propertyName);
+        if (null == value)
             return null;
         if (value instanceof Boolean)
             return (Boolean) value;
-        String stringValue = value.toString().toLowerCase().trim();
+        final String stringValue = value.toString().toLowerCase().trim();
         if ("true".equals(stringValue) || "1".equals(stringValue) || "yes".equals(stringValue))
             return true;
         if ("false".equals(stringValue) || "0".equals(stringValue) || "no".equals(stringValue))
@@ -259,15 +260,15 @@ public class ProjectFile extends BaseGraphNode {
         return null;
     }
 
-    public Boolean getBooleanProperty(String propertyName, Boolean defaultValue) {
-        Boolean value = getBooleanProperty(propertyName);
-        return value != null ? value : defaultValue;
+    public Boolean getBooleanProperty(final String propertyName, final Boolean defaultValue) {
+        final Boolean value = getBooleanProperty(propertyName);
+        return null != value ? value : defaultValue;
     }
 
     @SuppressWarnings("unchecked")
-    public <T> List<T> getListProperty(String propertyName) {
-        Object value = getProperty(propertyName);
-        if (value == null)
+    public <T> List<T> getListProperty(final String propertyName) {
+        final Object value = getProperty(propertyName);
+        if (null == value)
             return null;
         if (value instanceof List)
             return (List<T>) value;
@@ -276,17 +277,17 @@ public class ProjectFile extends BaseGraphNode {
         return null;
     }
 
-    public <T> List<T> getListProperty(String propertyName, List<T> defaultValue) {
-        List<T> value = getListProperty(propertyName);
-        return value != null ? value : defaultValue;
+    public <T> List<T> getListProperty(final String propertyName, final List<T> defaultValue) {
+        final List<T> value = getListProperty(propertyName);
+        return null != value ? value : defaultValue;
     }
 
     // hasProperty() inherited from BaseGraphNode
 
-    public boolean hasAllProperties(String... propertyNames) {
-        if (propertyNames == null || propertyNames.length == 0)
+    public boolean hasAllProperties(final String... propertyNames) {
+        if (null == propertyNames)
             return true;
-        for (String propertyName : propertyNames) {
+        for (final String propertyName : propertyNames) {
             if (!hasProperty(propertyName)) {
                 return false;
             }
@@ -300,13 +301,13 @@ public class ProjectFile extends BaseGraphNode {
     }
 
     @JsonProperty("allProperties")
-    public void setAllProperties(Map<String, Object> props) {
-        if (props != null) {
+    public void setAllProperties(final Map<String, Object> props) {
+        if (null != props) {
             props.forEach(this::setProperty);
         }
     }
 
-    public void removeProperty(String propertyName) {
+    public void removeProperty(final String propertyName) {
         setProperty(propertyName, null);
     }
 
@@ -334,40 +335,40 @@ public class ProjectFile extends BaseGraphNode {
 
     // ==================== INSPECTOR EXECUTION TRACKING ====================
 
-    public void markInspectorExecuted(String inspectorName) {
+    public void markInspectorExecuted(final String inspectorName) {
         markInspectorExecuted(inspectorName, LocalDateTime.now());
     }
 
-    public void markInspectorExecuted(String inspectorName, LocalDateTime executionTime) {
+    public void markInspectorExecuted(final String inspectorName, final LocalDateTime executionTime) {
         inspectorExecutionTimes.put(inspectorName, executionTime);
     }
 
-    public Optional<LocalDateTime> getInspectorExecutionTime(String inspectorName) {
+    public Optional<LocalDateTime> getInspectorExecutionTime(final String inspectorName) {
         return Optional.ofNullable(inspectorExecutionTimes.get(inspectorName));
     }
 
-    public boolean isInspectorUpToDate(String inspectorName) {
-        Optional<LocalDateTime> executionTime = getInspectorExecutionTime(inspectorName);
+    public boolean isInspectorUpToDate(final String inspectorName) {
+        final Optional<LocalDateTime> executionTime = getInspectorExecutionTime(inspectorName);
         if (executionTime.isEmpty())
             return false;
-        LocalDateTime fileModTime = getFileModificationTime();
+        final LocalDateTime fileModTime = getFileModificationTime();
         return executionTime.get().isAfter(fileModTime) || executionTime.get().isEqual(fileModTime);
     }
 
     @JsonIgnore
     public LocalDateTime getFileModificationTime() {
-        if (cachedFileModificationTime == null) {
+        if (null == cachedFileModificationTime) {
             try {
-                Path path = getFilePath();
-                if (path != null) {
+                final Path path = getFilePath();
+                if (null != path) {
                     cachedFileModificationTime = Files.getLastModifiedTime(path)
-                            .toInstant()
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDateTime();
+                                                      .toInstant()
+                                                      .atZone(ZoneId.systemDefault())
+                                                      .toLocalDateTime();
                 } else {
                     cachedFileModificationTime = LocalDateTime.now();
                 }
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 cachedFileModificationTime = LocalDateTime.now();
             }
         }
@@ -400,25 +401,25 @@ public class ProjectFile extends BaseGraphNode {
     @Override
     @JsonIgnore
     public String getDisplayLabel() {
-        String fqn = getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
-        if (fqn != null) {
+        final String fqn = getStringProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME);
+        if (null != fqn) {
             return fqn;
         }
-        String relativePath = getRelativePath();
-        String fileName = getFileName();
-        return relativePath.length() < 50 ? relativePath : fileName;
+        final String relativePath = getRelativePath();
+        final String fileName = getFileName();
+        return 50 > relativePath.length() ? relativePath : fileName;
     }
 
     // ==================== Object Methods ====================
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(final Object obj) {
         if (this == obj)
             return true;
-        if (obj == null || getClass() != obj.getClass())
+        if (null == obj || getClass() != obj.getClass())
             return false;
 
-        ProjectFile that = (ProjectFile) obj;
+        final ProjectFile that = (ProjectFile) obj;
         return Objects.equals(getId(), that.getId());
     }
 
@@ -430,7 +431,7 @@ public class ProjectFile extends BaseGraphNode {
     @Override
     public String toString() {
         return String.format("ProjectFile{relativePath='%s', fileName='%s', extension='%s', " +
-                "virtual=%b, properties=%d, tags=%d}",
+                        "virtual=%b, properties=%d, tags=%d}",
                 getRelativePath(),
                 getFileName(),
                 getFileExtension(),
@@ -439,7 +440,7 @@ public class ProjectFile extends BaseGraphNode {
                 getTags().size());
     }
 
-    public void setFullQualifiedName(String packageName, String className) {
+    public void setFullQualifiedName(final String packageName, final String className) {
 
         if (packageName.isEmpty()) {
             setProperty(InspectorTags.PROP_JAVA_FULLY_QUALIFIED_NAME, className);

@@ -152,6 +152,48 @@ public class MigrationContext {
     }
 
     /**
+     * Resolves a variable name from YAML configuration.
+     * <p>
+     * This is a simple helper for batch blocks that need to extract variable names
+     * from YAML fields like `input-nodes: "${stateless_beans}"`.
+     * </p>
+     * <p>
+     * Behavior:
+     * <ul>
+     * <li>If the value contains `${}`, use FreeMarker's substituteVariables() to
+     * resolve it</li>
+     * <li>Otherwise, return the value as-is (already a variable name)</li>
+     * </ul>
+     * </p>
+     * <p>
+     * Examples:
+     * <ul>
+     * <li>`"${stateless_beans}"` → Uses substituteVariables() →
+     * `"stateless_beans"`</li>
+     * <li>`"stateless_beans"` → Returns as-is → `"stateless_beans"`</li>
+     * <li>`"${my_var}_suffix"` → Uses substituteVariables() → `"value_suffix"`</li>
+     * </ul>
+     * </p>
+     *
+     * @param variableReference The variable reference from YAML (may contain ${}
+     *                          syntax)
+     * @return The resolved variable name to use with getVariable()
+     */
+    public String resolveVariableName(String variableReference) {
+        if (variableReference == null || variableReference.trim().isEmpty()) {
+            return variableReference;
+        }
+
+        // If it contains ${}, use FreeMarker to resolve it
+        if (variableReference.contains("${")) {
+            return substituteVariables(variableReference);
+        }
+
+        // Otherwise, use as-is
+        return variableReference;
+    }
+
+    /**
      * Check if a variable exists in the context
      */
     public boolean hasVariable(String name) {

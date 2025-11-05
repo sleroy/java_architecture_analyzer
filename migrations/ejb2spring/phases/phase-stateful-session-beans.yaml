@@ -26,7 +26,7 @@ migration-plan:
               description: "Replace @Stateful with @Component and @Scope"
               recipe: "com.analyzer.ejb2spring.MigrateStatefulSession"
               file-pattern: "**/*.java"
-              base-directory: "${project_root}/src/main/java"
+              base-directory: "${project_root}/${artifact_id}/src/main/java"
             
             - type: "AI_ASSISTED_BATCH"
               name: "ai-migrate-stateful-beans"

@@ -3,6 +3,7 @@ package com.analyzer.api.graph;
 import org.jgrapht.Graph;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -135,4 +136,14 @@ public interface GraphRepository {
      * @return Collection of nodes of the specified type
      */
     <T extends GraphNode> Collection<T> getNodesByClass(Class<T> nodeClass);
+
+    List<GraphNode> findAll();
+
+    List<GraphNode> findNodesByType(String processedType);
+
+    List<GraphNode> findNodesByTag(String first);
+
+    List<GraphNode> findNodesByAnyTags(List<String> processedTags);
+
+    List<GraphNode> findNodesByTypeAndAnyTags(String processedType, List<String> processedTags);
 }

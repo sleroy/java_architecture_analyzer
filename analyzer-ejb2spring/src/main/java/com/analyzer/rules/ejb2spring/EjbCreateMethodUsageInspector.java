@@ -388,7 +388,7 @@ public class EjbCreateMethodUsageInspector extends AbstractASMClassInspector {
             if (method.exceptions != null) {
                 exceptions = method.exceptions.stream()
                         .map(String::valueOf)
-                        .collect(Collectors.toList());
+                        .toList();
             }
 
             return new HomeCreateMethodInfo(method.name, method.desc, createMethodSuffix,

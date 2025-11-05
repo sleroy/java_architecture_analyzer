@@ -49,7 +49,7 @@ public class MigrationPlan {
         return phases.stream()
                 .sorted((p1, p2) -> Integer.compare(p1.getOrder(), p2.getOrder()))
                 .flatMap(phase -> phase.getTasks().stream())
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**
