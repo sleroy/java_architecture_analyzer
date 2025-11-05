@@ -22,45 +22,45 @@ public class InMemoryGraphRepository implements GraphRepository {
     private static final Logger logger = LoggerFactory.getLogger(InMemoryGraphRepository.class);
 
     // Primary storage
-    private final Map<String, GraphNode> nodes = new ConcurrentHashMap<>();
-    private final Map<String, GraphEdge> edges = new ConcurrentHashMap<>();
+    private final Map<String, GraphNode> nodes = new ConcurrentHashMap<>(100);
+    private final Map<String, GraphEdge> edges = new ConcurrentHashMap<>(100);
 
     // Index for efficient edge lookups by source-target-type combination
-    private final Map<String, GraphEdge> edgeIndex = new ConcurrentHashMap<>();
+    private final Map<String, GraphEdge> edgeIndex = new ConcurrentHashMap<>(100);
 
     // Index for efficient class lookups by FQN
-    private final Map<String, JavaClassNode> classFqnIndex = new ConcurrentHashMap<>();
+    private final Map<String, JavaClassNode> classFqnIndex = new ConcurrentHashMap<>(100);
 
     @Override
-    public GraphNode getOrCreateNode(GraphNode node) {
+    public final GraphNode getOrCreateNode(final GraphNode node) {
         Objects.requireNonNull(node, "Node cannot be null");
-        Objects.requireNonNull(node.getId(), "Node ID cannot be null");
+        final String nodeId = node.getId();
+        Objects.requireNonNull(nodeId, "Node ID cannot be null");
 
-        GraphNode existingNode = nodes.get(node.getId());
-        if (existingNode != null) {
-            logger.debug("Returning existing node with ID: {}", node.getId());
+        final GraphNode existingNode = nodes.get(nodeId);
+        if (null != existingNode) {
+            logger.debug("Returning existing node with ID: {}", nodeId);
             return existingNode;
         }
 
-        nodes.put(node.getId(), node);
-        if (node instanceof JavaClassNode) {
-            JavaClassNode classNode = (JavaClassNode) node;
+        nodes.put(nodeId, node);
+        if (node instanceof final JavaClassNode classNode) {
             classFqnIndex.put(classNode.getFullyQualifiedName(), classNode);
         }
-        logger.debug("Added new node with ID: {} and type: {}", node.getId(), node.getNodeType());
+        logger.debug("Added new node with ID: {} and type: {}", nodeId, node.getNodeType());
         return node;
     }
 
     @Override
-    public GraphEdge getOrCreateEdge(GraphNode source, GraphNode target, String edgeType) {
+    public final GraphEdge getOrCreateEdge(final GraphNode source, final GraphNode target, final String edgeType) {
         Objects.requireNonNull(source, "Source node cannot be null");
         Objects.requireNonNull(target, "Target node cannot be null");
         Objects.requireNonNull(edgeType, "Edge type cannot be null");
 
-        String edgeKey = createEdgeKey(source.getId(), target.getId(), edgeType);
-        GraphEdge existingEdge = edgeIndex.get(edgeKey);
+        final String edgeKey = createEdgeKey(source.getId(), target.getId(), edgeType);
+        final GraphEdge existingEdge = edgeIndex.get(edgeKey);
 
-        if (existingEdge != null) {
+        if (null != existingEdge) {
             logger.debug("Returning existing edge: {} -> {} ({})", source.getId(), target.getId(), edgeType);
             return existingEdge;
         }
@@ -70,7 +70,7 @@ public class InMemoryGraphRepository implements GraphRepository {
         getOrCreateNode(target);
 
         // Create new edge with auto-generated ID
-        GraphEdge newEdge = new GraphEdge(source, target, edgeType);
+        final GraphEdge newEdge = new GraphEdge(source, target, edgeType);
         edges.put(newEdge.getId(), newEdge);
         edgeIndex.put(edgeKey, newEdge);
 
@@ -80,79 +80,80 @@ public class InMemoryGraphRepository implements GraphRepository {
     }
 
     @Override
-    public void addNode(GraphNode node) {
+    public final void addNode(final GraphNode node) {
         Objects.requireNonNull(node, "Node cannot be null");
         Objects.requireNonNull(node.getId(), "Node ID cannot be null");
         nodes.put(node.getId(), node);
-        if (node instanceof JavaClassNode) {
-            JavaClassNode classNode = (JavaClassNode) node;
+        if (node instanceof final JavaClassNode classNode) {
             classFqnIndex.put(classNode.getFullyQualifiedName(), classNode);
         }
     }
 
     @Override
-    public Optional<GraphNode> getNodeById(String nodeId) {
+    public final Optional<GraphNode> getNodeById(final String nodeId) {
         return Optional.ofNullable(nodes.get(nodeId));
     }
 
     @Override
-    public Optional<GraphEdge> getEdge(String edgeId) {
+    public final Optional<GraphEdge> getEdge(final String edgeId) {
         return Optional.ofNullable(edges.get(edgeId));
     }
 
     @Override
-    public Collection<GraphNode> getNodesByType(Set<String> nodeTypes) {
-        if (nodeTypes == null || nodeTypes.isEmpty()) {
+    public final Collection<GraphNode> getNodesByType(final Set<String> nodeTypes) {
+        if (null == nodeTypes || nodeTypes.isEmpty()) {
             return getNodes();
         }
 
-        return nodes.values().stream()
-                .filter(node -> nodeTypes.contains(node.getNodeType()))
-                .collect(Collectors.toList());
+        final Collection<GraphNode> values = nodes.values();
+        return values.stream()
+                     .filter(node -> nodeTypes.contains(node.getNodeType()))
+                     .toList();
     }
 
     @Override
-    public Collection<GraphEdge> getEdgesByType(Set<String> edgeTypes) {
-        if (edgeTypes == null || edgeTypes.isEmpty()) {
+    public final Collection<GraphEdge> getEdgesByType(final Set<String> edgeTypes) {
+        if (null == edgeTypes || edgeTypes.isEmpty()) {
             return getAllEdges();
         }
 
-        return edges.values().stream()
-                .filter(edge -> edgeTypes.contains(edge.getEdgeType()))
-                .collect(Collectors.toList());
+        final Collection<GraphEdge> graphEdges = edges.values();
+        return graphEdges.stream()
+                         .filter(edge -> edgeTypes.contains(edge.getEdgeType()))
+                         .toList();
     }
 
     @Override
-    public Collection<GraphNode> getNodes() {
+    public final Collection<GraphNode> getNodes() {
         return Collections.unmodifiableCollection(nodes.values());
     }
 
     @Override
-    public Collection<GraphEdge> getAllEdges() {
+    public final Collection<GraphEdge> getAllEdges() {
         return Collections.unmodifiableCollection(edges.values());
     }
 
     @Override
-    public Graph<GraphNode, GraphEdge> buildGraph(Set<String> nodeTypes, Set<String> edgeTypes) {
+    public final Graph<GraphNode, GraphEdge> buildGraph(final Set<String> nodeTypes, final Set<String> edgeTypes) {
         logger.debug("Building graph with node types: {} and edge types: {}", nodeTypes, edgeTypes);
 
         // Create a new directed multigraph
-        Graph<GraphNode, GraphEdge> graph = new DirectedMultigraph<>(GraphEdge.class);
+        final Graph<GraphNode, GraphEdge> graph = new DirectedMultigraph<>(GraphEdge.class);
 
         // Add filtered nodes
-        Collection<GraphNode> filteredNodes = getNodesByType(nodeTypes);
-        Set<String> nodeIds = new HashSet<>();
+        final Collection<GraphNode> filteredNodes = getNodesByType(nodeTypes);
+        final Set<String> nodeIds = new HashSet<>();
 
-        for (GraphNode node : filteredNodes) {
+        for (final GraphNode node : filteredNodes) {
             graph.addVertex(node);
             nodeIds.add(node.getId());
         }
 
         // Add filtered edges (only if both source and target nodes are in the graph)
-        Collection<GraphEdge> filteredEdges = getEdgesByType(edgeTypes);
+        final Collection<GraphEdge> filteredEdges = getEdgesByType(edgeTypes);
         int addedEdges = 0;
 
-        for (GraphEdge edge : filteredEdges) {
+        for (final GraphEdge edge : filteredEdges) {
             if (nodeIds.contains(edge.getSource().getId()) &&
                     nodeIds.contains(edge.getTarget().getId())) {
                 graph.addEdge(edge.getSource(), edge.getTarget(), edge);
@@ -165,7 +166,7 @@ public class InMemoryGraphRepository implements GraphRepository {
     }
 
     @Override
-    public void clear() {
+    public final void clear() {
         logger.info("Clearing graph repository");
         nodes.clear();
         edges.clear();
@@ -173,26 +174,77 @@ public class InMemoryGraphRepository implements GraphRepository {
     }
 
     @Override
-    public int getNodeCount() {
+    public final int getNodeCount() {
         return nodes.size();
     }
 
     @Override
-    public int getEdgeCount() {
+    public final int getEdgeCount() {
         return edges.size();
     }
 
     @Override
-    public Optional<JavaClassNode> findClassByFqn(String fqn) {
+    public final Optional<JavaClassNode> findClassByFqn(final String fqn) {
         return Optional.ofNullable(classFqnIndex.get(fqn));
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends GraphNode> Collection<T> getNodesByClass(Class<T> nodeClass) {
-        return (Collection<T>) nodes.values().stream()
-                .filter(nodeClass::isInstance)
-                .collect(Collectors.toList());
+    public final <T extends GraphNode> Collection<T> getNodesByClass(final Class<T> nodeClass) {
+        final Collection<GraphNode> values = nodes.values();
+        return (Collection<T>) values.stream()
+                                     .filter(nodeClass::isInstance)
+                                     .toList();
+    }
+
+    @Override
+    public final List<GraphNode> findAll() {
+        return new ArrayList<>(nodes.values());
+    }
+
+    @Override
+    public final List<GraphNode> findNodesByType(final String processedType) {
+        if (null == processedType) {
+            return List.of();
+        }
+
+        return nodes.values().stream()
+                    .filter(node -> processedType.equals(node.getNodeType()))
+                    .toList();
+    }
+
+    @Override
+    public final List<GraphNode> findNodesByTag(final String tag) {
+        if (null == tag) {
+            return List.of();
+        }
+
+        return nodes.values().stream()
+                    .filter(node -> node.hasTag(tag))
+                    .toList();
+    }
+
+    @Override
+    public final List<GraphNode> findNodesByAnyTags(final List<String> processedTags) {
+        if (null == processedTags || processedTags.isEmpty()) {
+            return List.of();
+        }
+
+        return nodes.values().stream()
+                    .filter(node -> processedTags.stream().anyMatch(node::hasTag))
+                    .toList();
+    }
+
+    @Override
+    public final List<GraphNode> findNodesByTypeAndAnyTags(final String processedType, final List<String> processedTags) {
+        if (null == processedType || null == processedTags || processedTags.isEmpty()) {
+            return List.of();
+        }
+
+        return nodes.values().stream()
+                    .filter(node -> processedType.equals(node.getNodeType()))
+                    .filter(node -> processedTags.stream().anyMatch(node::hasTag))
+                    .toList();
     }
 
     /**
@@ -200,19 +252,19 @@ public class InMemoryGraphRepository implements GraphRepository {
      * edge type.
      * This allows efficient lookup of existing edges.
      */
-    private String createEdgeKey(String sourceId, String targetId, String edgeType) {
+    private String createEdgeKey(final String sourceId, final String targetId, final String edgeType) {
         return sourceId + "|" + targetId + "|" + edgeType;
     }
 
     /**
      * Gets repository statistics for debugging purposes.
      */
-    public String getStats() {
-        Map<String, Long> nodeTypeCounts = nodes.values().stream()
-                .collect(Collectors.groupingBy(GraphNode::getNodeType, Collectors.counting()));
+    public final String getStats() {
+        final Map<String, Long> nodeTypeCounts = nodes.values().stream()
+                                                      .collect(Collectors.groupingBy(GraphNode::getNodeType, Collectors.counting()));
 
-        Map<String, Long> edgeTypeCounts = edges.values().stream()
-                .collect(Collectors.groupingBy(GraphEdge::getEdgeType, Collectors.counting()));
+        final Map<String, Long> edgeTypeCounts = edges.values().stream()
+                                                      .collect(Collectors.groupingBy(GraphEdge::getEdgeType, Collectors.counting()));
 
         return String.format("GraphRepository Stats - Nodes: %d (types: %s), Edges: %d (types: %s)",
                 getNodeCount(), nodeTypeCounts, getEdgeCount(), edgeTypeCounts);

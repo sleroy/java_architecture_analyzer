@@ -1,11 +1,11 @@
 package com.analyzer.migration.blocks.analysis;
 
+import com.analyzer.api.graph.GraphNode;
+import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.migration.context.MigrationContext;
 import com.analyzer.migration.plan.BlockResult;
 import com.analyzer.migration.plan.BlockType;
 import com.analyzer.migration.plan.MigrationBlock;
-import com.analyzer.core.db.H2GraphStorageRepository;
-import com.analyzer.core.db.entity.GraphNodeEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Queries the H2 graph database to filter nodes by type, tags, or properties.
@@ -23,7 +22,7 @@ public class GraphQueryBlock implements MigrationBlock {
     private static final Logger logger = LoggerFactory.getLogger(GraphQueryBlock.class);
 
     private final String name;
-    private final H2GraphStorageRepository repository;
+    private final GraphRepository repository;
     private final QueryType queryType;
     private final String nodeType;
     private final List<String> requiredTags;
@@ -48,7 +47,7 @@ public class GraphQueryBlock implements MigrationBlock {
         long startTime = System.currentTimeMillis();
 
         try {
-            List<GraphNodeEntity> results;
+            List<GraphNode> results;
 
             switch (queryType) {
                 case BY_TYPE:
@@ -74,8 +73,11 @@ public class GraphQueryBlock implements MigrationBlock {
 
             // Prepare output variables (will be set in context by TaskExecutor)
             List<String> nodeIds = results.stream()
-                    .map(GraphNodeEntity::getId)
-                    .collect(Collectors.toList());
+                    .map(GraphNode::getId)
+                    .toList();
+            List<String> nodeNames = results.stream()
+                    .map(GraphNode::getDisplayLabel)
+                    .toList();
 
             Map<String, Object> summary = new HashMap<>();
             summary.put("count", results.size());
@@ -99,7 +101,9 @@ public class GraphQueryBlock implements MigrationBlock {
                     .outputVariable(varName, results)
                     .outputVariable(varName + "_ids", nodeIds)
                     .outputVariable(varName + "_summary", summary)
+                    .outputVariable("node_count", results.size())
                     .outputVariable("result_count", results.size())
+                    .outputVariable(varName + "_names", nodeNames)
                     .executionTimeMs(executionTime)
                     .build();
 
@@ -110,16 +114,16 @@ public class GraphQueryBlock implements MigrationBlock {
         }
     }
 
-    private List<GraphNodeEntity> queryByType(MigrationContext context) {
+    private List<GraphNode> queryByType(MigrationContext context) {
         String processedType = context.substituteVariables(nodeType);
         logger.debug("Querying nodes by type: {}", processedType);
         return repository.findNodesByType(processedType);
     }
 
-    private List<GraphNodeEntity> queryByTags(MigrationContext context) {
+    private List<GraphNode> queryByTags(MigrationContext context) {
         List<String> processedTags = requiredTags.stream()
                 .map(context::substituteVariables)
-                .collect(Collectors.toList());
+                .toList();
 
         logger.debug("Querying nodes with tags: {} (using optimized database query)", processedTags);
 
@@ -132,11 +136,11 @@ public class GraphQueryBlock implements MigrationBlock {
         }
     }
 
-    private List<GraphNodeEntity> queryByTypeAndTags(MigrationContext context) {
+    private List<GraphNode> queryByTypeAndTags(MigrationContext context) {
         String processedType = context.substituteVariables(nodeType);
         List<String> processedTags = requiredTags.stream()
                 .map(context::substituteVariables)
-                .collect(Collectors.toList());
+                .toList();
 
         logger.debug("Querying nodes by type: {} with tags: {} (using optimized database query)", processedType,
                 processedTags);
@@ -148,26 +152,6 @@ public class GraphQueryBlock implements MigrationBlock {
             // For multiple tags, use OR condition (find nodes with any of these tags)
             return repository.findNodesByTypeAndAnyTags(processedType, processedTags);
         }
-    }
-
-    private boolean nodeHasTags(GraphNodeEntity node, List<String> requiredTags) {
-        String tagsJson = node.getTags();
-        if (tagsJson == null || tagsJson.isEmpty() || "[]".equals(tagsJson)) {
-            return requiredTags.isEmpty();
-        }
-
-        // Parse JSON array (simple parsing for tags)
-        // Tags are stored as JSON array: ["tag1", "tag2", "tag3"]
-        String tagList = tagsJson.replaceAll("[\\[\\]\"]", "");
-        List<String> nodeTags = List.of(tagList.split(",\\s*"));
-
-        // Check if node has all required tags
-        for (String requiredTag : requiredTags) {
-            if (!nodeTags.contains(requiredTag.trim())) {
-                return false;
-            }
-        }
-        return true;
     }
 
     @Override
@@ -298,7 +282,7 @@ public class GraphQueryBlock implements MigrationBlock {
 
     public static class Builder {
         private String name;
-        private H2GraphStorageRepository repository;
+        private GraphRepository repository;
         private QueryType queryType;
         private String nodeType;
         private List<String> requiredTags;
@@ -309,7 +293,7 @@ public class GraphQueryBlock implements MigrationBlock {
             return this;
         }
 
-        public Builder repository(H2GraphStorageRepository repository) {
+        public Builder repository(GraphRepository repository) {
             this.repository = repository;
             return this;
         }

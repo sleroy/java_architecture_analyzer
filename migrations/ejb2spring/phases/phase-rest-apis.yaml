@@ -28,7 +28,7 @@ migration-plan:
               description: "Replace JAX-RS annotations with Spring MVC"
               recipe: "com.analyzer.ejb2spring.MigrateJaxRsToSpring"
               file-pattern: "**/*.java"
-              base-directory: "${project_root}/src/main/java"
+              base-directory: "${project_root}/${artifact_id}/src/main/java"
             
             # Step 3: AI_ASSISTED_BATCH - Process each resource
             - type: "AI_ASSISTED_BATCH"

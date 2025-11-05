@@ -5,6 +5,11 @@ import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractTextFileInspector;
 import com.analyzer.api.resource.ResourceResolver;
+import com.analyzer.core.bedrock.BedrockConfig;
+import com.analyzer.core.bedrock.BedrockApiClient;
+import com.analyzer.core.bedrock.BedrockResponse;
+import com.analyzer.core.bedrock.BedrockApiException;
+import com.analyzer.core.bedrock.BedrockConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

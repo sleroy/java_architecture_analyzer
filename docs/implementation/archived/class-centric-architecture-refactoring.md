@@ -382,7 +382,7 @@ public class InspectorRegistry {
         return inspectors.stream()
             .filter(i -> i.getTargetNodeType().equals(nodeType))
             .map(i -> (Inspector<T>) i)
-            .collect(Collectors.toList());
+            .toList();
     }
     
     // NEW: Cache inspectors by type for performance

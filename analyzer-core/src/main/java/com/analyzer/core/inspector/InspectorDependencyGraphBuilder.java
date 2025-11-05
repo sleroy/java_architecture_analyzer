@@ -329,7 +329,7 @@ public class InspectorDependencyGraphBuilder {
                     inspector.getClass().getSimpleName(),
                     new HashSet<>(), // We don't need required tags for this analysis
                     getProducedTags(inspector.getClass())))
-                .collect(Collectors.toList())) {
+                .toList()) {
             
             for (String tag : node.producedTags()) {
                 inspectorToTags.computeIfAbsent(node.inspectorName(), k -> new HashSet<>()).add(tag);
@@ -447,7 +447,7 @@ public class InspectorDependencyGraphBuilder {
             
             List<String> contextTags = allTags.stream()
                 .filter(tag -> contextKeywords.stream().anyMatch(keyword -> tag.toUpperCase().contains(keyword)))
-                .collect(Collectors.toList());
+                .toList();
                 
             if (contextTags.size() > 1) {
                 // Further analyze within context for semantic similarity
@@ -497,7 +497,7 @@ public class InspectorDependencyGraphBuilder {
                     inspector.getClass().getSimpleName(),
                     new HashSet<>(), // We don't need required tags for this analysis
                     getProducedTags(inspector.getClass())))
-                .collect(Collectors.toList())) {
+                .toList()) {
             
             for (String tag : node.producedTags()) {
                 tagToProducers.computeIfAbsent(tag, k -> new HashSet<>()).add(node.inspectorName());
@@ -962,7 +962,7 @@ public class InspectorDependencyGraphBuilder {
 
         return complexChains.stream()
                 .filter(chain -> chain.size() >= minChainLength)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**

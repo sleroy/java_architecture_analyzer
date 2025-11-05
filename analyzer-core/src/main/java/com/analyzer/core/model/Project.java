@@ -5,6 +5,7 @@ import com.analyzer.api.graph.ProjectFileRepository;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Represents a project being analyzed.
@@ -17,7 +18,6 @@ public class Project {
     public static final String DEFAULT_FILE_NAME = "project-analysis.json";
     private final Path projectPath;
     private final String projectName;
-    private final Map<String, ProjectFile> projectFiles;
     private final Map<String, Object> projectData;
     private final Date createdAt;
     private Date lastAnalyzed;
@@ -34,7 +34,6 @@ public class Project {
     public Project(Path projectPath, String projectName, ProjectFileRepository projectFileRepository) {
         this.projectPath = Objects.requireNonNull(projectPath, "Project path cannot be null");
         this.projectName = Objects.requireNonNull(projectName, "Project name cannot be null");
-        this.projectFiles = new ConcurrentHashMap<>();
         this.projectData = new ConcurrentHashMap<>();
         this.createdAt = new Date();
         this.lastAnalyzed = null;
@@ -56,87 +55,77 @@ public class Project {
     }
 
     /**
-     * Get all project files discovered in this project
-     */
-    public Map<String, ProjectFile> getProjectFiles() {
-        return Collections.unmodifiableMap(projectFiles);
-    }
-
-    /**
-     * Add a project file to the project.
-     * Uses absolute path (ID) as key to ensure uniqueness.
-     */
-    public void addProjectFile(ProjectFile projectFile) {
-        Objects.requireNonNull(projectFile, "ProjectFile cannot be null");
-        String id = projectFile.getId(); // Use absolute path as key for uniqueness
-        projectFiles.put(id, projectFile);
-    }
-
-    /**
-     * Remove a project file from the project by its absolute path (ID)
-     */
-    public void removeProjectFile(String absolutePath) {
-        projectFiles.remove(absolutePath);
-    }
-
-    /**
-     * Get a specific project file by its absolute path (ID)
-     */
-    public ProjectFile getProjectFile(String absolutePath) {
-        return projectFiles.get(absolutePath);
-    }
-
-    /**
      * Get or create a project file with the given absolute path.
-     * If the file doesn't exist, creates a new ProjectFile and adds it to the
-     * project.
-     * Uses absolute path as key to ensure uniqueness across the project.
+     * Delegates to ProjectFileRepository for all file management.
      * 
-     * If a ProjectFileRepository is configured, the file will be registered in the
-     * graph store.
+     * @param relativePath not used, kept for backward compatibility
+     * @param absolutePath the absolute path of the file
+     * @return the ProjectFile instance from the repository
      */
     public ProjectFile getOrCreateProjectFile(String relativePath, Path absolutePath) {
-        String id = absolutePath.toString(); // Use absolute path as key
-
-        // First check local cache
-        ProjectFile projectFile = projectFiles.get(id);
-        if (projectFile != null) {
-            return projectFile;
+        if (projectFileRepository == null) {
+            throw new IllegalStateException("ProjectFileRepository is required but not configured");
         }
 
-        // If repository is available, try to find or create through it
-        if (projectFileRepository != null) {
-            projectFile = projectFileRepository.findByPath(absolutePath).orElse(null);
-            if (projectFile == null) {
-                // Create new ProjectFile and save to repository
-                projectFile = new ProjectFile(absolutePath, this.projectPath);
-                projectFileRepository.save(projectFile);
-            }
-            // Add to local cache
-            projectFiles.put(id, projectFile);
+        return projectFileRepository.findByPath(absolutePath).orElseGet(() -> {
+            ProjectFile projectFile = new ProjectFile(absolutePath, this.projectPath);
+            projectFileRepository.save(projectFile);
             return projectFile;
-        }
-
-        // Fallback: no repository available, use local cache only
-        return projectFiles.computeIfAbsent(id, key -> new ProjectFile(absolutePath, this.projectPath));
+        });
     }
 
     /**
-     * Get project files filtered by tag
+     * Get project files filtered by tag.
+     * Delegates to ProjectFileRepository.
      */
     public List<ProjectFile> getProjectFilesByTag(String tagName, Object tagValue) {
-        return projectFiles.values().stream()
+        if (projectFileRepository == null) {
+            return Collections.emptyList();
+        }
+        return projectFileRepository.findAll().stream()
                 .filter(file -> Objects.equals(file.getProperty(tagName), tagValue))
                 .toList();
     }
 
     /**
-     * Get project files that have a specific tag (regardless of value)
+     * Get project files that have a specific tag (regardless of value).
+     * Delegates to ProjectFileRepository.
      */
     public List<ProjectFile> getProjectFilesWithTag(String tagName) {
-        return projectFiles.values().stream()
+        if (projectFileRepository == null) {
+            return Collections.emptyList();
+        }
+        return projectFileRepository.findAll().stream()
                 .filter(file -> file.hasProperty(tagName))
                 .toList();
+    }
+
+    /**
+     * Get all project files as a map (absolute path -> ProjectFile).
+     * Delegates to ProjectFileRepository.
+     * 
+     * @return map of absolute path strings to ProjectFile objects
+     */
+    public Map<String, ProjectFile> getProjectFiles() {
+        if (projectFileRepository == null) {
+            return Collections.emptyMap();
+        }
+        return projectFileRepository.findAll().stream()
+                .collect(Collectors.toMap(
+                        file -> file.getFilePath().toString(),
+                        file -> file));
+    }
+
+    /**
+     * Add a project file to the repository.
+     * Delegates to ProjectFileRepository.
+     * 
+     * @param projectFile the file to add
+     */
+    public void addProjectFile(ProjectFile projectFile) {
+        if (projectFileRepository != null) {
+            projectFileRepository.save(projectFile);
+        }
     }
 
     /**
@@ -193,14 +182,18 @@ public class Project {
     }
 
     /**
-     * Get project statistics
+     * Get project statistics.
+     * Delegates to ProjectFileRepository for file counts.
      */
     public ProjectStatistics getStatistics() {
         Map<String, Integer> fileTypeCount = new HashMap<>();
-        int totalFiles = projectFiles.size();
+        List<ProjectFile> allFiles = projectFileRepository != null
+                ? projectFileRepository.findAll()
+                : Collections.emptyList();
+        int totalFiles = allFiles.size();
 
         // Count files by their detected type
-        for (ProjectFile file : projectFiles.values()) {
+        for (ProjectFile file : allFiles) {
             String fileType = (String) file.getProperty("fileType");
             if (fileType != null) {
                 fileTypeCount.merge(fileType, 1, Integer::sum);
@@ -211,10 +204,11 @@ public class Project {
     }
 
     /**
-     * Clear all project files and data
+     * Clear all project data.
+     * Note: Project files are managed by ProjectFileRepository and should be
+     * cleared there if needed.
      */
     public void clear() {
-        projectFiles.clear();
         projectData.clear();
     }
 
@@ -235,10 +229,11 @@ public class Project {
 
     @Override
     public String toString() {
+        int fileCount = projectFileRepository != null ? projectFileRepository.findAll().size() : 0;
         return "Project{" +
                 "projectPath=" + projectPath +
                 ", projectName='" + projectName + '\'' +
-                ", filesCount=" + projectFiles.size() +
+                ", filesCount=" + fileCount +
                 ", dataCount=" + projectData.size() +
                 '}';
     }

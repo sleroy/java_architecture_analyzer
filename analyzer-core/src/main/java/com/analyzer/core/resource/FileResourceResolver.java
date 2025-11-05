@@ -73,7 +73,7 @@ public class FileResourceResolver implements ResourceResolver {
         try (Stream<Path> children = Files.list(path)) {
             return children
                     .map(childPath -> ResourceLocation.file(childPath.toString()))
-                    .collect(Collectors.toList());
+                    .toList();
         }
     }
 

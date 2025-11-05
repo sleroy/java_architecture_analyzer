@@ -37,7 +37,7 @@ public class PackageFilter {
                 .filter(Objects::nonNull)
                 .map(String::trim)
                 .filter(filter -> !filter.isEmpty())
-                .collect(Collectors.toList());
+                .toList();
 
         if (cleanFilters.isEmpty()) {
             return new HashMap<>(packages);
@@ -83,7 +83,7 @@ public class PackageFilter {
                 .filter(Objects::nonNull)
                 .map(String::trim)
                 .filter(filter -> !filter.isEmpty())
-                .collect(Collectors.toList());
+                .toList();
 
         if (cleanFilters.isEmpty()) {
             return new HashMap<>(classes);

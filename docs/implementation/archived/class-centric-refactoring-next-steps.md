@@ -288,7 +288,7 @@ public class InspectorRegistry {
         return inspectorsByType.getOrDefault(nodeType, Collections.emptyList())
             .stream()
             .map(i -> (Inspector<T>) i)
-            .collect(Collectors.toList());
+            .toList();
     }
     
     // NEW: Index inspectors by target type

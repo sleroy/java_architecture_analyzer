@@ -344,7 +344,7 @@ public class OpenRewriteBlock implements MigrationBlock {
         List<GraphNode> nodes = context.getVariable(targetNodesVar);
         List<Path> targetFiles = nodes.stream()
             .map(node -> Path.of(node.getProperty("file_path")))
-            .collect(Collectors.toList());
+            .toList();
         
         // Apply recipe to ALL files (BATCH OPERATION)
         List<Result> results = applyRecipeToFiles(recipe, targetFiles);

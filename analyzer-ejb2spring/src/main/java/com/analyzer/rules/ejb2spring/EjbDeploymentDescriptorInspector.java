@@ -433,7 +433,7 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
         // Transaction configurations for this bean
         List<TransactionConfiguration> beanConfigs = allConfigs.stream()
                 .filter(c -> c.beanName.equals(bean.ejbName))
-                .collect(Collectors.toList());
+                .toList();
 
         if (!beanConfigs.isEmpty()) {
             for (TransactionConfiguration config : beanConfigs) {

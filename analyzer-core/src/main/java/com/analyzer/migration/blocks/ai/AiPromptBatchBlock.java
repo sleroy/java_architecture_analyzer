@@ -50,12 +50,15 @@ public class AiPromptBatchBlock implements MigrationBlock {
         long startTime = System.currentTimeMillis();
 
         try {
+            // Resolve variable name if it contains template syntax (e.g., "${items}")
+            String resolvedVariableName = context.resolveVariableName(itemsVariableName);
+
             // Get the list of items from context
-            Object itemsObj = context.getVariable(itemsVariableName);
+            Object itemsObj = context.getVariable(resolvedVariableName);
             if (itemsObj == null) {
                 return BlockResult.failure(
                         "Items variable not found in context",
-                        "Variable: " + itemsVariableName);
+                        "Variable: " + resolvedVariableName + " (from: " + itemsVariableName + ")");
             }
 
             List<?> items = convertToList(itemsObj);

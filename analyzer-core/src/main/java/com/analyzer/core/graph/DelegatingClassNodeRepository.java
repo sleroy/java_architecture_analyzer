@@ -44,7 +44,7 @@ public class DelegatingClassNodeRepository implements ClassNodeRepository {
     public List<JavaClassNode> findByPackage(String packageName) {
         return graphRepository.getNodesByClass(JavaClassNode.class).stream()
                 .filter(classNode -> packageName.equals(classNode.getPackageName()))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -62,14 +62,14 @@ public class DelegatingClassNodeRepository implements ClassNodeRepository {
     @Override
     public List<JavaClassNode> findAll() {
         return graphRepository.getNodesByClass(JavaClassNode.class).stream()
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
     public List<JavaClassNode> findByTag(String tag) {
         return graphRepository.getNodesByClass(JavaClassNode.class).stream()
                 .filter(classNode -> classNode.hasTag(tag))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

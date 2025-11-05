@@ -143,7 +143,7 @@ public class MigrationHistoryCommand implements Callable<Integer> {
             filteredHistory = history.stream()
                     .sorted(Comparator.comparing(PhaseExecutionRecord::getTimestamp).reversed())
                     .limit(lastN)
-                    .collect(Collectors.toList());
+                    .toList();
         }
 
         for (PhaseExecutionRecord record : filteredHistory) {
