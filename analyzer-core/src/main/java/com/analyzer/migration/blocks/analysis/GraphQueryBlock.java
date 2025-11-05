@@ -69,15 +69,13 @@ public class GraphQueryBlock implements MigrationBlock {
 
             long executionTime = System.currentTimeMillis() - startTime;
 
-            // Store results in context
+            // Determine output variable name
             String varName = outputVariable != null ? outputVariable : "query_results";
-            context.setVariable(varName, results);
 
-            // Also store convenient formats
+            // Prepare output variables (will be set in context by TaskExecutor)
             List<String> nodeIds = results.stream()
                     .map(GraphNodeEntity::getId)
                     .collect(Collectors.toList());
-            context.setVariable(varName + "_ids", nodeIds);
 
             Map<String, Object> summary = new HashMap<>();
             summary.put("count", results.size());
@@ -88,13 +86,13 @@ public class GraphQueryBlock implements MigrationBlock {
             if (!requiredTags.isEmpty()) {
                 summary.put("tags", requiredTags);
             }
-            context.setVariable(varName + "_summary", summary);
 
             // Create descriptive success message with count and query details
             String successMessage = buildSuccessMessage(results.size(), executionTime);
 
             logger.info("Graph query returned {} nodes", results.size());
 
+            // Return all variables via BlockResult - TaskExecutor will add them to context
             return BlockResult.builder()
                     .success(true)
                     .message(successMessage)
@@ -127,7 +125,7 @@ public class GraphQueryBlock implements MigrationBlock {
 
         // Use optimized database query instead of filtering in memory
         if (processedTags.size() == 1) {
-            return repository.findNodesByTag(processedTags.get(0));
+            return repository.findNodesByTag(processedTags.getFirst());
         } else {
             // For multiple tags, use OR condition (find nodes with any of these tags)
             return repository.findNodesByAnyTags(processedTags);
@@ -213,23 +211,24 @@ public class GraphQueryBlock implements MigrationBlock {
         }
 
         switch (queryType) {
-            case BY_TYPE:
-            case BY_TYPE_AND_TAGS:
+            case BY_TYPE, BY_TYPE_AND_TAGS:
                 if (nodeType == null || nodeType.isEmpty()) {
                     logger.error("Node type is required for {} query", queryType);
                     return false;
                 }
                 break;
             case BY_TAGS:
-                if (requiredTags == null || requiredTags.isEmpty()) {
+                if (requiredTags.isEmpty()) {
                     logger.error("Tags are required for BY_TAGS query");
                     return false;
                 }
                 break;
+            case ALL:
+                break;
         }
 
         if (queryType == QueryType.BY_TYPE_AND_TAGS) {
-            if (requiredTags == null || requiredTags.isEmpty()) {
+            if (requiredTags.isEmpty()) {
                 logger.error("Tags are required for BY_TYPE_AND_TAGS query");
                 return false;
             }

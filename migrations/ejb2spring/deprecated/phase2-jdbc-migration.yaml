@@ -204,20 +204,25 @@ migration-plan:
                             <scope>runtime</scope>
                         </dependency>
                 
-            - type: "COMMAND"
-              name: "test-datasource-connection"
-              description: "Test datasource configuration"
+            - type: "MAVEN"
+              name: "compile-for-datasource-test"
+              description: "Compile project before datasource test"
               enable_if: "${database_enabled}"
-              command: |
-                cd ${project_root}/semeru-springboot && \
-                mvn clean compile && \
-                timeout 30 mvn spring-boot:run &
-                sleep 20
-                pkill -f "spring-boot:run"
-                echo "DataSource test completed"
-              working-directory: "${project_root}"
+              goals: "clean compile"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 120
-              capture-output: true
+
+            - type: "MAVEN"
+              name: "test-datasource-connection"
+              description: "Test datasource configuration by starting application"
+              enable_if: "${database_enabled}"
+              goals: "spring-boot:run"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
+              timeout-seconds: 30
               
             - type: "INTERACTIVE_VALIDATION"
               name: "verify-datasource-configuration"
@@ -441,12 +446,13 @@ migration-plan:
                   - "JdbcHelper"
                 target-pattern: "@Autowired ${dao_name}"
                 
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "compile-new-daos"
               description: "Compile the new DAO classes"
-              command: |
-                cd ${project_root}/semeru-springboot && mvn compile
-              working-directory: "${project_root}"
+              goals: "compile"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 180
               
             - type: "AI_PROMPT"
@@ -479,14 +485,16 @@ migration-plan:
               files: "${dao_unit_tests}"
               base-path: "${project_root}/semeru-springboot/src/test/java/${package_base_path}/dao"
               
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "run-dao-tests"
               description: "Execute DAO unit tests"
-              command: |
-                cd ${project_root}/semeru-springboot && mvn test -Dtest="*Dao*"
-              working-directory: "${project_root}"
+              goals: "test"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
+              properties:
+                test: "*Dao*"
               timeout-seconds: 300
-              capture-output: true
               
             - type: "INTERACTIVE_VALIDATION"
               name: "verify-jdbc-migration"

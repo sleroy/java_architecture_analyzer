@@ -4,6 +4,7 @@ import com.analyzer.migration.context.MigrationContext;
 import com.analyzer.migration.plan.BlockResult;
 import com.analyzer.migration.plan.MigrationBlock;
 import com.analyzer.migration.plan.Task;
+import com.analyzer.migration.template.TemplateAwareBlock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -228,6 +229,24 @@ public class TaskExecutor {
      * Execute a single block (dry-run or normal execution).
      */
     private BlockResult executeBlock(MigrationBlock block, MigrationContext context) {
+        // Resolve templates for template-aware blocks before execution
+        if (block instanceof TemplateAwareBlock) {
+            TemplateAwareBlock templateBlock = (TemplateAwareBlock) block;
+            if (templateBlock.hasUnresolvedTemplates()) {
+                logger.debug("Resolving templates for block: {}", block.getName());
+                try {
+                    templateBlock.resolveTemplates(context);
+                } catch (Exception e) {
+                    logger.error("Template resolution failed for block {}: {}", block.getName(), e.getMessage());
+                    return BlockResult.builder()
+                            .success(false)
+                            .message("Template resolution failed: " + e.getMessage())
+                            .executionTimeMs(0)
+                            .build();
+                }
+            }
+        }
+
         if (context.isDryRun()) {
             logger.info("[DRY-RUN] Simulating block: {} ({})", block.getName(), block.getType());
             return simulateBlockExecution(block);

@@ -43,13 +43,28 @@ migration-plan:
     - "common/variables.yaml"
     - "phases/phase0-assessment.yaml"
     - "phases/phase1-initialization.yaml"
-    - "phases/phase2-jdbc-migration.yaml"
-    - "phases/phase2b-entity-beans.yaml"
-    - "phases/phase3-session-beans.yaml"
-    - "phases/phase3b-3c-ejb-cleanup.yaml"
-    - "phases/phase4-8-integration.yaml"
-    - "phases/phase9-10-modernization.yaml"
-  
+    # EJB Component Migration Phases (NEW - AI_ASSISTED_BATCH)
+    - "phases/phase-stateless-session-beans.yaml" 
+    - "phases/phase-cmp-entity-beans.yaml"
+    - "phases/phase-bmp-entity-beans.yaml"
+    - "phases/phase-stateful-session-beans.yaml"
+    - "phases/phase-message-driven-beans.yaml"
+    - "phases/phase-ejb-interfaces-cleanup.yaml"
+    - "phases/phase-primary-key-classes.yaml"
+    # Additional Refactoring Phases (NEW - AI_ASSISTED_BATCH)
+    - "phases/phase-jdbc-wrappers.yaml"
+    - "phases/phase-rest-apis.yaml"
+    - "phases/phase-soap-services.yaml"
+    - "phases/phase-antipatterns.yaml"
+    # Legacy phase files (deprecated)
+    #- "phases/phase1b-refactoring-setup.yaml"
+    #- "phases/phase2-jdbc-migration.yaml"
+    #- "phases/phase2b-entity-beans.yaml"
+    #- "phases/phase3-session-beans.yaml"
+    #- "phases/phase3b-3c-ejb-cleanup.yaml"
+    #- "phases/phase4-8-integration.yaml"
+    #- "phases/phase9-10-modernization.yaml"
+#  
   # Additional metadata or variables can be defined here to override includes
   # (Currently empty - all config is in included files)
   

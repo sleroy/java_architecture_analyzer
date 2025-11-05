@@ -229,4 +229,74 @@ public class BlockDTO {
     public void setBasePath(String basePath) {
         properties.put("base-path", basePath);
     }
+
+    // OpenRewrite block properties
+    @JsonProperty("file-paths")
+    public void setFilePaths(Object filePaths) {
+        properties.put("file-paths", filePaths);
+    }
+
+    @JsonProperty("file-pattern")
+    public void setFilePattern(String filePattern) {
+        properties.put("file-pattern", filePattern);
+    }
+
+    @JsonProperty("pattern")
+    public void setPattern(String pattern) {
+        properties.put("pattern", pattern);
+    }
+
+    // Maven block properties
+    @JsonProperty("goals")
+    public void setGoals(String goals) {
+        properties.put("goals", goals);
+    }
+
+    @JsonProperty("java-home")
+    public void setJavaHome(String javaHome) {
+        properties.put("java-home", javaHome);
+    }
+
+    @JsonProperty("maven-home")
+    public void setMavenHome(String mavenHome) {
+        properties.put("maven-home", mavenHome);
+    }
+
+    @JsonProperty("maven-opts")
+    public void setMavenOpts(String mavenOpts) {
+        properties.put("maven-opts", mavenOpts);
+    }
+
+    @JsonProperty("offline")
+    public void setOffline(Boolean offline) {
+        properties.put("offline", offline);
+    }
+
+    @JsonProperty("profiles")
+    public void setProfiles(String profiles) {
+        properties.put("profiles", profiles);
+    }
+
+    // Note: "properties" is also a YAML field for Maven -D flags
+    // Using "maven-properties" to avoid confusion with the internal properties map
+    @JsonProperty("properties")
+    public void setMavenProperties(Map<String, String> mavenProperties) {
+        properties.put("properties", mavenProperties);
+    }
+
+    // AI_ASSISTED_BATCH block properties
+    @JsonProperty("input-nodes")
+    public void setInputNodes(String inputNodes) {
+        properties.put("input-nodes", inputNodes);
+    }
+
+    @JsonProperty("progress-message")
+    public void setProgressMessage(String progressMessage) {
+        properties.put("progress-message", progressMessage);
+    }
+
+    @JsonProperty("max-nodes")
+    public void setMaxNodes(Integer maxNodes) {
+        properties.put("max-nodes", maxNodes);
+    }
 }

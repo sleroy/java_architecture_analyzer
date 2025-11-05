@@ -56,7 +56,7 @@ public class OpenRewriteBlock implements MigrationBlock {
             if (!filePaths.isEmpty()) {
                 processedFiles = filePaths.stream()
                         .map(context::substituteVariables)
-                        .collect(Collectors.toList());
+                        .toList();
             } else if (filePattern != null) {
                 // Find files matching pattern in base directory
                 String processedPattern = context.substituteVariables(filePattern);

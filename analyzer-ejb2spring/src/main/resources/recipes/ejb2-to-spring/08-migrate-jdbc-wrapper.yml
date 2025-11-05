@@ -1,0 +1,14 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.analyzer.ejb2spring.MigrateJdbcWrapper
+displayName: Migrate JDBC Wrapper to Spring JdbcTemplate
+description: Remove manual connection management and prepare for JdbcTemplate
+recipeList:
+  # Remove manual connection management patterns
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: java.sql.Connection
+      newFullyQualifiedTypeName: org.springframework.jdbc.core.JdbcTemplate
+  
+  # Change to Spring DataAccessException
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: java.sql.SQLException
+      newFullyQualifiedTypeName: org.springframework.dao.DataAccessException

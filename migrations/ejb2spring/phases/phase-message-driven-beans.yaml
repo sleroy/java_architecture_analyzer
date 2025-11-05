@@ -1,0 +1,115 @@
+# Phase: Message-Driven Bean Migration
+# Migrates message-driven beans to Spring JMS listeners
+
+migration-plan:
+  phases:
+    - id: "phase-message-driven"
+      name: "Message-Driven Bean Migration"
+      description: "Migrate message-driven beans to Spring JMS @JmsListener components"
+      
+      tasks:
+        - id: "task-mdb-migration"
+          name: "Migrate Message-Driven Beans"
+          description: "Convert MDBs to Spring JMS listeners"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-mdbs"
+              description: "Query all message-driven beans"
+              query-type: "BY_TAGS"
+              tags:
+                - "EJB_MESSAGE_DRIVEN_BEAN"
+              output-variable: "mdb_beans"
+            
+            - type: "OPENREWRITE"
+              name: "refactor-mdb-annotations"
+              description: "Replace @MessageDriven with @Component"
+              recipe: "com.analyzer.ejb2spring.MigrateMessageDriven"
+              file-pattern: "**/*.java"
+              base-directory: "${project_root}/src/main/java"
+            
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-migrate-mdbs"
+              description: "AI-assisted migration for each MDB"
+              input-nodes: "${mdb_beans}"
+              prompt: |
+                You are migrating a Message-Driven Bean to a Spring JMS listener.
+                
+                **Current MDB:**
+                - Node ID: ${current_node_id}
+                - Class Name: ${current_node.className}
+                - Package: ${current_node.packageName}
+                
+                **Migration Tasks:**
+                
+                1. **Convert to Spring JMS Listener:**
+                   - Replace @MessageDriven with @Component
+                   - Remove MessageListener interface
+                   - Replace onMessage() with @JmsListener annotated method
+                   - Extract destination name from @MessageDriven annotation
+                
+                2. **Configure JMS Listener:**
+                   - Add @JmsListener(destination = "queueName")
+                   - Use appropriate destination type (queue or topic)
+                   - Configure concurrency if needed
+                   - Set up error handling with @SendTo for replies
+                
+                3. **Message Processing:**
+                   - Convert Message parameter to specific type (TextMessage, ObjectMessage, etc.)
+                   - Or use @Payload for automatic conversion
+                   - Handle message acknowledgment properly
+                   - Preserve transaction boundaries
+                
+                4. **Configuration:**
+                   - Ensure spring-boot-starter-artemis or activemq is in dependencies
+                   - Configure connection factory in application.properties
+                   - Set up message converter if needed
+                
+                **Expected Output:**
+                - Spring @Component with @JmsListener method
+                - Proper message handling
+                - Error handling configured
+                - JMS configuration updated
+                
+                Please migrate this MDB.
+              working-directory: "${project_root}"
+              progress-message: "Migrating message-driven bean"
+              timeout-seconds: 600
+            
+            - type: "AI_ASSISTED"
+              name: "compile-jms-listeners"
+              description: "Compile and configure JMS"
+              prompt: |
+                All MDBs migrated to JMS listeners.
+                
+                **Summary:**
+                - MDBs processed: ${node_count}
+                - Successful: ${success_count}
+                - Failed: ${failure_count}
+                
+                **Tasks:**
+                1. Add spring-boot-starter-artemis to pom.xml
+                2. Configure JMS in application.properties
+                3. Compile project
+                4. Verify @JmsListener configuration
+                
+                Please complete JMS configuration.
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+            
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-mdb-migration"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                MDB migration completed.
+                
+                **Summary:** ${node_count} MDBs (${success_count} successful)
+                
+                **Review:**
+                1. JMS listeners configured
+                2. Destinations properly mapped
+                3. Error handling in place
+                
+                Confirm to proceed.
+              required: true
+              timeout-seconds: 1800

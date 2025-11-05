@@ -163,14 +163,40 @@ public class InteractiveValidationBlock implements MigrationBlock {
     }
 
     private boolean requestUserConfirmation() {
-        System.out.println("\nConfirm to continue (y/n): ");
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
-            String response = reader.readLine();
-            return response != null && response.trim().equalsIgnoreCase("y");
-        } catch (Exception e) {
-            logger.error("Failed to read user input", e);
-            return false;
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+
+        while (true) {
+            System.out.println("\nConfirm to continue (y/n): ");
+            try {
+                String response = reader.readLine();
+
+                if (response == null) {
+                    logger.error("Failed to read user input (EOF)");
+                    return false;
+                }
+
+                String trimmed = response.trim().toLowerCase();
+
+                // Accept yes/y for confirmation
+                if (trimmed.equals("y") || trimmed.equals("yes")) {
+                    return true;
+                }
+
+                // Accept no/n for rejection
+                if (trimmed.equals("n") || trimmed.equals("no")) {
+                    return false;
+                }
+
+                // Invalid input - show error and loop again
+                System.out.println("Invalid input '" + response + "'. Please enter 'y' for yes or 'n' for no.");
+
+            } catch (Exception e) {
+                logger.error("Failed to read user input", e);
+                return false;
+            }
         }
+        // Don't close the reader - System.in should remain open for the application
+        // lifetime
     }
 
     @Override

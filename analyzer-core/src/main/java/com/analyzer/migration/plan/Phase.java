@@ -9,12 +9,14 @@ import java.util.List;
  * Phases group related tasks that should be executed together.
  */
 public class Phase {
+    private final String id;
     private final String name;
     private final String description;
     private final List<Task> tasks;
     private final int order;
 
     private Phase(Builder builder) {
+        this.id = builder.id;
         this.name = builder.name;
         this.description = builder.description;
         this.tasks = new ArrayList<>(builder.tasks);
@@ -23,6 +25,10 @@ public class Phase {
 
     public static Builder builder(String name) {
         return new Builder(name);
+    }
+
+    public String getId() {
+        return id;
     }
 
     public String getName() {
@@ -42,6 +48,7 @@ public class Phase {
     }
 
     public static class Builder {
+        private String id;
         private final String name;
         private String description;
         private List<Task> tasks = new ArrayList<>();
@@ -49,6 +56,11 @@ public class Phase {
 
         private Builder(String name) {
             this.name = name;
+        }
+
+        public Builder id(String id) {
+            this.id = id;
+            return this;
         }
 
         public Builder description(String description) {

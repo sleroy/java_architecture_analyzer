@@ -254,10 +254,10 @@ migration-plan:
               name: "create-directory-structure"
               description: "Create complete Spring Boot directory structure"
               command: |
-                mkdir -p semeru-springboot/src/main/java
-                mkdir -p semeru-springboot/src/main/resources
-                mkdir -p semeru-springboot/src/test/java
-                mkdir -p semeru-springboot/src/test/resources
+                mkdir -p ${artifact_id}/src/main/java
+                mkdir -p ${artifact_id}/src/main/resources
+                mkdir -p ${artifact_id}/src/test/java
+                mkdir -p ${artifact_id}/src/test/resources
               working-directory: "${project_root}"
               timeout-seconds: 30
               
@@ -265,7 +265,7 @@ migration-plan:
               name: "create-gitignore"
               description: "Create .gitignore file for Spring Boot project"
               operation: "CREATE"
-              path: "${project_root}/semeru-springboot/.gitignore"
+              path: "${project_root}/${artifact_id}/.gitignore"
               content: |
                 # Compiled class files
                 *.class
@@ -292,7 +292,7 @@ migration-plan:
               name: "create-readme"
               description: "Create README.md for Spring Boot project"
               operation: "CREATE"
-              path: "${project_root}/semeru-springboot/README.md"
+              path: "${project_root}/${artifact_id}/README.md"
               content: |
                 # Semeru Spring Boot Application
                 
@@ -368,7 +368,7 @@ migration-plan:
               description: "Commit initial migration structure"
               args:
                 - "add ."
-                - "commit -m 'feat: create Spring Boot migration structure\n\n- Created semeru-springboot directory structure\n- Added .gitignore for Spring Boot project\n- Created initial README.md\n- Documented migration strategy\n\nRelated to: TASK-001'"
+                - "commit -m 'feat: create Spring Boot migration structure\n\n- Created ${artifact_id} directory structure\n- Added .gitignore for Spring Boot project\n- Created initial README.md\n- Documented migration strategy\n\nRelated to: TASK-001'"
               working-directory: "${project_root}"
               timeout-seconds: 60
               idempotent: true
@@ -396,26 +396,42 @@ migration-plan:
           description: "Create complete mapping of JBoss dependencies to Spring Boot equivalents"
           
           blocks:
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "extract-dependencies"
               description: "Extract all dependencies from existing POMs using Maven"
-              command: |
-                JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 mvn dependency:tree -DoutputFile=docs/original-dependencies.txt
+              goals: "dependency:tree"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
               working-directory: "${project_root}"
+              properties:
+                outputFile: "docs/original-dependencies.txt"
               timeout-seconds: 120
               enable_if: "${read_dependencies}"
+
+            - type: "COMMAND"
+              name: "extract-dependencies-grep"
+              description: "Extract dependencies from POM files using grep (fallback method)"
+              command: |
+                mkdir -p docs
+                echo "# Dependencies extracted from POM files using grep" > docs/original-dependencies.txt
+                echo "Generated: $(date)" >> docs/original-dependencies.txt
+                echo "" >> docs/original-dependencies.txt
+                find . -name "pom.xml" ! -path "*/target/*" ! -path "*/${artifact_id}/*" -exec echo "=== {} ===" \; -exec grep "<dependency>" {} -A 5 \; >> docs/original-dependencies.txt 2>/dev/null || true
+                echo "" >> docs/original-dependencies.txt
+                echo "Note: This is a grep-based extraction. Set read_dependencies=true to use Maven dependency:tree for complete dependency graph." >> docs/original-dependencies.txt
+              working-directory: "${project_root}"
+              timeout-seconds: 60
+              enable_if: "!${read_dependencies}"
               
             - type: "AI_ASSISTED"
               name: "generate-dependency-mapping"
               description: "Generate Spring Boot dependency mapping using Amazon Q"
+              working-directory: "${project_root}"
               prompt: |
                 Analyze the JBoss EJB 2 application dependencies and create a comprehensive mapping to Spring Boot ${spring_boot_version} equivalents.
-                
-                Based on the EJB inventory analysis:
-                - Stateless Session Beans: ${stateless_beans_summary.count}
-                - CMP Entities: ${cmp_entities_summary.count}
-                - Message-Driven Beans: ${mdb_beans_summary.count}
-                
+
+                A preliminary inventory of EJB components has been provided in @docs/original-dependencies.txt.
+              
                 Provide Spring Boot dependency mappings for:
                 
                 1. EJB APIs (javax.ejb.*): Map to Spring Context and Transaction management
@@ -426,13 +442,21 @@ migration-plan:
                 6. Swagger (API documentation): Map to springdoc-openapi
                 7. Validation APIs: Map to spring-boot-starter-validation
                 
-                For each mapping, provide:
+                For each mapping, in the report and based on your recommendations, provide:
+                - ignore dependencies that are no longer needed
+                - suggest Spring Boot starter dependencies to include instead
+                - update versions compatible with Spring Boot ${spring_boot_version}
+                - note any migration considerations
+                - highlight breaking changes
+                - provide a summary of the mapping
+                
+                Format the report as a markdown table for easy reference.
+
                 - Maven dependency coordinates
-                - Version compatible with Spring Boot ${spring_boot_version}
+                - Version compatible with Spring Boot ${spring_boot_version} and Java ${java_version}
                 - Migration notes
                 - Breaking changes to watch for
                 
-                Format as a markdown table for easy reference.
               output-variable: "dependency_mapping_analysis"
               
             - type: "FILE_OPERATION"

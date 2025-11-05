@@ -1,0 +1,180 @@
+# Phase: EJB Interface Cleanup
+# Removes EJB Home, Remote, Local, and LocalHome interfaces
+
+migration-plan:
+  phases:
+    - id: "phase-ejb-interfaces"
+      name: "EJB Interface Cleanup"
+      description: "Remove EJB-specific Home, Remote, Local, and LocalHome interfaces"
+      
+      tasks:
+        # Task 1: Remove Home Interfaces
+        - id: "task-home-interfaces"
+          name: "Remove EJB Home Interfaces"
+          description: "Remove EJB Home interfaces (no longer needed in Spring)"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-home-interfaces"
+              query-type: "BY_TAGS"
+              tags:
+                - "EJB_HOME_INTERFACE"
+              output-variable: "home_interfaces"
+            
+            - type: "OPENREWRITE"
+              name: "remove-home-references"
+              recipe: "com.analyzer.ejb2spring.RemoveEJBHomeInterface"
+              file-pattern: "**/*.java"
+              base-directory: "${project_root}/src/main/java"
+            
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-remove-home-interfaces"
+              input-nodes: "${home_interfaces}"
+              prompt: |
+                Remove EJB Home interface and update references.
+                
+                **Interface:** ${current_node_id}
+                
+                **Tasks:**
+                1. Identify all classes that use this Home interface
+                2. Remove JNDI lookups (InitialContext.lookup())
+                3. Replace with direct Spring dependency injection
+                4. Delete the Home interface file
+                5. Update any factory methods that returned Home interfaces
+                
+                Remove this Home interface completely.
+              working-directory: "${project_root}"
+              progress-message: "Removing Home interface"
+              timeout-seconds: 300
+            
+            - type: "AI_ASSISTED"
+              name: "verify-home-removal"
+              prompt: "Verify all Home interfaces removed and compile project."
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+        
+        # Task 2: Remove Remote Interfaces
+        - id: "task-remote-interfaces"
+          name: "Remove EJB Remote Interfaces"
+          description: "Convert or remove EJB Remote interfaces"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-remote-interfaces"
+              query-type: "BY_TAGS"
+              tags:
+                - "EJB_REMOTE_INTERFACE"
+              output-variable: "remote_interfaces"
+            
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-remove-remote-interfaces"
+              input-nodes: "${remote_interfaces}"
+              prompt: |
+                Handle EJB Remote interface.
+                
+                **Interface:** ${current_node_id}
+                
+                **Decision:**
+                1. If used for remote access: Convert to REST API or consider removal
+                2. If used locally: Remove and use concrete class with DI
+                3. Delete interface if no longer needed
+                4. Update all @EJB references to use Spring injection
+                
+                Process this Remote interface.
+              working-directory: "${project_root}"
+              progress-message: "Processing Remote interface"
+              timeout-seconds: 300
+        
+        # Task 3: Remove Local Interfaces  
+        - id: "task-local-interfaces"
+          name: "Remove EJB Local Interfaces"
+          description: "Remove EJB Local interfaces"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-local-interfaces"
+              query-type: "BY_TAGS"
+              tags:
+                - "EJB_LOCAL_INTERFACE"
+              output-variable: "local_interfaces"
+            
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-remove-local-interfaces"
+              input-nodes: "${local_interfaces}"
+              prompt: |
+                Remove EJB Local interface.
+                
+                **Interface:** ${current_node_id}
+                
+                **Tasks:**
+                1. Replace interface references with concrete class
+                2. Use Spring DI instead of Local interface
+                3. Delete Local interface file
+                4. Update injection points
+                
+                Remove this Local interface.
+              working-directory: "${project_root}"
+              progress-message: "Removing Local interface"
+              timeout-seconds: 300
+        
+        # Task 4: Remove LocalHome Interfaces
+        - id: "task-localhome-interfaces"
+          name: "Remove EJB LocalHome Interfaces"
+          description: "Remove EJB LocalHome interfaces"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-localhome-interfaces"
+              query-type: "BY_TAGS"
+              tags:
+                - "EJB_LOCAL_HOME_INTERFACE"
+              output-variable: "localhome_interfaces"
+            
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-remove-localhome-interfaces"
+              input-nodes: "${localhome_interfaces}"
+              prompt: |
+                Remove EJB LocalHome interface.
+                
+                **Interface:** ${current_node_id}
+                
+                Remove this LocalHome interface and update references.
+              working-directory: "${project_root}"
+              progress-message: "Removing LocalHome interface"
+              timeout-seconds: 300
+        
+        # Final validation
+        - id: "task-interfaces-validation"
+          name: "Validate Interface Cleanup"
+          
+          blocks:
+            - type: "AI_ASSISTED"
+              name: "compile-after-interface-cleanup"
+              prompt: |
+                All EJB interfaces removed.
+                
+                **Tasks:**
+                1. Compile project
+                2. Verify no EJB interface imports remain
+                3. Check all DI is working
+                4. Fix any broken references
+                
+                Compile and verify.
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+            
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-interface-cleanup"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                EJB interface cleanup completed.
+                
+                **Removed:**
+                - Home interfaces
+                - Remote interfaces
+                - Local interfaces
+                - LocalHome interfaces
+                
+                Please verify and confirm.
+              required: true
+              timeout-seconds: 1800

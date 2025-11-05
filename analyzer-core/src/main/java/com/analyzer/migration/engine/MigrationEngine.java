@@ -201,7 +201,8 @@ public class MigrationEngine {
      * Execute a single phase by ID from the plan.
      *
      * @param plan    Migration plan containing the phase
-     * @param phaseId ID of the phase to execute
+     * @param phaseId ID of the phase to execute (searches by ID first, then by
+     *                name)
      * @param context Migration context
      * @return ExecutionResult with the single phase execution
      */
@@ -213,10 +214,11 @@ public class MigrationEngine {
 
         LocalDateTime startTime = LocalDateTime.now();
 
-        // Find the phase by name (phases don't have separate IDs, using name as ID)
+        // Find the phase by ID first, then by name as fallback
         Phase targetPhase = null;
         for (Phase phase : plan.getPhases()) {
-            if (phase.getName().equalsIgnoreCase(phaseId)) {
+            if ((phase.getId() != null && phase.getId().equalsIgnoreCase(phaseId)) ||
+                    phase.getName().equalsIgnoreCase(phaseId)) {
                 targetPhase = phase;
                 break;
             }

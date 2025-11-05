@@ -1,0 +1,26 @@
+type: specs.openrewrite.org/v1beta/recipe
+name: com.analyzer.ejb2spring.MigrateJaxRsToSpring
+displayName: Migrate JAX-RS to Spring REST
+description: Replace JAX-RS annotations with Spring MVC annotations
+recipeList:
+  # Replace JAX-RS HTTP method annotations
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: javax.ws.rs.GET
+      newAnnotation: org.springframework.web.bind.annotation.GetMapping
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: javax.ws.rs.POST
+      newAnnotation: org.springframework.web.bind.annotation.PostMapping
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: javax.ws.rs.PUT
+      newAnnotation: org.springframework.web.bind.annotation.PutMapping
+  - org.openrewrite.java.ChangeAnnotation:
+      oldAnnotation: javax.ws.rs.DELETE
+      newAnnotation: org.springframework.web.bind.annotation.DeleteMapping
+  
+  # Remove JAX-RS specific annotations (will be handled manually)
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.ws.rs.Path"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.ws.rs.Produces"
+  - org.openrewrite.java.RemoveAnnotation:
+      annotationPattern: "@javax.ws.rs.Consumes"

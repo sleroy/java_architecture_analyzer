@@ -1,0 +1,174 @@
+# Phase: REST API Migration
+# Migrates JAX-RS REST endpoints to Spring MVC @RestController
+
+migration-plan:
+  phases:
+    - id: "phase-rest-apis"
+      name: "REST API Migration"
+      description: "Migrate JAX-RS REST endpoints to Spring MVC @RestController"
+      
+      tasks:
+        - id: "task-rest-migration"
+          name: "Migrate JAX-RS to Spring REST"
+          description: "Convert JAX-RS resources to Spring @RestController"
+          
+          blocks:
+            # Step 1: GRAPH_QUERY - Find JAX-RS resources
+            - type: "GRAPH_QUERY"
+              name: "query-rest-resources"
+              description: "Query all JAX-RS REST resource classes"
+              query-type: "BY_TAGS"
+              tags:
+                - "REST_JAX_RS"
+              output-variable: "rest_resources"
+            
+            # Step 2: OPENREWRITE - Apply automated refactorings
+            - type: "OPENREWRITE"
+              name: "refactor-jaxrs-annotations"
+              description: "Replace JAX-RS annotations with Spring MVC"
+              recipe: "com.analyzer.ejb2spring.MigrateJaxRsToSpring"
+              file-pattern: "**/*.java"
+              base-directory: "${project_root}/src/main/java"
+            
+            # Step 3: AI_ASSISTED_BATCH - Process each resource
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-migrate-rest-resources"
+              description: "AI-assisted migration for each REST resource"
+              input-nodes: "${rest_resources}"
+              prompt: |
+                You are migrating a JAX-RS REST resource to a Spring MVC @RestController.
+                
+                **Current JAX-RS Resource:**
+                - Node ID: ${current_node_id}
+                - Class Name: ${current_node.className}
+                - Package: ${current_node.packageName}
+                
+                **Migration Tasks:**
+                
+                1. **Convert Annotations:**
+                   - @Path → @RequestMapping or @RestController with path
+                   - @GET → @GetMapping
+                   - @POST → @PostMapping
+                   - @PUT → @PutMapping
+                   - @DELETE → @DeleteMapping
+                   - @PathParam → @PathVariable
+                   - @QueryParam → @RequestParam
+                   - @FormParam → @RequestParam
+                   - Body parameter → @RequestBody
+                   - @Produces → produces attribute or implicit JSON
+                   - @Consumes → consumes attribute or implicit JSON
+                
+                2. **Update Return Types:**
+                   - Response → ResponseEntity<T>
+                   - Response.ok(entity) → ResponseEntity.ok(entity)
+                   - Response.status(201).entity(x) → ResponseEntity.status(HttpStatus.CREATED).body(x)
+                   - Response.noContent() → ResponseEntity.noContent().build()
+                   - Response.notFound() → ResponseEntity.notFound().build()
+                
+                3. **Update Dependency Injection:**
+                   - Replace @EJB with constructor injection
+                   - Use @Autowired or constructor-based DI
+                   - Remove @Context annotations (use Spring equivalents)
+                
+                4. **Handle Exceptions:**
+                   - Remove WebApplicationException throws
+                   - Create @ExceptionHandler methods or use @ControllerAdvice
+                   - Return appropriate ResponseEntity for errors
+                
+                5. **Add Validation:**
+                   - Add @Valid to @RequestBody parameters
+                   - Use Bean Validation annotations in DTOs
+                   - Handle MethodArgumentNotValidException
+                
+                6. **Migration Guidelines:**
+                   - Use ResponseEntity for HTTP status control
+                   - Prefer specific mappings (@GetMapping) over generic @RequestMapping
+                   - Use @PathVariable for path parameters
+                   - Use @RequestParam for query parameters
+                   - Add @CrossOrigin if CORS needed
+                   - Document API with OpenAPI/Swagger annotations
+                
+                **Example Mapping:**
+                ```java
+                // OLD JAX-RS
+                @Path("/customers")
+                @GET
+                public List<Customer> getAll() {...}
+                
+                @GET @Path("/{id}")
+                public Customer get(@PathParam("id") Long id) {...}
+                
+                @POST
+                public Response create(Customer customer) {...}
+                
+                // NEW Spring REST
+                @RestController
+                @RequestMapping("/api/customers")
+                public class CustomerController {
+                    
+                    @GetMapping
+                    public ResponseEntity<List<Customer>> getAll() {...}
+                    
+                    @GetMapping("/{id}")
+                    public ResponseEntity<Customer> get(@PathVariable Long id) {...}
+                    
+                    @PostMapping
+                    public ResponseEntity<Customer> create(@RequestBody @Valid Customer customer) {...}
+                }
+                ```
+                
+                **Expected Output:**
+                - @RestController class
+                - Spring MVC mappings
+                - ResponseEntity returns
+                - Proper validation
+                - Exception handling
+                
+                Please migrate this JAX-RS resource.
+              working-directory: "${project_root}"
+              progress-message: "Migrating REST resource"
+              timeout-seconds: 600
+            
+            # Step 4: AI_ASSISTED - Compile and validate
+            - type: "AI_ASSISTED"
+              name: "compile-rest-controllers"
+              description: "Compile all REST controllers"
+              prompt: |
+                All JAX-RS resources migrated to Spring REST controllers.
+                
+                **Summary:**
+                - Resources processed: ${node_count}
+                - Successful: ${success_count}
+                - Failed: ${failure_count}
+                
+                **Tasks:**
+                1. Compile project
+                2. Verify all @RequestMapping paths correct
+                3. Check ResponseEntity usage
+                4. Test endpoints with curl or Postman
+                5. Verify JSON serialization works
+                6. Check exception handling
+                
+                Please compile and test endpoints.
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+            
+            # Step 5: INTERACTIVE_VALIDATION
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-rest-migration"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                REST API migration completed.
+                
+                **Summary:** ${node_count} endpoints (${success_count} successful)
+                
+                **Review:**
+                1. All @RestController classes created
+                2. HTTP mappings correct
+                3. ResponseEntity used
+                4. Endpoints accessible
+                5. JSON responses valid
+                
+                Test endpoints and confirm.
+              required: true
+              timeout-seconds: 1800

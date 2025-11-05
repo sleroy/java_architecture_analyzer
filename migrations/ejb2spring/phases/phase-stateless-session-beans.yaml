@@ -1,0 +1,138 @@
+# Phase: Stateless Session Bean Migration
+# Migrates stateless session beans to Spring @Service components
+
+migration-plan:
+  phases:
+    - id: "phase-stateless-session"
+      name: "Stateless Session Bean Migration"
+      description: "Migrate stateless session beans to Spring @Service components with @Transactional"
+      
+      tasks:
+        - id: "task-stateless-migration"
+          name: "Migrate Stateless Session Beans"
+          description: "Convert stateless session beans to Spring services with proper dependency injection"
+          
+          blocks:
+            # Step 1: GRAPH_QUERY - Find all stateless session beans
+            - type: "GRAPH_QUERY"
+              name: "query-stateless-beans"
+              description: "Query all stateless session beans"
+              query-type: "BY_TAGS"
+              tags:
+                - "EJB_STATELESS_SESSION_BEAN"
+              output-variable: "stateless_beans"
+            
+            # Step 2: OPENREWRITE - Apply automated refactorings
+            - type: "OPENREWRITE"
+              name: "refactor-stateless-annotations"
+              description: "Replace @Stateless with @Service and update injections"
+              recipe: "com.analyzer.ejb2spring.MigrateStatelessSession"
+              file-pattern: "**/*.java"
+              base-directory: "${project_root}/src/main/java"
+            
+            # Step 3: AI_ASSISTED_BATCH - Process each stateless bean
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-migrate-stateless-beans"
+              description: "AI-assisted migration for each stateless session bean"
+              input-nodes: "${stateless_beans}"
+              prompt: |
+                You are migrating a Stateless Session Bean to a Spring @Service component.
+                
+                **Current Stateless Session Bean:**
+                - Node ID: ${current_node_id}
+                - Class Name: ${current_node.className}
+                - Package: ${current_node.packageName}
+                
+                **Migration Tasks:**
+                
+                1. **Convert to Spring Service:**
+                   - Replace @Stateless with @Service
+                   - Remove @Local and @Remote interface annotations
+                   - Replace @EJB injections with constructor injection (@Autowired or final fields)
+                   - Add @Transactional to methods that need transactions
+                   - Remove EJB lifecycle methods (@PostConstruct can stay, but remove @PreDestroy if not needed)
+                
+                2. **Update Dependency Injection:**
+                   - Convert all @EJB fields to constructor injection
+                   - Use constructor-based dependency injection (preferred in Spring)
+                   - Remove any @Resource injections and replace with @Autowired or @Value
+                   - Update SessionContext references to use Spring equivalents
+                
+                3. **Transaction Management:**
+                   - Add @Transactional at class level for read-write operations
+                   - Use @Transactional(readOnly = true) for read-only operations
+                   - Preserve transaction attributes (REQUIRED, REQUIRES_NEW, etc.)
+                   - Remove @TransactionAttribute and use Spring's @Transactional properties
+                
+                4. **Security Migration:**
+                   - Replace @RolesAllowed with @PreAuthorize or @Secured
+                   - Update @PermitAll to @PreAuthorize("permitAll()")
+                   - Convert @DenyAll to @PreAuthorize("denyAll()")
+                
+                5. **Migration Guidelines:**
+                   - Use Jakarta namespace (jakarta.* not javax.*)
+                   - Prefer constructor injection over field injection
+                   - Make injected fields final
+                   - Use Spring's @PostConstruct and @PreDestroy if needed
+                   - Document any behavioral changes from EJB to Spring
+                
+                **Expected Output:**
+                - Spring @Service class with proper annotations
+                - Constructor-based dependency injection
+                - @Transactional methods
+                - Updated security annotations
+                - No EJB-specific code remaining
+                
+                Please migrate this stateless session bean to a Spring service.
+              working-directory: "${project_root}"
+              progress-message: "Migrating stateless session bean"
+              timeout-seconds: 600
+            
+            # Step 4: AI_ASSISTED - Compile and validate
+            - type: "AI_ASSISTED"
+              name: "compile-stateless-services"
+              description: "Compile all migrated stateless services"
+              prompt: |
+                All stateless session beans have been migrated to Spring services.
+                
+                **Summary:**
+                - Total beans processed: ${node_count}
+                - Successful migrations: ${success_count}
+                - Failed migrations: ${failure_count}
+                
+                **Tasks:**
+                1. Run Maven compile to check for errors
+                2. Verify all @EJB references replaced with constructor injection
+                3. Check @Transactional annotations are correctly placed
+                4. Ensure security annotations are properly configured
+                5. Verify Spring context configuration is correct
+                6. Fix any circular dependency issues
+                
+                Please compile the project and fix any errors.
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+            
+            # Step 5: INTERACTIVE_VALIDATION
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-stateless-migration"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                Stateless Session Bean migration completed.
+                
+                **Migration Summary:**
+                - Beans processed: ${node_count}
+                - Successful: ${success_count}
+                - Failed: ${failure_count}
+                
+                **Review Checklist:**
+                1. All @Stateless replaced with @Service
+                2. Constructor injection used for dependencies
+                3. @Transactional added to appropriate methods
+                4. Security annotations migrated
+                5. No EJB imports remaining
+                6. All services compile successfully
+                7. Spring context properly configured
+                
+                Please verify and confirm to proceed.
+              required: true
+              timeout-seconds: 1800

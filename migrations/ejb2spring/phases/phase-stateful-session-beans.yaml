@@ -1,0 +1,120 @@
+# Phase: Stateful Session Bean Migration
+# Migrates stateful session beans to Spring session-scoped components
+
+migration-plan:
+  phases:
+    - id: "phase-stateful-session"
+      name: "Stateful Session Bean Migration"
+      description: "Migrate stateful session beans to Spring session-scoped components"
+      
+      tasks:
+        - id: "task-stateful-migration"
+          name: "Migrate Stateful Session Beans"
+          description: "Convert stateful session beans to Spring session-scoped beans"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-stateful-beans"
+              description: "Query all stateful session beans"
+              query-type: "BY_TAGS"
+              tags:
+                - "EJB_STATEFUL_SESSION_BEAN"
+              output-variable: "stateful_beans"
+            
+            - type: "OPENREWRITE"
+              name: "refactor-stateful-annotations"
+              description: "Replace @Stateful with @Component and @Scope"
+              recipe: "com.analyzer.ejb2spring.MigrateStatefulSession"
+              file-pattern: "**/*.java"
+              base-directory: "${project_root}/src/main/java"
+            
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-migrate-stateful-beans"
+              description: "AI-assisted migration for each stateful session bean"
+              input-nodes: "${stateful_beans}"
+              prompt: |
+                You are migrating a Stateful Session Bean to a Spring session-scoped component.
+                
+                **Current Stateful Session Bean:**
+                - Node ID: ${current_node_id}
+                - Class Name: ${current_node.className}
+                - Package: ${current_node.packageName}
+                
+                **Migration Tasks:**
+                
+                1. **Convert to Spring Session-Scoped Component:**
+                   - Replace @Stateful with @Component
+                   - Add @Scope(value = WebApplicationContext.SCOPE_SESSION, proxyMode = ScopedProxyMode.TARGET_CLASS)
+                   - Or use @SessionScope for simpler cases
+                   - Implement Serializable if storing in session
+                
+                2. **Handle Conversational State:**
+                   - Identify stateful fields that maintain conversation state
+                   - Ensure these fields are Serializable
+                   - Consider using @PreDestroy for cleanup
+                   - Replace @Remove methods with explicit cleanup logic
+                
+                3. **Update Passivation/Activation:**
+                   - Remove @PrePassivate and @PostActivate
+                   - Use @PreDestroy for cleanup before session invalidation
+                   - Consider using HTTP session attributes for complex state
+                
+                4. **Dependency Injection:**
+                   - Convert @EJB to constructor injection
+                   - Use @Autowired or constructor-based DI
+                   - Be careful with injecting singletons into session-scoped beans
+                
+                5. **Migration Guidelines:**
+                   - Document stateful behavior clearly
+                   - Consider if stateful bean is truly necessary (can it be stateless?)
+                   - Use session attributes for simple state
+                   - Implement proper session timeout handling
+                
+                **Expected Output:**
+                - Spring session-scoped component
+                - Proper state management
+                - Serializable implementation if needed
+                - Clear documentation of stateful behavior
+                
+                Please migrate this stateful session bean.
+              working-directory: "${project_root}"
+              progress-message: "Migrating stateful session bean"
+              timeout-seconds: 600
+            
+            - type: "AI_ASSISTED"
+              name: "compile-stateful-components"
+              description: "Compile all migrated stateful components"
+              prompt: |
+                All stateful session beans migrated.
+                
+                **Summary:**
+                - Beans processed: ${node_count}
+                - Successful: ${success_count}
+                - Failed: ${failure_count}
+                
+                **Tasks:**
+                1. Compile project
+                2. Verify @SessionScope annotations
+                3. Check Serializable implementation
+                4. Test session management
+                
+                Please compile and fix errors.
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+            
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-stateful-migration"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                Stateful Session Bean migration completed.
+                
+                **Summary:** ${node_count} beans (${success_count} successful, ${failure_count} failed)
+                
+                **Review:**
+                1. Session-scoped components configured
+                2. State properly serializable
+                3. Cleanup methods implemented
+                
+                Please verify and confirm.
+              required: true
+              timeout-seconds: 1800

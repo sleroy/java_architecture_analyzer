@@ -70,8 +70,8 @@ public class PropertiesFileExample {
             writer.write("# Migration Variables Configuration\n");
             writer.write("# Generated: " + java.time.LocalDateTime.now() + "\n\n");
             writer.write("# Spring Boot Configuration\n");
-            writer.write("spring_boot_version=2.7.18\n");
-            writer.write("java_version=8\n\n");
+            writer.write("spring_boot_version=3.5.7\n");
+            writer.write("java_version=17\n\n");
             writer.write("# Project Configuration\n");
             writer.write("group_id=com.example\n");
             writer.write("artifact_id=my-spring-app\n");

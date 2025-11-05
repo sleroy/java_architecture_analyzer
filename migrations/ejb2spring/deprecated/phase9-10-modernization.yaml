@@ -13,10 +13,13 @@ migration-plan:
           name: "Analyze Library Compatibility"
           pattern-tag: "LIBRARY_COMPATIBILITY_ANALYSIS"
           blocks:
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "list-dependencies"
-              command: "cd ${project_root}/semeru-springboot && mvn dependency:tree > ${project_root}/docs/migration/dependencies.txt"
-              working-directory: "${project_root}"
+              description: "Generate dependency tree for JDK compatibility analysis"
+              goals: "dependency:tree"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 120
               
             - type: "AI_PROMPT"
@@ -103,12 +106,14 @@ migration-plan:
               working-directory: "${project_root}"
               timeout-seconds: 120
               
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "compile-with-jdk17"
-              command: "cd ${project_root}/semeru-springboot && mvn clean compile"
-              working-directory: "${project_root}"
+              description: "Compile with JDK 17+ after Jakarta namespace migration"
+              goals: "clean compile"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 300
-              capture-output: true
               
             - type: "INTERACTIVE_VALIDATION"
               name: "verify-jdk-upgrade"
@@ -355,10 +360,13 @@ migration-plan:
                     public long getTimestamp() { return timestamp; }
                 }
               
-            - type: "COMMAND"
+            - type: "MAVEN"
               name: "final-compilation"
-              command: "cd ${project_root}/semeru-springboot && mvn clean compile"
-              working-directory: "${project_root}"
+              description: "Final compilation with JDK 17+ and modernizations"
+              goals: "clean compile"
+              java-home: "${maven_java_home}"
+              maven-home: "${maven_home}"
+              working-directory: "${project_root}/semeru-springboot"
               timeout-seconds: 300
               
             - type: "INTERACTIVE_VALIDATION"

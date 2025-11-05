@@ -17,6 +17,11 @@ public enum BlockType {
     GIT,
 
     /**
+     * Execute Maven commands with explicit JAVA_HOME and MAVEN_HOME control
+     */
+    MAVEN,
+
+    /**
      * File operations (create, copy, move, delete files/directories)
      */
     FILE_OPERATION,
@@ -47,7 +52,18 @@ public enum BlockType {
     AI_ASSISTED,
 
     /**
+     * Execute AI_ASSISTED for each node in a list with progress tracking.
+     * Similar to AI_PROMPT_BATCH but invokes Amazon Q CLI for each node.
+     */
+    AI_ASSISTED_BATCH,
+
+    /**
      * Interactive validation checkpoint requiring human confirmation
      */
-    INTERACTIVE_VALIDATION
+    INTERACTIVE_VALIDATION,
+
+    /**
+     * Create a git checkpoint by staging and committing all changes
+     */
+    CHECKPOINT
 }

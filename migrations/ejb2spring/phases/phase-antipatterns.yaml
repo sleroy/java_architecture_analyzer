@@ -1,0 +1,242 @@
+# Phase: Legacy Antipattern Refactoring
+# Refactors common legacy code antipatterns to modern Spring patterns
+
+migration-plan:
+  phases:
+    - id: "phase-antipatterns"
+      name: "Legacy Antipattern Refactoring"
+      description: "Refactor common legacy antipatterns (Singletons, deep inheritance, god classes, static utilities, exception handling)"
+      
+      tasks:
+        # Task 1: Singleton Pattern Modernization
+        - id: "task-singleton-refactoring"
+          name: "Modernize Singleton Pattern"
+          description: "Replace manual Singletons with Spring dependency injection"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-singletons"
+              description: "Query all manual Singleton implementations"
+              query-type: "BY_TAGS"
+              tags:
+                - "ANTIPATTERN_SINGLETON"
+              output-variable: "singleton_classes"
+            
+            - type: "OPENREWRITE"
+              name: "refactor-singletons"
+              description: "Convert getInstance() patterns to Spring beans"
+              recipe: "com.analyzer.ejb2spring.ModernizeSingleton"
+              file-pattern: "**/*.java"
+              base-directory: "${project_root}/${artifact_id}/src/main/java"
+            
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-modernize-singletons"
+              description: "AI-assisted singleton modernization"
+              input-nodes: "${singleton_classes}"
+              prompt: |
+                You are modernizing a manual Singleton pattern to use Spring dependency injection.
+                
+                **Current Singleton Class:**
+                - Node ID: ${current_node_id}
+                - Class Name: ${current_node.className}
+                - Package: ${current_node.packageName}
+                
+                **Migration Tasks:**
+                
+                1. **Convert to Spring Component:**
+                   - Add @Component or @Service annotation
+                   - Remove private constructor
+                   - Remove static getInstance() method
+                   - Remove static instance field
+                   - Make all fields non-static
+                
+                2. **Update All Callers:**
+                   - Replace Class.getInstance() with injected dependency
+                   - Use constructor injection in calling classes
+                   - Remove static method calls
+                
+                3. **Handle Initialization:**
+                   - Use @PostConstruct for initialization logic
+                   - Spring manages bean lifecycle
+                
+                4. **Migration Guidelines:**
+                   - Spring beans are singleton by default
+                   - Use @Scope if different scope needed
+                   - Thread-safety automatically handled
+                   - Better testability with DI
+                
+                **Expected Output:**
+                - @Component/@Service class
+                - No static getInstance()
+                - Constructor injection in callers
+                - @PostConstruct for initialization
+                
+                Please modernize this Singleton.
+              working-directory: "${project_root}"
+              progress-message: "Modernizing Singleton"
+              timeout-seconds: 600
+        
+        # Task 2: Static Utility Refactoring
+        - id: "task-utility-refactoring"
+          name: "Refactor Static Utility Classes"
+          description: "Convert complex static utilities to Spring components"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-utility-classes"
+              description: "Query all utility classes with complex logic"
+              query-type: "BY_TAGS"
+              tags:
+                - "ANTIPATTERN_UTILITY_CLASS"
+              output-variable: "utility_classes"
+            
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-refactor-utilities"
+              description: "Refactor complex utilities to components"
+              input-nodes: "${utility_classes}"
+              prompt: |
+                You are refactoring a static utility class.
+                
+                **Current Utility Class:**
+                - Node ID: ${current_node_id}
+                - Class Name: ${current_node.className}
+                
+                **Tasks:**
+                
+                1. **Evaluate Complexity:**
+                   - Simple utilities (isEmpty, capitalize): Keep static
+                   - Complex utilities (with dependencies/state): Convert to @Component
+                
+                2. **If Converting to Component:**
+                   - Add @Component annotation
+                   - Remove static modifiers from methods
+                   - Inject dependencies via constructor
+                   - Update callers to use DI
+                
+                3. **If Keeping Static:**
+                   - Ensure truly stateless
+                   - No external dependencies
+                   - Pure functions only
+                   - Add final class modifier
+                
+                **Guidelines:**
+                - Complex logic → Spring component
+                - Simple helpers → Keep static
+                - Better testability with components
+                
+                Please refactor this utility class appropriately.
+              working-directory: "${project_root}"
+              progress-message: "Refactoring utility class"
+              timeout-seconds: 300
+        
+        # Task 3: Exception Handling Modernization
+        - id: "task-exception-refactoring"
+          name: "Modernize Exception Handling"
+          description: "Reduce checked exceptions, use runtime exceptions and Optional"
+          
+          blocks:
+            - type: "GRAPH_QUERY"
+              name: "query-exception-patterns"
+              description: "Query classes with excessive checked exceptions"
+              query-type: "BY_TAGS"
+              tags:
+                - "ANTIPATTERN_EXCEPTION_GENERIC"
+              output-variable: "exception_classes"
+            
+            - type: "AI_ASSISTED_BATCH"
+              name: "ai-modernize-exceptions"
+              description: "Modernize exception handling"
+              input-nodes: "${exception_classes}"
+              prompt: |
+                You are modernizing exception handling in this class.
+                
+                **Current Class:**
+                - Node ID: ${current_node_id}
+                - Class Name: ${current_node.className}
+                
+                **Tasks:**
+                
+                1. **Review Checked Exceptions:**
+                   - Identify excessive throws clauses
+                   - Convert to runtime exceptions where appropriate
+                   - Use Optional for missing values
+                
+                2. **Modernization Rules:**
+                   - Unexpected errors: Use runtime exceptions
+                   - Missing values: Use Optional<T>
+                   - Validation errors: IllegalArgumentException
+                   - Not found: Custom runtime exception
+                
+                3. **Create Custom Exceptions:**
+                   ```java
+                   public class CustomerNotFoundException extends RuntimeException {
+                       public CustomerNotFoundException(String message) {
+                           super(message);
+                       }
+                   }
+                   ```
+                
+                4. **Global Exception Handler:**
+                   - Create @ControllerAdvice
+                   - Handle exceptions globally
+                   - Return proper HTTP status codes
+                
+                **Expected Output:**
+                - Reduced checked exceptions
+                - Runtime exceptions for unexpected errors
+                - Optional for missing values
+                - Global exception handler
+                
+                Please modernize exception handling.
+              working-directory: "${project_root}"
+              progress-message: "Modernizing exception handling"
+              timeout-seconds: 300
+        
+        # Final compilation and validation
+        - id: "task-antipattern-validation"
+          name: "Validate Antipattern Refactoring"
+          description: "Compile and validate all antipattern refactorings"
+          
+          blocks:
+            - type: "AI_ASSISTED"
+              name: "compile-refactored-code"
+              description: "Compile all refactored code"
+              prompt: |
+                All antipattern refactorings completed.
+                
+                **Summary:**
+                - Singletons modernized
+                - Utilities refactored
+                - Exception handling improved
+                
+                **Tasks:**
+                1. Full Maven compile
+                2. Run all tests
+                3. Check code quality metrics
+                4. Verify no static abuse remains
+                5. Check exception handling consistency
+                
+                Please compile and validate.
+              working-directory: "${project_root}"
+              timeout-seconds: 300
+            
+            - type: "INTERACTIVE_VALIDATION"
+              name: "verify-antipattern-refactoring"
+              validation-type: "MANUAL_CONFIRM"
+              message: |
+                Legacy antipattern refactoring completed.
+                
+                **Refactorings:**
+                - Singletons → Spring beans
+                - Complex utilities → @Component
+                - Exception handling modernized
+                
+                **Review:**
+                1. Code more maintainable
+                2. Better testability
+                3. Cleaner dependencies
+                4. Modern Java patterns
+                
+                Confirm refactorings complete.
+              required: true
+              timeout-seconds: 1800

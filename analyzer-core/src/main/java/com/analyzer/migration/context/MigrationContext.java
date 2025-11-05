@@ -87,9 +87,12 @@ public class MigrationContext {
             if (stringValue.contains("${")) {
                 try {
                     value = substituteVariables(stringValue);
-                } catch (TemplateProcessingException e) {
+                } catch (Exception e) {
                     // If resolution fails, store the original value
-                    // This allows forward references to work if needed
+                    // This allows forward references to work, and preserves values
+                    // that contain ${...} but aren't meant to be template variables
+                    // (e.g., Maven properties in POM files)
+                    // Debug log only to avoid noise from legitimate non-template uses
                 }
             }
         }

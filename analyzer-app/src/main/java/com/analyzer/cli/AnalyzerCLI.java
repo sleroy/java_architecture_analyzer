@@ -14,6 +14,7 @@ import picocli.CommandLine.HelpCommand;
         JsonExportCommand.class,
         InspectorDependencyGraphCommand.class,
         ApplyMigrationCommand.class,
+        ListPhasesCommand.class,
         PlanInfoCommand.class,
         MigrationHistoryCommand.class,
         HelpCommand.class
