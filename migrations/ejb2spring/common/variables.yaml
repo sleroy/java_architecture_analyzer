@@ -12,7 +12,7 @@ migration-plan:
     
     # Maven Environment Configuration
     maven_java_home: "/usr/lib/jvm/java-21-openjdk-amd64/"
-    maven_home: "/home/sleroy/mvn/bin"
+    maven_home: "/home/sleroy/mvn"
     maven_opts: "-Xmx1024m"
     
     # Database Configuration (disabled by default)

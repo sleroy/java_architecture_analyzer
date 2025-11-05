@@ -135,10 +135,6 @@ public class ProjectDeserializer {
             // Create ProjectFile
             ProjectFile projectFile = new ProjectFile(filePath, projectBasePath);
 
-            // Set additional properties if available
-            if (fileNode.has("sourceJarPath") && !fileNode.get("sourceJarPath").isNull()) {
-                // sourceJarPath is handled internally by ProjectFile based on file path
-            }
 
             if (fileNode.has("discoveredAt") && !fileNode.get("discoveredAt").isNull()) {
                 Date discoveredAt = objectMapper.convertValue(fileNode.get("discoveredAt"), Date.class);

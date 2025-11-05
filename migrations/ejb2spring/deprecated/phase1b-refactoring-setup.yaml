@@ -79,7 +79,7 @@ migration-plan:
                 Effort Estimate: [hours]
                 Risks: [potential issues]
                 Migration Notes: [specific guidance]
-              max-prompts: 50
+              max-prompts: 5000
               parallel: true
               output-variable: "migration_priorities"
               temperature: 0.2

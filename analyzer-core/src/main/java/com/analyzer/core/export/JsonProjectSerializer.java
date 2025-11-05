@@ -11,10 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class JsonProjectSerializer {
 
@@ -39,6 +36,9 @@ public class JsonProjectSerializer {
 
         // Serialize edges
         serializeEdges();
+
+        // Serialize tag indexes
+        serializeTags();
 
         // Note: project.json removed as redundant - project metadata can be derived
         // from:
@@ -102,6 +102,7 @@ public class JsonProjectSerializer {
     private void createDirectories() throws IOException {
         Files.createDirectories(outputDir.toPath().resolve("nodes"));
         Files.createDirectories(outputDir.toPath().resolve("edges"));
+        Files.createDirectories(outputDir.toPath().resolve("tags"));
     }
 
     private void serializeNode(GraphNode node) throws IOException {
@@ -174,6 +175,43 @@ public class JsonProjectSerializer {
         String safeId = Integer.toString(id.hashCode());
         File nodeFile = nodeDir.resolve("node-" + safeId + ".json").toFile();
         mapper.writeValue(nodeFile, nodeData);
+    }
+
+    private void serializeTags() throws IOException {
+        var nodes = graphRepository.getNodes();
+        if (nodes == null || nodes.isEmpty()) {
+            return;
+        }
+
+        // Group nodes by their tags
+        Map<String, List<Map<String, Object>>> tagToNodes = new HashMap<>();
+
+        for (GraphNode node : nodes) {
+            Set<String> tags = node.getTags();
+            if (tags != null && !tags.isEmpty()) {
+                for (String tag : tags) {
+                    tagToNodes.computeIfAbsent(tag, k -> new ArrayList<>()).add(createNodeReference(node));
+                }
+            }
+        }
+
+        // Write one index file per tag
+        Path tagsDir = outputDir.toPath().resolve("tags");
+        for (Map.Entry<String, List<Map<String, Object>>> entry : tagToNodes.entrySet()) {
+            String tag = entry.getKey();
+            List<Map<String, Object>> nodeRefs = entry.getValue();
+
+            File tagIndexFile = tagsDir.resolve(tag + ".index.jsonp").toFile();
+            mapper.writeValue(tagIndexFile, nodeRefs);
+        }
+    }
+
+    private Map<String, Object> createNodeReference(GraphNode node) {
+        Map<String, Object> nodeRef = new HashMap<>();
+        nodeRef.put("id", node.getId());
+        nodeRef.put("nodeType", node.getNodeType());
+        nodeRef.put("displayLabel", node.getDisplayLabel());
+        return nodeRef;
     }
 
     // Removed serializeProject() method - project.json was redundant
