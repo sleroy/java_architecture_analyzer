@@ -11,14 +11,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 // https://download.jboss.org/jbossas/6.1/jboss-as-distribution-6.1.0.Final.zip
-// https://github.com/leandrocgsi/semeru-ejb-maven/tree/master
+
 public class CsvExportExample {
 
     private static final Logger logger = LoggerFactory.getLogger(CsvExportExample.class);
 
     public static void main(String[] args) throws IOException {
 
-        String folder = "/home/sleroy/git/semeru-ejb-maven";
+        String folder = "demo-ejb2-project";
 
         int exitCode3 = new CommandLine(new AnalyzerCLI()).execute("csv_export", "--project", folder, "--output-dir", "/tmp/example");
 

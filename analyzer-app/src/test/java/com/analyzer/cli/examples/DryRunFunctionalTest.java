@@ -62,9 +62,9 @@ public class DryRunFunctionalTest {
 
         // Verify no actual files were created (except .analysis directory for state
         // tracking)
-        Path semeruSpringboot = tempProjectDir.resolve("semeru-springboot");
-        assertFalse(Files.exists(semeruSpringboot),
-                "Dry-run should not create semeru-springboot directory");
+        Path springbootProject = tempProjectDir.resolve("demo-springboot");
+        assertFalse(Files.exists(springbootProject),
+                "Dry-run should not create demo-springboot directory");
 
         Path baseline = tempProjectDir.resolve("docs/BASELINE.md");
         assertFalse(Files.exists(baseline),

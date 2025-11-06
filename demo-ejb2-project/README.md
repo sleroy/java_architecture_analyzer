@@ -1,6 +1,6 @@
 # Demo EJB 2.0 Project
 
-A consolidated, single-module Maven project demonstrating EJB 2.0 technologies, modern EJB 3.1, SOAP web services, and REST endpoints. This project combines all source code and resources from the original multi-module `semeru-ejb-maven` project into a unified WAR file for simplified deployment to JBoss AS 7 / WildFly.
+A consolidated, single-module Maven project demonstrating EJB 2.0 technologies, modern EJB 3.1, SOAP web services, and REST endpoints. This unified WAR project provides a comprehensive reference for understanding legacy EJB patterns and facilitating migration to modern Java EE / Jakarta EE architectures.
 
 ## 🎯 Project Overview
 
@@ -24,7 +24,7 @@ demo-ejb2-project/
 ├── README.md                        # This file
 └── src/
     ├── main/
-    │   ├── java/br/com/semeru/
+    │   ├── java/com/example/ejbapp/
     │   │   ├── model/               # JPA entities
     │   │   ├── data/                # Data access layer (repositories)
     │   │   ├── service/             # EJB 3.1 business services
@@ -201,7 +201,8 @@ After deployment, the following endpoints are available:
 ```bash
 curl -X POST http://localhost:8080/demo-ejb2-project/MemberWebService \
   -H "Content-Type: text/xml" \
-  -d '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soap="http://soap.semeru.com.br/">
+  -d '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soap="
+  .com/">
    <soapenv:Body>
       <soap:registerMember>
          <memberRequest>
@@ -234,7 +235,19 @@ Container Managed Persistence entity bean example:
 - `ProductBean.java` - Bean implementation
 - `ejb-jar.xml` - Deployment descriptor with EJB-QL queries
 
-**See detailed documentation**: `src/main/java/br/com/semeru/ejb2/cmp/README.md`
+**See detailed documentation**: `src/main/java/com.example/ejbapp/ejb2/cmp/README.md`
+
+### Stateless Session Beans (`ejb2/session/`)
+
+Stateless Session Bean example for order processing:
+- `OrderService.java` - Remote interface
+- `OrderServiceHome.java` - Remote home interface
+- `OrderServiceLocal.java` - Local interface
+- `OrderServiceLocalHome.java` - Local home interface
+- `OrderServiceBean.java` - Bean implementation
+- `ejb-jar.xml` - Deployment descriptor
+
+**See detailed documentation**: `src/main/java/com/example/ejbapp/ejb2/session/README.md`
 
 ### Message-Driven Beans (`ejb2/mdb/`)
 
@@ -244,7 +257,7 @@ Asynchronous message processing examples:
 - `MessageSenderExample.java` - JMS message sender
 - `ejb-jar.xml` - MDB deployment descriptor
 
-**See detailed documentation**: `src/main/java/br/com/semeru/ejb2/mdb/README.md`
+**See detailed documentation**: `src/main/java/com/example/ejbapp/ejb2/mdb/README.md`
 
 ### Testing Message-Driven Beans
 
@@ -252,7 +265,7 @@ Asynchronous message processing examples:
 # Compile and run message sender
 cd demo-ejb2-project
 mvn compile
-mvn exec:java -Dexec.mainClass="br.com.semeru.ejb2.mdb.MessageSenderExample"
+mvn exec:java -Dexec.mainClass="com.example.ejbapp.ejb2.mdb.MessageSenderExample"
 ```
 
 ## 🧪 Testing
@@ -324,10 +337,9 @@ mvn clean test -Parq-jbossas-remote
 
 ## 📖 Additional Documentation
 
-- **SOAP Services**: `src/main/java/br/com/semeru/soap/README.md`
-- **EJB 2.0 CMP**: `src/main/java/br/com/semeru/ejb2/cmp/README.md`
-- **EJB 2.0 MDB**: `src/main/java/br/com/semeru/ejb2/mdb/README.md` (to be created)
-- **Original Project**: https://github.com/leandrocgsi/semeru-ejb-maven
+- **SOAP Services**: `src/main/java/com/example/ejbapp/soap/README.md`
+- **EJB 2.0 CMP**: `src/main/java/com/example/ejbapp/ejb2/cmp/README.md`
+- **EJB 2.0 MDB**: `src/main/java/com/example/ejbapp/ejb2/mdb/README.md`
 
 ## 📄 License
 
@@ -350,6 +362,4 @@ For issues or questions:
 
 ---
 
-**Built from**: semeru-ejb-maven multi-module project  
-**Consolidated**: Single-module for simplified deployment  
-**Purpose**: EJB 2.0 demonstration and migration reference
+**Purpose**: EJB 2.0 demonstration and migration reference for Java Architecture Analyzer

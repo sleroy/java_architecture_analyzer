@@ -38,7 +38,7 @@ cd /path/to/java_architecture_analyzer
 
 **What it does:**
 1. Reads source files from `demo-ejb2-project/src/main/java/`
-2. Creates new Spring Boot project at `demo-ejb2-project/target/semeru-springboot/`
+2. Creates new Spring Boot project at `demo-ejb2-project/target/example/springboot/`
 3. Migrates EJB components to Spring equivalents
 4. Generates Spring Boot POM with appropriate dependencies
 5. Does NOT modify any files in the original demo project
@@ -54,7 +54,7 @@ demo-ejb2-project/
 │   └── main/
 │       └── java/
 └── target/                    # Maven build directory (gitignored)
-    └── semeru-springboot/     # NEW - Migrated Spring Boot project
+    └── example/springboot/     # NEW - Migrated Spring Boot project
         ├── pom.xml            # Generated Spring Boot POM
         ├── src/
         │   └── main/
@@ -84,7 +84,7 @@ variables:
   migration_output_dir: "${user.dir}/demo-ejb2-project/target"
   
   # Name of the generated Spring Boot project directory
-  artifact_id: "semeru-springboot"
+  artifact_id: "example/springboot"
 ```
 
 ### Spring Boot Configuration
@@ -98,8 +98,8 @@ variables:
   java_version: "21"
   
   # Maven coordinates for the new project
-  group_id: "br.com.semeru"
-  package_base: "br.com.semeru"
+  group_id: "com.example.ejbapp"
+  package_base: "com.example.ejbapp"
 ```
 
 ### Maven Environment

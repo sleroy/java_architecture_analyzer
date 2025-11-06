@@ -66,9 +66,9 @@ All variables are defined in `common/variables.yaml`:
 |----------|---------|-------------|
 | `spring_boot_version` | 3.5.7 | Spring Boot version for the migration |
 | `java_version` | 17 | Java version (17+ for Spring Boot 3.x) |
-| `group_id` | br.com.semeru | Maven groupId for new project |
-| `artifact_id` | semeru-springboot | Maven artifactId for new project |
-| `package_base` | br.com.semeru | Base package for Java classes |
+| `group_id` | com.example.ejbapp | Maven groupId for new project |
+| `artifact_id` | example/springboot | Maven artifactId for new project |
+| `package_base` | com.example.ejbapp | Base package for Java classes |
 | `database_enabled` | false | Enable database schema operations |
 | `read_dependencies` | false | Extract and analyze dependencies |
 

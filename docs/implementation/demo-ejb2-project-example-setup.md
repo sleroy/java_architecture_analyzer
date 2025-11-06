@@ -26,7 +26,7 @@ This document describes the setup and configuration for running the EJB 2 to Spr
 **Decision:** All configurations must ensure the original demo-ejb2-project files remain unmodified.
 
 **Implementation:**
-- Migration artifacts are created in `demo-ejb2-project/target/semeru-springboot/`
+- Migration artifacts are created in `demo-ejb2-project/target/example/springboot/`
 - Using target/ follows Maven convention (automatically gitignored)
 - Source files are only READ from `demo-ejb2-project/src/main/java/`
 - No FILE_OPERATION blocks target the original source directory
@@ -41,7 +41,7 @@ git status  # Should be clean
 
 # After migration
 git status  # Should still be clean - no changes to tracked files
-ls -la target/  # New target/semeru-springboot/ directory created
+ls -la target/  # New target/example/springboot/ directory created
 
 # Clean up generated files
 mvn clean  # Removes entire target/ directory including migration artifacts
@@ -72,9 +72,9 @@ mvn clean  # Removes entire target/ directory including migration artifacts
 |----------|---------|---------------|---------|
 | `project_root` | (required) | `${user.dir}/demo-ejb2-project` | Source project location |
 | `migration_output_dir` | (optional) | `${user.dir}/demo-ejb2-project/target` | Output directory for artifacts |
-| `artifact_id` | `semeru-springboot` | `semeru-springboot` | Generated project name |
-| `group_id` | `br.com.semeru` | `br.com.semeru` | Maven group ID |
-| `package_base` | `br.com.semeru` | `br.com.semeru` | Base Java package |
+| `artifact_id` | `example/springboot` | `example/springboot` | Generated project name |
+| `group_id` | `com.example.ejbapp` | `com.example.ejbapp` | Maven group ID |
+| `package_base` | `com.example.ejbapp` | `com.example.ejbapp` | Base Java package |
 | `spring_boot_version` | `3.5.7` | `3.5.7` | Spring Boot version |
 | `java_version` | `21` | `21` | Java version |
 | `database_enabled` | `false` | `false` | Database operations |
@@ -116,7 +116,7 @@ java_architecture_analyzer/
 │   │   └── main/
 │   │       └── java/             # UNCHANGED - original EJB 2.0 code
 │   └── target/                    # Maven build directory (gitignored)
-│       └── semeru-springboot/    # NEW - migrated Spring Boot project
+│       └── example/springboot/    # NEW - migrated Spring Boot project
 │           ├── pom.xml           # Generated
 │           ├── src/
 │           │   └── main/
@@ -213,9 +213,9 @@ Source file operations:
 - ✅ `read_file` - Allowed on source
 - ✅ `list_files` - Allowed on source
 - ✅ `search_files` - Allowed on source
-- ❌ `write_to_file` - Only to `target/semeru-springboot/`
-- ❌ `replace_in_file` - Only to `target/semeru-springboot/`
-- ❌ `FILE_OPERATION` - Only to `target/semeru-springboot/`
+- ❌ `write_to_file` - Only to `target/example/springboot/`
+- ❌ `replace_in_file` - Only to `target/example/springboot/`
+- ❌ `FILE_OPERATION` - Only to `target/example/springboot/`
 
 ### 3. Git Status Check
 

@@ -20,9 +20,9 @@ migration-plan:
   variables:
     spring_boot_version: "2.7.18"
     java_version: "8"
-    group_id: "br.com.semeru"
-    artifact_id: "semeru-springboot"
-    package_base: "br.com.semeru"
+    group_id: "com.example.ejbapp"
+    artifact_id: "example/springboot"
+    package_base: "com.example.ejbapp"
     migration_branch_prefix: "migration"
     
   phases:
@@ -246,10 +246,10 @@ migration-plan:
               name: "create-directory-structure"
               description: "Create complete Spring Boot directory structure"
               command: |
-                mkdir -p semeru-springboot/src/main/java
-                mkdir -p semeru-springboot/src/main/resources
-                mkdir -p semeru-springboot/src/test/java
-                mkdir -p semeru-springboot/src/test/resources
+                mkdir -p example/springboot/src/main/java
+                mkdir -p example/springboot/src/main/resources
+                mkdir -p example/springboot/src/test/java
+                mkdir -p example/springboot/src/test/resources
               working-directory: "${project_root}"
               timeout-seconds: 30
               
@@ -258,7 +258,7 @@ migration-plan:
               name: "create-gitignore"
               description: "Create .gitignore file for Spring Boot project"
               operation: "CREATE"
-              path: "${project_root}/semeru-springboot/.gitignore"
+              path: "${project_root}/example/springboot/.gitignore"
               content: |
                 # Compiled class files
                 *.class
@@ -286,11 +286,11 @@ migration-plan:
               name: "create-readme"
               description: "Create README.md for Spring Boot project"
               operation: "CREATE"
-              path: "${project_root}/semeru-springboot/README.md"
+              path: "${project_root}/example/springboot/README.md"
               content: |
-                # Semeru Spring Boot Application
+                # Unicorn Spring Boot Application
                 
-                This is the Spring Boot version of the Semeru application, migrated from JBoss EJB 2.
+                This is the Spring Boot version of the Unicorn application, migrated from JBoss EJB 2.
                 
                 ## Project Status
                 
@@ -327,7 +327,7 @@ migration-plan:
                 
                 ## Overview
                 
-                This document outlines the strategy for migrating the Semeru application from JBoss EJB 2 to Spring Boot ${spring_boot_version}.
+                This document outlines the strategy for migrating the Unicorn application from JBoss EJB 2 to Spring Boot ${spring_boot_version}.
                 
                 ## Migration Approach
                 
@@ -364,7 +364,7 @@ migration-plan:
               description: "Commit initial migration structure"
               args:
                 - "add ."
-                - "commit -m 'feat: create Spring Boot migration structure\n\n- Created semeru-springboot directory structure\n- Added .gitignore for Spring Boot project\n- Created initial README.md\n- Documented migration strategy\n\nRelated to: TASK-001'"
+                - "commit -m 'feat: create Spring Boot migration structure\n\n- Created example/springboot directory structure\n- Added .gitignore for Spring Boot project\n- Created initial README.md\n- Documented migration strategy\n\nRelated to: TASK-001'"
               working-directory: "${project_root}"
               timeout-seconds: 60
               idempotent: true
@@ -378,7 +378,7 @@ migration-plan:
                 Migration branch structure created successfully.
                 
                 - Branch: ${migration_branch_prefix}/springboot-initial
-                - Directory structure: semeru-springboot/src/{main,test}/{java,resources}
+                - Directory structure: example/springboot/src/{main,test}/{java,resources}
                 - .gitignore configured
                 - README.md created
                 - MIGRATION_STRATEGY.md documented
@@ -530,7 +530,7 @@ migration-plan:
               name: "create-spring-boot-pom"
               description: "Create pom.xml for Spring Boot project"
               operation: "CREATE"
-              path: "${project_root}/semeru-springboot/pom.xml"
+              path: "${project_root}/example/springboot/pom.xml"
               content: |
                 <?xml version="1.0" encoding="UTF-8"?>
                 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -551,8 +551,8 @@ migration-plan:
                     <version>1.0.0-SNAPSHOT</version>
                     <packaging>jar</packaging>
                     
-                    <name>Semeru Spring Boot Application</name>
-                    <description>Semeru application migrated from JBoss EJB 2 to Spring Boot</description>
+                    <name>Unicorn Spring Boot Application</name>
+                    <description>Unicorn application migrated from JBoss EJB 2 to Spring Boot</description>
                     
                     <properties>
                         <java.version>${java_version}</java.version>
@@ -598,7 +598,7 @@ migration-plan:
               description: "Validate pom.xml and resolve dependencies"
               command: |
                 mvn validate
-              working-directory: "${project_root}/semeru-springboot"
+              working-directory: "${project_root}/example/springboot"
               timeout-seconds: 120
               
             # Step 3: Compile to verify setup
@@ -607,7 +607,7 @@ migration-plan:
               description: "Test compilation to verify Maven setup"
               command: |
                 mvn clean compile
-              working-directory: "${project_root}/semeru-springboot"
+              working-directory: "${project_root}/example/springboot"
               timeout-seconds: 300
               
             # Step 4: Validation checkpoint
@@ -644,19 +644,19 @@ migration-plan:
             # Step 1: Create main application class
             - type: "FILE_OPERATION"
               name: "create-main-application-class"
-              description: "Create SemeruApplication.java main class"
+              description: "Create UnicornApplication.java main class"
               operation: "CREATE"
-              path: "${project_root}/semeru-springboot/src/main/java/br/com/semeru/SemeruApplication.java"
+              path: "${project_root}/example/springboot/src/main/java/br/com/semeru/UnicornApplication.java"
               content: |
-                package br.com.semeru;
+                package com.example.ejbapp;
                 
                 import org.springframework.boot.SpringApplication;
                 import org.springframework.boot.autoconfigure.SpringBootApplication;
                 
                 @SpringBootApplication
-                public class SemeruApplication {
+                public class UnicornApplication {
                     public static void main(String[] args) {
-                        SpringApplication.run(SemeruApplication.class, args);
+                        SpringApplication.run(UnicornApplication.class, args);
                     }
                 }
                 
@@ -665,14 +665,14 @@ migration-plan:
               name: "create-application-properties"
               description: "Create application.properties configuration file"
               operation: "CREATE"
-              path: "${project_root}/semeru-springboot/src/main/resources/application.properties"
+              path: "${project_root}/example/springboot/src/main/resources/application.properties"
               content: |
                 # Application Configuration
-                spring.application.name=semeru-springboot
+                spring.application.name=example/springboot
                 server.port=8080
                 
                 # Logging Configuration
-                logging.level.br.com.semeru=DEBUG
+                logging.level.com.example.ejbapp=DEBUG
                 logging.level.org.springframework=INFO
                 
             # Step 3: Test application startup
@@ -683,7 +683,7 @@ migration-plan:
                 timeout 30 mvn spring-boot:run &
                 sleep 20
                 pkill -f "spring-boot:run"
-              working-directory: "${project_root}/semeru-springboot"
+              working-directory: "${project_root}/example/springboot"
               timeout-seconds: 60
               
             # Step 4: Validation checkpoint
@@ -694,7 +694,7 @@ migration-plan:
               message: |
                 Spring Boot main application class created successfully.
                 
-                - SemeruApplication.java created
+                - UnicornApplication.java created
                 - application.properties configured
                 - Application startup tested
                 

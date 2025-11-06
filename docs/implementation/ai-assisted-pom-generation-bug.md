@@ -22,7 +22,7 @@ The following has evaluated to null or missing:
 ### Stage 2: POM File Corruption
 
 ```
-[FATAL] Non-parseable POM /home/sleroy/git/semeru-ejb-maven/semeru-springboot/pom.xml: 
+[FATAL] Non-parseable POM demo-ejb2-project/example/springboot/pom.xml: 
 only whitespace content allowed before start tag and not I (position: START_DOCUMENT seen I... @1:1)
 ```
 
@@ -142,7 +142,7 @@ To verify the fix:
 ## Notes
 
 The phase1-initialization.yaml file has been correctly updated with:
-- ✅ Removed all hardcoded "semeru-springboot" references
+- ✅ Removed all hardcoded "example/springboot" references
 - ✅ Added task-102 to copy source files from all Maven modules
 - ✅ Enhanced AI prompt to emphasize POM validation
 

@@ -86,7 +86,7 @@ enable_if: "migrate_db && (database_type == 'mysql' || database_type == 'postgre
 
 ### Nested Object Access
 ```yaml
-enable_if: "project.name == 'semeru-springboot'"
+enable_if: "project.name == 'example/springboot'"
 enable_if: "user.home != null"
 ```
 

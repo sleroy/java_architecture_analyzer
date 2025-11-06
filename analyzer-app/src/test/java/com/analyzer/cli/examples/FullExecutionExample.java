@@ -28,7 +28,7 @@ public class FullExecutionExample {
         System.out.println();
 
         // Create a test project directory if it doesn't exist
-        final Path testProjectPath = Paths.get("/home/sleroy/git/semeru-ejb-maven");
+        final Path testProjectPath = Paths.get("demo-ejb2-project");
         if (!Files.exists(testProjectPath)) {
             System.out.println("Creating test project directory: " + testProjectPath);
             Files.createDirectories(testProjectPath);

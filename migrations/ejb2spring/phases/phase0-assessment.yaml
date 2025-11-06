@@ -294,9 +294,9 @@ migration-plan:
               operation: "CREATE"
               path: "${project_root}/${artifact_id}/README.md"
               content: |
-                # Semeru Spring Boot Application
+                # Unicorn Spring Boot Application
                 
-                This is the Spring Boot version of the Semeru application, migrated from JBoss EJB 2.
+                This is the Spring Boot version of the Unicorn application, migrated from JBoss EJB 2.
                 
                 ## Project Status
                 
@@ -332,7 +332,7 @@ migration-plan:
                 
                 ## Overview
                 
-                This document outlines the strategy for migrating the Semeru application from JBoss EJB 2 to Spring Boot ${spring_boot_version}.
+                This document outlines the strategy for migrating the Unicorn application from JBoss EJB 2 to Spring Boot ${spring_boot_version}.
                 
                 ## Migration Approach
                 
@@ -381,7 +381,7 @@ migration-plan:
             #     Migration branch structure created successfully.
                 
             #     - Branch: ${migration_branch_prefix}/springboot-initial
-            #     - Directory structure: semeru-springboot/src/{main,test}/{java,resources}
+            #     - Directory structure: example/springboot/src/{main,test}/{java,resources}
             #     - .gitignore configured
             #     - README.md created
             #     - MIGRATION_STRATEGY.md documented
@@ -516,7 +516,7 @@ migration-plan:
                 
                 - Original dependencies extracted to: docs/original-dependencies.txt
                 - AI dependency mapping analysis generated
-                - Spring Boot POM created at: semeru-springboot/pom.xml
+                - Spring Boot POM created at: example/springboot/pom.xml
                 - DEPENDENCY_MAPPING.md created
                 
                 Please review:
