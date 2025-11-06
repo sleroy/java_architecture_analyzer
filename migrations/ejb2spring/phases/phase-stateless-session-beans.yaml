@@ -43,15 +43,84 @@ migration-plan:
                 - Class Name: ${current_node.simpleName}
                 - Fully Qualified Name: ${current_node.fullyQualifiedName}
                 - Package: ${current_node.packageName}
+                - Migration Complexity: ${current_node.properties.ejb.session_bean.migrationComplexity!'UNKNOWN'}
                 
                 Locations including cached items in .analysis that should be ignored : 
                 <#list current_node.sourceAliasPaths?filter(path -> path?ends_with(".java")) as bean>
                 - ${bean}
                 </#list>
                 
+                <#-- Context-aware instructions based on node properties -->
+                <#if current_node.properties.factory?? && current_node.properties.factory.bean?? && current_node.properties.factory.bean.analysis??>
+                <#assign factoryAnalysis = current_node.properties.factory.bean.analysis>
+                <#if (factoryAnalysis.factoryMethodCount > 0)>
+                
+                **⚠️ FACTORY PATTERN DETECTED:**
+                This class has ${factoryAnalysis.factoryMethodCount} factory methods:
+                <#list factoryAnalysis.factoryMethods as method>
+                - ${method}
+                </#list>
+                
+                **Factory Migration Instructions:**
+                - Consider converting factory methods to @Bean methods in a @Configuration class
+                - Or keep as static utility methods if they don't need Spring context
+                - Ensure thread-safety if factory methods have state
+                </#if>
+                </#if>
+                
+                <#if current_node.properties.mutable?? && current_node.properties.mutable.service?? && current_node.properties.mutable.service.analysis??>
+                <#assign mutableAnalysis = current_node.properties.mutable.service.analysis>
+                <#if (mutableAnalysis.mutableFieldCount > 0)>
+                
+                **⚠️ MUTABLE STATE DETECTED:**
+                This stateless bean has ${mutableAnalysis.mutableFieldCount} mutable fields (ANTI-PATTERN in stateless beans):
+                <#list mutableAnalysis.mutableFields as field>
+                - ${field}
+                </#list>
+                
+                **State Management Instructions:**
+                - Stateless beans should NOT have mutable instance state
+                - Convert mutable fields to method parameters or request-scoped beans
+                - If state is truly needed, consider using @Scope("request") or @Scope("prototype")
+                - Logger fields are OK as they are thread-safe
+                - CDI Event sources (@Inject Event<T>) are OK as they are proxies
+                </#if>
+                </#if>
+                
+                <#if current_node.properties.ejb?? && current_node.properties.ejb.conversational?? && current_node.properties.ejb.conversational.state?? && current_node.properties.ejb.conversational.state.fields??>
+                <#assign stateFields = current_node.properties.ejb.conversational.state.fields>
+                <#if (stateFields?size > 0)>
+                
+                **⚠️ CONVERSATIONAL STATE IN STATELESS BEAN:**
+                Found ${stateFields?size} state fields that should not exist in stateless beans:
+                <#list stateFields as field>
+                - ${field.name} (${field.type})
+                </#list>
+                
+                **Critical:** These fields violate stateless contract. Review and refactor!
+                </#if>
+                </#if>
+                
+                <#if current_node.properties.resource?? && current_node.properties.resource.analysis_result??>
+                <#assign resourceAnalysis = current_node.properties.resource.analysis_result>
+                <#if (resourceAnalysis.dataSourceCount > 0 || resourceAnalysis.resourceRefCount > 0)>
+                
+                **📊 RESOURCE USAGE DETECTED:**
+                - DataSources: ${resourceAnalysis.dataSourceCount}
+                - Resource References: ${resourceAnalysis.resourceRefCount}
+                - Connection Pool Configs: ${resourceAnalysis.poolConfigCount}
+                
+                **Resource Migration Instructions:**
+                - Replace @Resource DataSource with constructor-injected Spring DataSource
+                - Use Spring's application.properties for datasource configuration
+                - No JPA/Hibernate - use Spring JdbcTemplate or named ParameterJdbcTemplate
+                - Spring Boot will auto-configure connection pool (HikariCP by default)
+                </#if>
+                </#if>
+                
                 **Migration Tasks:**
                 
-                1. **Convert the Java class (source code to Spring Service:**
+                1. **Convert the Java class (source code) to Spring Service:**
                    - Replace @Stateless with @Service
                    - Remove @Local and @Remote interface annotations
                    - Replace @EJB injections with constructor injection (@Autowired or final fields)
@@ -82,10 +151,11 @@ migration-plan:
                    - Use Spring's @PostConstruct and @PreDestroy if needed
                    - Document any behavioral changes from EJB to Spring
 
-                6. ** JDBC Migration**
-                   - We are not using JPA or Hibernate
+                6. **JDBC Migration:**
+                   - We are NOT using JPA or Hibernate
                    - Database operations are handled by Spring default connection pool
-                   - We may need to migrate to Spring JDBC for database operations 
+                   - Migrate to Spring JdbcTemplate or NamedParameterJdbcTemplate for database operations 
+                   - Use @Transactional for transaction management
                 
                 **Expected Output:**
                 - Spring @Service class with proper annotations
@@ -93,6 +163,7 @@ migration-plan:
                 - @Transactional methods
                 - Updated security annotations
                 - No EJB-specific code remaining
+                - Address any anti-patterns identified above
                 
                 Please migrate this stateless session bean to a Spring service.
               working-directory: "${project_root}/${artifact_id}/src/main/java"
