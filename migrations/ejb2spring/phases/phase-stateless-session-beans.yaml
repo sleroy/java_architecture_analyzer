@@ -19,7 +19,7 @@ migration-plan:
               description: "Query all stateless session beans"
               query-type: "BY_TAGS"
               tags:
-                - "EJB_STATELESS_SESSION_BEAN"
+                - "ejb.stateless.sessionBean"
               output-variable: "stateless_beans"
             
             # Step 2: OPENREWRITE - Apply automated refactorings
@@ -43,11 +43,15 @@ migration-plan:
                 - Class Name: ${current_node.simpleName}
                 - Fully Qualified Name: ${current_node.fullyQualifiedName}
                 - Package: ${current_node.packageName}
-                - Source File Path: ${current_node.sourceFilePath}
+                
+                Locations including cached items in .analysis that should be ignored : 
+                <#list current_node.sourceAliasPaths?filter(path -> path?ends_with(".java")) as bean>
+                - ${bean}
+                </#list>
                 
                 **Migration Tasks:**
                 
-                1. **Convert to Spring Service:**
+                1. **Convert the Java class (source code to Spring Service:**
                    - Replace @Stateless with @Service
                    - Remove @Local and @Remote interface annotations
                    - Replace @EJB injections with constructor injection (@Autowired or final fields)
@@ -77,6 +81,11 @@ migration-plan:
                    - Make injected fields final
                    - Use Spring's @PostConstruct and @PreDestroy if needed
                    - Document any behavioral changes from EJB to Spring
+
+                6. ** JDBC Migration**
+                   - We are not using JPA or Hibernate
+                   - Database operations are handled by Spring default connection pool
+                   - We may need to migrate to Spring JDBC for database operations 
                 
                 **Expected Output:**
                 - Spring @Service class with proper annotations

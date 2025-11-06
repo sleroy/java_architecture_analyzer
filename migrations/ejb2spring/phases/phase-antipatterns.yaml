@@ -19,7 +19,7 @@ migration-plan:
               description: "Query all manual Singleton implementations"
               query-type: "BY_TAGS"
               tags:
-                - "ANTIPATTERN_SINGLETON"
+                - "antipattern.singleton.detected"
               output-variable: "singleton_classes"
             
             - type: "OPENREWRITE"
@@ -87,7 +87,7 @@ migration-plan:
               description: "Query all utility classes with complex logic"
               query-type: "BY_TAGS"
               tags:
-                - "ANTIPATTERN_UTILITY_CLASS"
+                - "antipattern.utilityClass"
               output-variable: "utility_classes"
             
             - type: "AI_ASSISTED_BATCH"
@@ -140,7 +140,7 @@ migration-plan:
               description: "Query classes with excessive checked exceptions"
               query-type: "BY_TAGS"
               tags:
-                - "ANTIPATTERN_EXCEPTION_GENERIC"
+                - "antipattern.exception.generic"
               output-variable: "exception_classes"
             
             - type: "AI_ASSISTED_BATCH"

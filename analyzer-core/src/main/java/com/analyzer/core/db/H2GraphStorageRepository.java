@@ -12,11 +12,7 @@ import org.apache.ibatis.session.SqlSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 
 /**
  * H2 database storage repository for graph data persistence.
@@ -31,11 +27,11 @@ public class H2GraphStorageRepository {
     private final GraphDatabaseSessionManager config;
     private final JsonSerializationService jsonSerializer;
 
-    public H2GraphStorageRepository(GraphDatabaseSessionManager config) {
+    public H2GraphStorageRepository(final GraphDatabaseSessionManager config) {
         this(config, new JsonSerializationService());
     }
 
-    public H2GraphStorageRepository(GraphDatabaseSessionManager config, JsonSerializationService jsonSerializer) {
+    public H2GraphStorageRepository(final GraphDatabaseSessionManager config, final JsonSerializationService jsonSerializer) {
         this.config = config;
         this.jsonSerializer = jsonSerializer;
     }
@@ -48,9 +44,9 @@ public class H2GraphStorageRepository {
      * @param nodeId The node ID
      * @return GraphNodeEntity or null if not found
      */
-    public GraphNodeEntity findNodeById(String nodeId) {
-        try (SqlSession session = config.openSession()) {
-            NodeMapper mapper = session.getMapper(NodeMapper.class);
+    public GraphNodeEntity findNodeById(final String nodeId) {
+        try (final SqlSession session = config.openSession()) {
+            final NodeMapper mapper = session.getMapper(NodeMapper.class);
             return mapper.findById(nodeId);
         }
     }
@@ -61,9 +57,9 @@ public class H2GraphStorageRepository {
      * @param nodeType The node type
      * @return List of nodes
      */
-    public List<GraphNodeEntity> findNodesByType(String nodeType) {
-        try (SqlSession session = config.openSession()) {
-            NodeMapper mapper = session.getMapper(NodeMapper.class);
+    public List<GraphNodeEntity> findNodesByType(final String nodeType) {
+        try (final SqlSession session = config.openSession()) {
+            final NodeMapper mapper = session.getMapper(NodeMapper.class);
             return mapper.findByType(nodeType);
         }
     }
@@ -74,8 +70,8 @@ public class H2GraphStorageRepository {
      * @return List of all nodes
      */
     public List<GraphNodeEntity> findAll() {
-        try (SqlSession session = config.openSession()) {
-            NodeMapper mapper = session.getMapper(NodeMapper.class);
+        try (final SqlSession session = config.openSession()) {
+            final NodeMapper mapper = session.getMapper(NodeMapper.class);
             return mapper.findAll();
         }
     }
@@ -86,9 +82,9 @@ public class H2GraphStorageRepository {
      * @param tag The tag to search for
      * @return List of nodes containing this tag
      */
-    public List<GraphNodeEntity> findNodesByTag(String tag) {
-        try (SqlSession session = config.openSession()) {
-            NodeMapper mapper = session.getMapper(NodeMapper.class);
+    public List<GraphNodeEntity> findNodesByTag(final String tag) {
+        try (final SqlSession session = config.openSession()) {
+            final NodeMapper mapper = session.getMapper(NodeMapper.class);
             return mapper.findByTag(tag);
         }
     }
@@ -99,9 +95,9 @@ public class H2GraphStorageRepository {
      * @param tags List of tags (OR condition)
      * @return List of nodes containing any of these tags
      */
-    public List<GraphNodeEntity> findNodesByAnyTags(List<String> tags) {
-        try (SqlSession session = config.openSession()) {
-            NodeMapper mapper = session.getMapper(NodeMapper.class);
+    public List<GraphNodeEntity> findNodesByAnyTags(final List<String> tags) {
+        try (final SqlSession session = config.openSession()) {
+            final NodeMapper mapper = session.getMapper(NodeMapper.class);
             return mapper.findByAnyTags(tags);
         }
     }
@@ -112,9 +108,9 @@ public class H2GraphStorageRepository {
      * @param tags List of tags (AND condition)
      * @return List of nodes containing all of these tags
      */
-    public List<GraphNodeEntity> findNodesByAllTags(List<String> tags) {
-        try (SqlSession session = config.openSession()) {
-            NodeMapper mapper = session.getMapper(NodeMapper.class);
+    public List<GraphNodeEntity> findNodesByAllTags(final List<String> tags) {
+        try (final SqlSession session = config.openSession()) {
+            final NodeMapper mapper = session.getMapper(NodeMapper.class);
             return mapper.findByAllTags(tags);
         }
     }
@@ -126,9 +122,9 @@ public class H2GraphStorageRepository {
      * @param tags     List of tags (OR condition)
      * @return List of nodes of this type containing any of these tags
      */
-    public List<GraphNodeEntity> findNodesByTypeAndAnyTags(String nodeType, List<String> tags) {
-        try (SqlSession session = config.openSession()) {
-            NodeMapper mapper = session.getMapper(NodeMapper.class);
+    public List<GraphNodeEntity> findNodesByTypeAndAnyTags(final String nodeType, final List<String> tags) {
+        try (final SqlSession session = config.openSession()) {
+            final NodeMapper mapper = session.getMapper(NodeMapper.class);
             return mapper.findByTypeAndAnyTags(nodeType, tags);
         }
     }
@@ -140,9 +136,9 @@ public class H2GraphStorageRepository {
      * @param tags     List of tags (AND condition)
      * @return List of nodes of this type containing all of these tags
      */
-    public List<GraphNodeEntity> findNodesByTypeAndAllTags(String nodeType, List<String> tags) {
-        try (SqlSession session = config.openSession()) {
-            NodeMapper mapper = session.getMapper(NodeMapper.class);
+    public List<GraphNodeEntity> findNodesByTypeAndAllTags(final String nodeType, final List<String> tags) {
+        try (final SqlSession session = config.openSession()) {
+            final NodeMapper mapper = session.getMapper(NodeMapper.class);
             return mapper.findByTypeAndAllTags(nodeType, tags);
         }
     }
@@ -153,9 +149,9 @@ public class H2GraphStorageRepository {
      * @param nodeId The node ID
      * @return true if exists
      */
-    public boolean nodeExists(String nodeId) {
-        try (SqlSession session = config.openSession()) {
-            NodeMapper mapper = session.getMapper(NodeMapper.class);
+    public boolean nodeExists(final String nodeId) {
+        try (final SqlSession session = config.openSession()) {
+            final NodeMapper mapper = session.getMapper(NodeMapper.class);
             return mapper.exists(nodeId);
         }
     }
@@ -165,10 +161,10 @@ public class H2GraphStorageRepository {
      *
      * @param nodeId The node ID
      */
-    public void deleteNode(String nodeId) {
-        try (SqlSession session = config.openSession()) {
+    public void deleteNode(final String nodeId) {
+        try (final SqlSession session = config.openSession()) {
             // Cascade delete will handle properties, tags, and edges
-            NodeMapper mapper = session.getMapper(NodeMapper.class);
+            final NodeMapper mapper = session.getMapper(NodeMapper.class);
             mapper.deleteNode(nodeId);
             session.commit();
             logger.debug("Deleted node: {}", nodeId);
@@ -184,7 +180,7 @@ public class H2GraphStorageRepository {
      * @param targetId Target node ID
      * @param edgeType Edge type (depends_on, contains, etc.)
      */
-    public void createEdge(String sourceId, String targetId, String edgeType) {
+    public void createEdge(final String sourceId, final String targetId, final String edgeType) {
         createEdge(sourceId, targetId, edgeType, null);
     }
 
@@ -196,11 +192,11 @@ public class H2GraphStorageRepository {
      * @param edgeType Edge type
      * @param metadata Optional metadata as JSON string
      */
-    public void createEdge(String sourceId, String targetId, String edgeType, String metadata) {
-        try (SqlSession session = config.openSession()) {
-            EdgeMapper mapper = session.getMapper(EdgeMapper.class);
+    public void createEdge(final String sourceId, final String targetId, final String edgeType, final String metadata) {
+        try (final SqlSession session = config.openSession()) {
+            final EdgeMapper mapper = session.getMapper(EdgeMapper.class);
 
-            GraphEdgeEntity edge = new GraphEdgeEntity(sourceId, targetId, edgeType);
+            final GraphEdgeEntity edge = new GraphEdgeEntity(sourceId, targetId, edgeType);
             edge.setMetadataJson(metadata);
 
             mapper.insertEdge(edge);
@@ -215,9 +211,9 @@ public class H2GraphStorageRepository {
      * @param nodeId Source node ID
      * @return List of edges
      */
-    public List<GraphEdgeEntity> findOutgoingEdges(String nodeId) {
-        try (SqlSession session = config.openSession()) {
-            EdgeMapper mapper = session.getMapper(EdgeMapper.class);
+    public List<GraphEdgeEntity> findOutgoingEdges(final String nodeId) {
+        try (final SqlSession session = config.openSession()) {
+            final EdgeMapper mapper = session.getMapper(EdgeMapper.class);
             return mapper.findBySourceId(nodeId);
         }
     }
@@ -228,9 +224,9 @@ public class H2GraphStorageRepository {
      * @param nodeId Target node ID
      * @return List of edges
      */
-    public List<GraphEdgeEntity> findIncomingEdges(String nodeId) {
-        try (SqlSession session = config.openSession()) {
-            EdgeMapper mapper = session.getMapper(EdgeMapper.class);
+    public List<GraphEdgeEntity> findIncomingEdges(final String nodeId) {
+        try (final SqlSession session = config.openSession()) {
+            final EdgeMapper mapper = session.getMapper(EdgeMapper.class);
             return mapper.findByTargetId(nodeId);
         }
     }
@@ -241,9 +237,9 @@ public class H2GraphStorageRepository {
      * @param edgeType Edge type
      * @return List of edges
      */
-    public List<GraphEdgeEntity> findEdgesByType(String edgeType) {
-        try (SqlSession session = config.openSession()) {
-            EdgeMapper mapper = session.getMapper(EdgeMapper.class);
+    public List<GraphEdgeEntity> findEdgesByType(final String edgeType) {
+        try (final SqlSession session = config.openSession()) {
+            final EdgeMapper mapper = session.getMapper(EdgeMapper.class);
             return mapper.findByType(edgeType);
         }
     }
@@ -256,10 +252,10 @@ public class H2GraphStorageRepository {
      * @param nodeId The node ID
      * @return Map of property key to value
      */
-    public Map<String, Object> getNodeProperties(String nodeId) {
-        try (SqlSession session = config.openSession()) {
-            NodeMapper mapper = session.getMapper(NodeMapper.class);
-            GraphNodeEntity node = mapper.findById(nodeId);
+    public Map<String, Object> getNodeProperties(final String nodeId) {
+        try (final SqlSession session = config.openSession()) {
+            final NodeMapper mapper = session.getMapper(NodeMapper.class);
+            final GraphNodeEntity node = mapper.findById(nodeId);
             if (node == null || node.getProperties() == null) {
                 return Map.of();
             }
@@ -275,9 +271,9 @@ public class H2GraphStorageRepository {
      * @param value    Property value to match
      * @return List of matching nodes
      */
-    public List<GraphNodeEntity> findNodesByPropertyValue(String jsonPath, String value) {
-        try (SqlSession session = config.openSession()) {
-            NodeMapper mapper = session.getMapper(NodeMapper.class);
+    public List<GraphNodeEntity> findNodesByPropertyValue(final String jsonPath, final String value) {
+        try (final SqlSession session = config.openSession()) {
+            final NodeMapper mapper = session.getMapper(NodeMapper.class);
             return mapper.findByPropertyValue(jsonPath, value);
         }
     }
@@ -290,14 +286,14 @@ public class H2GraphStorageRepository {
      * @return Statistics object
      */
     public GraphStatistics getStatistics() {
-        try (SqlSession session = config.openSession()) {
-            NodeMapper nodeMapper = session.getMapper(NodeMapper.class);
-            EdgeMapper edgeMapper = session.getMapper(EdgeMapper.class);
+        try (final SqlSession session = config.openSession()) {
+            final NodeMapper nodeMapper = session.getMapper(NodeMapper.class);
+            final EdgeMapper edgeMapper = session.getMapper(EdgeMapper.class);
 
             // Count nodes with tags from JSON column
             int tagCount = 0;
-            List<GraphNodeEntity> nodes = nodeMapper.findAll();
-            for (GraphNodeEntity node : nodes) {
+            final List<GraphNodeEntity> nodes = nodeMapper.findAll();
+            for (final GraphNodeEntity node : nodes) {
                 if (node.getTags() != null && !node.getTags().isEmpty() && !"[]".equals(node.getTags())) {
                     tagCount++;
                 }
@@ -314,9 +310,9 @@ public class H2GraphStorageRepository {
      * Clear all data from the database.
      */
     public void clearAll() {
-        try (SqlSession session = config.openSession()) {
-            EdgeMapper edgeMapper = session.getMapper(EdgeMapper.class);
-            NodeMapper nodeMapper = session.getMapper(NodeMapper.class);
+        try (final SqlSession session = config.openSession()) {
+            final EdgeMapper edgeMapper = session.getMapper(EdgeMapper.class);
+            final NodeMapper nodeMapper = session.getMapper(NodeMapper.class);
 
             // Delete in order (respecting foreign keys)
             edgeMapper.deleteAll();
@@ -334,14 +330,14 @@ public class H2GraphStorageRepository {
      *
      * @param node The GraphNode to save
      */
-    public void saveNode(GraphNode node) {
-        try (SqlSession session = config.openSession()) {
+    public void saveNode(final GraphNode node) {
+        try (final SqlSession session = config.openSession()) {
             // Extract node data
-            String nodeId = node.getId();
-            String nodeType = node.getNodeType();
-            String displayLabel = node.getDisplayLabel();
-            Map<String, Object> properties = node.getNodeProperties();
-            Set<String> tags = node.getTags();
+            final String nodeId = node.getId();
+            final String nodeType = node.getNodeType();
+            final String displayLabel = node.getDisplayLabel();
+            final Map<String, Object> properties = node.getNodeProperties();
+            final Set<String> tags = node.getTags();
 
             // Extract metrics separately - DO NOT include in properties
             Map<String, Double> metricsMap = null;
@@ -352,22 +348,22 @@ public class H2GraphStorageRepository {
             // Validate properties
             PropertiesValidator.validate(properties);
 
-            NodeMapper nodeMapper = session.getMapper(NodeMapper.class);
+            final NodeMapper nodeMapper = session.getMapper(NodeMapper.class);
 
             // Serialize properties, metrics, and tags to JSON
-            String propertiesJson = jsonSerializer.serializeProperties(properties);
+            final String propertiesJson = jsonSerializer.serializeProperties(properties);
 
             String metricsJson = null;
             if (metricsMap != null && !metricsMap.isEmpty()) {
                 // Cast Map<String, Double> to Map<String, Object> for serialization
-                Map<String, Object> metricsAsObjects = new HashMap<>(metricsMap);
+                final Map<String, Object> metricsAsObjects = new HashMap<>(metricsMap);
                 metricsJson = jsonSerializer.serializeProperties(metricsAsObjects);
             }
 
-            String tagsJson = jsonSerializer.serializeTags(tags);
+            final String tagsJson = jsonSerializer.serializeTags(tags);
 
             // Use merge operation for atomic insert/update
-            GraphNodeEntity nodeEntity = new GraphNodeEntity(nodeId, nodeType, displayLabel, propertiesJson,
+            final GraphNodeEntity nodeEntity = new GraphNodeEntity(nodeId, nodeType, displayLabel, propertiesJson,
                     metricsJson, tagsJson);
             nodeMapper.mergeNode(nodeEntity);
 
@@ -384,18 +380,18 @@ public class H2GraphStorageRepository {
      *
      * @param edge The GraphEdge to save
      */
-    public void saveEdge(GraphEdge edge) {
-        try (SqlSession session = config.openSession()) {
-            EdgeMapper edgeMapper = session.getMapper(EdgeMapper.class);
+    public void saveEdge(final GraphEdge edge) {
+        try (final SqlSession session = config.openSession()) {
+            final EdgeMapper edgeMapper = session.getMapper(EdgeMapper.class);
 
             // Extract edge data
-            String sourceId = edge.getSource().getId();
-            String targetId = edge.getTarget().getId();
-            String edgeType = edge.getEdgeType();
-            Map<String, Object> properties = edge.getProperties();
+            final String sourceId = edge.getSource().getId();
+            final String targetId = edge.getTarget().getId();
+            final String edgeType = edge.getEdgeType();
+            final Map<String, Object> properties = edge.getProperties();
 
             // Check if edge already exists
-            GraphEdgeEntity existingEdge = edgeMapper.findEdge(sourceId, targetId, edgeType);
+            final GraphEdgeEntity existingEdge = edgeMapper.findEdge(sourceId, targetId, edgeType);
             if (existingEdge != null) {
                 logger.debug("Edge already exists: {} -> {} (type: {})", sourceId, targetId, edgeType);
                 return;
@@ -408,13 +404,20 @@ public class H2GraphStorageRepository {
             }
 
             // Create and insert edge
-            GraphEdgeEntity edgeEntity = new GraphEdgeEntity(sourceId, targetId, edgeType);
+            final GraphEdgeEntity edgeEntity = new GraphEdgeEntity(sourceId, targetId, edgeType);
             edgeEntity.setMetadataJson(metadataJson);
 
             edgeMapper.insertEdge(edgeEntity);
             session.commit();
 
             logger.debug("Saved edge: {} -> {} (type: {})", sourceId, targetId, edgeType);
+        }
+    }
+
+    public Collection<? extends GraphEdgeEntity> findAllEdges() {
+        try (final SqlSession session = config.openSession()) {
+            final EdgeMapper mapper = session.getMapper(EdgeMapper.class);
+            return mapper.findAll();
         }
     }
 

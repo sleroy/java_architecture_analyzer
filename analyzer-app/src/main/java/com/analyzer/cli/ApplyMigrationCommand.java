@@ -92,7 +92,7 @@ public class ApplyMigrationCommand implements Callable<Integer> {
     @CommandLine.Option(names = "--dry-run", description = "Validate plan and variables without executing")
     private boolean dryRun;
 
-    @CommandLine.Option(names = "--interactive", description = "Enable interactive mode with validation prompts", defaultValue = "true")
+    @CommandLine.Option(names = "--interactive", description = "Enable interactive mode with validation prompts", defaultValue = "false")
     private boolean interactive;
 
     @CommandLine.Option(names = "--step-by-step", description = "Enable step-by-step mode - press Enter to proceed between each block")
@@ -111,12 +111,49 @@ public class ApplyMigrationCommand implements Callable<Integer> {
     @CommandLine.Option(names = "--verbose", description = "Enable verbose output")
     private boolean verbose;
 
+    @CommandLine.Option(names = "--ai-provider", description = "AI provider to use: amazonq (default) or gemini", defaultValue = "amazonq")
+    private String aiProvider;
+
     // ========================================================================
     // Cached Infrastructure (initialized once, reused)
     // ========================================================================
 
     private GraphDatabase cachedGraphDatabase;
     private YamlMigrationPlanLoader cachedLoader;
+
+    // ========================================================================
+    // AI Backend Support
+    // ========================================================================
+
+    /**
+     * Initialize and validate the AI backend based on CLI parameter.
+     *
+     * @return The initialized AI backend
+     * @throws IllegalArgumentException if the provider is invalid or unavailable
+     */
+    private com.analyzer.ai.AiBackend initializeAiBackend() {
+        logger.info("Initializing AI backend: {}", aiProvider);
+
+        try {
+            com.analyzer.ai.AiBackend backend = com.analyzer.ai.AiBackendFactory.createFromString(aiProvider);
+
+            // Check if the backend is available
+            if (!backend.isAvailable()) {
+                logger.error("AI provider '{}' is not available on this system", aiProvider);
+                logger.error("Please ensure the {} CLI is installed and accessible", backend.getCliCommand());
+                throw new IllegalStateException("AI provider not available: " + aiProvider);
+            }
+
+            logger.info("AI backend initialized successfully: {} ({})", backend.getType().getName(),
+                    backend.getCliCommand());
+            return backend;
+
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid AI provider: {}", aiProvider);
+            logger.error("Supported providers: amazonq, gemini");
+            throw e;
+        }
+    }
 
     // ========================================================================
     // Main Execution Method
@@ -470,10 +507,10 @@ public class ApplyMigrationCommand implements Callable<Integer> {
 
             // Create LoadOptions with project root (automatically sets database path)
             final LoadOptions options = LoadOptions.builder()
-                                                   .withProjectRoot(projectDir)
-                                                   .loadAllNodes()
-                                                   .loadAllEdges()
-                                                   .build();
+                    .withProjectRoot(projectDir)
+                    .loadAllNodes()
+                    .loadAllEdges()
+                    .build();
 
             // Create JSON serialization service
             final JsonSerializationService jsonSerializer = new JsonSerializationService();
@@ -612,9 +649,9 @@ public class ApplyMigrationCommand implements Callable<Integer> {
         if (verbose) {
             logger.debug("Auto-derived variables:");
             variables.entrySet().stream()
-                     .filter(e -> e.getKey().startsWith("project.") || e.getKey().startsWith("plan.")
-                             || e.getKey().startsWith("current_") || e.getKey().startsWith("user."))
-                     .forEach(e -> logger.debug("  {} = {}", e.getKey(), e.getValue()));
+                    .filter(e -> e.getKey().startsWith("project.") || e.getKey().startsWith("plan.")
+                            || e.getKey().startsWith("current_") || e.getKey().startsWith("user."))
+                    .forEach(e -> logger.debug("  {} = {}", e.getKey(), e.getValue()));
         }
     }
 
@@ -772,7 +809,12 @@ public class ApplyMigrationCommand implements Callable<Integer> {
         final Path projectDir = Paths.get(projectPath).toAbsolutePath();
         final MigrationContext context = new MigrationContext(projectDir, dryRun);
 
+        // Initialize and set AI backend
+        final com.analyzer.ai.AiBackend aiBackend = initializeAiBackend();
+        context.setAiBackend(aiBackend);
+
         // Set execution modes
+        context.setInteractiveMode(interactive);
         context.setStepByStepMode(stepByStep);
 
         for (final Map.Entry<String, String> entry : variables.entrySet()) {
@@ -807,8 +849,8 @@ public class ApplyMigrationCommand implements Callable<Integer> {
 
             // Validate phase exists (search by ID first, then by name)
             final boolean phaseExists = plan.getPhases().stream()
-                                            .anyMatch(p -> (null != p.getId() && p.getId().equalsIgnoreCase(phaseId))
-                                                    || p.getName().equalsIgnoreCase(phaseId));
+                    .anyMatch(p -> (null != p.getId() && p.getId().equalsIgnoreCase(phaseId))
+                            || p.getName().equalsIgnoreCase(phaseId));
 
             if (!phaseExists) {
                 logger.error("\n❌ Phase not found: {}", phaseId);
@@ -866,7 +908,8 @@ public class ApplyMigrationCommand implements Callable<Integer> {
 
         logger.info("\nPhase Results:");
         result.getPhaseResults().forEach(phase -> {
-            logger.info("  {}: {} ({}ms)", phase.getPhaseName(), phase.isSuccess() ? "SUCCESS" : "FAILED", phase.getDuration().toMillis());
+            logger.info("  {}: {} ({}ms)", phase.getPhaseName(), phase.isSuccess() ? "SUCCESS" : "FAILED",
+                    phase.getDuration().toMillis());
         });
 
         System.out.println();
@@ -930,5 +973,9 @@ public class ApplyMigrationCommand implements Callable<Integer> {
 
     public boolean isVerbose() {
         return verbose;
+    }
+
+    public String getAiProvider() {
+        return aiProvider;
     }
 }

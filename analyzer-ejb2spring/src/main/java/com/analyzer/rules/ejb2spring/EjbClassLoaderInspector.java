@@ -1,4 +1,5 @@
 package com.analyzer.rules.ejb2spring;
+
 import com.analyzer.core.cache.LocalCache;
 
 import com.analyzer.core.export.NodeDecorator;
@@ -12,7 +13,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.*;
@@ -136,6 +139,12 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
                         found = true;
                         break;
                 }
+            }
+
+            // Detect CDI scope annotations
+            if (EjbAnalysisUtils.CDI_SCOPE_ANNOTATIONS.contains(annotationName)) {
+                logger.debug("Detected CDI scope annotation: {}", annotationName);
+                EjbAnalysisUtils.analyzeCdiScope(annotationName, classNode);
             }
         }
 
@@ -526,6 +535,49 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
         return recommendations;
     }
 
+    /**
+     * Analyzes conversational state fields using reflection.
+     * Creates FieldInfo objects and uses shared utility for analysis.
+     */
+    private void analyzeConversationalStateFields(Class<?> clazz, JavaClassNode classNode) {
+        List<EjbAnalysisUtils.FieldInfo> fields = new ArrayList<>();
+
+        // Analyze all declared fields
+        for (Field field : clazz.getDeclaredFields()) {
+            int modifiers = field.getModifiers();
+            boolean isStatic = Modifier.isStatic(modifiers);
+            boolean isFinal = Modifier.isFinal(modifiers);
+            boolean isPrivate = Modifier.isPrivate(modifiers);
+
+            String fieldType = field.getType().getName();
+            boolean isCollection = Collection.class.isAssignableFrom(field.getType());
+            boolean isPrimitive = field.getType().isPrimitive();
+            String visibility = isPrivate ? "private" : "protected/public";
+
+            // Create FieldInfo for this field
+            EjbAnalysisUtils.FieldInfo fieldInfo = new EjbAnalysisUtils.FieldInfo(
+                    field.getName(), fieldType, isStatic, isFinal, isCollection, isPrimitive, visibility);
+            fields.add(fieldInfo);
+
+            // Check for EJB references (for graph edges)
+            if (EjbAnalysisUtils.isEjbReference(fieldType)) {
+                logger.debug("Found EJB reference field: {} of type: {}", field.getName(), fieldType);
+                classNode.enableTag(EjbMigrationTags.EJB_FIELD_EJB_REFERENCE);
+            }
+        }
+
+        // Use shared utility to analyze conversational state
+        if (!fields.isEmpty()) {
+            EjbAnalysisUtils.analyzeConversationalState(fields, classNode);
+        }
+
+        // Check for Serializable implementation
+        if (java.io.Serializable.class.isAssignableFrom(clazz)) {
+            classNode.enableTag(EjbMigrationTags.EJB_SERIALIZABLE_DETECTED);
+            classNode.setProperty("ejb.serialization.marker", true);
+        }
+    }
+
     private String createAnalysisJson(Map<String, Object> result) {
         StringBuilder json = new StringBuilder();
         json.append("{");
@@ -542,7 +594,8 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
     }
 
     @Override
-    protected void analyzeLoadedClass(Class<?> loadedClass, JavaClassNode classNode, NodeDecorator<JavaClassNode> decorator) {
+    protected void analyzeLoadedClass(Class<?> loadedClass, JavaClassNode classNode,
+            NodeDecorator<JavaClassNode> decorator) {
         logger.debug("Analyzing loaded class for EJB components: {}", loadedClass.getName());
         EjbRuntimeAnalysis analysis = new EjbRuntimeAnalysis(loadedClass);
 
@@ -567,6 +620,10 @@ public class EjbClassLoaderInspector extends AbstractClassLoaderBasedInspector {
         // If EJB component found, perform enhanced analysis
         if (isEjbComponent) {
             classNode.enableTag(EjbMigrationTags.EJB_BEAN_DETECTED);
+
+            // Analyze conversational state fields
+            analyzeConversationalStateFields(loadedClass, classNode);
+
             Map<String, Object> result = performEnhancedAnalysis(analysis, classNode);
             classNode.setProperty("ejb.runtime.analysis", createAnalysisJson(result));
             logger.info("EJB component runtime analysis complete: {}", loadedClass.getName());

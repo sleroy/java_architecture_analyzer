@@ -19,7 +19,7 @@ migration-plan:
               description: "Query all JAX-RS REST resource classes"
               query-type: "BY_TAGS"
               tags:
-                - "REST_JAX_RS"
+                - "rest.jaxrs.detected"
               output-variable: "rest_resources"
             
             # Step 2: OPENREWRITE - Apply automated refactorings

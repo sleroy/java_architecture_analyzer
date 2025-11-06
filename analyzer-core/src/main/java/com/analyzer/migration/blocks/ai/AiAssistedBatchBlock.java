@@ -17,12 +17,14 @@ import java.util.Map;
 
 /**
  * Executes AI_ASSISTED for each node in a list with progress tracking.
- * Similar to AI_PROMPT_BATCH but invokes Amazon Q CLI for each node.
+ * Similar to AI_PROMPT_BATCH but invokes the configured AI backend (Amazon Q,
+ * Gemini, etc.) for each node.
  * 
  * <p>
  * This block is useful for processing lists of graph nodes (from GRAPH_QUERY
  * results)
- * where each node requires AI-assisted migration with Amazon Q CLI.
+ * where each node requires AI-assisted migration with the configured AI
+ * backend.
  * </p>
  * 
  * <p>
@@ -109,7 +111,7 @@ public class AiAssistedBatchBlock implements MigrationBlock {
             int successCount = 0;
             int failureCount = 0;
 
-            logger.info("Processing {} nodes with AI_ASSISTED using Amazon Q", nodeCount);
+            logger.info("Processing {} nodes with AI_ASSISTED using configured AI backend", nodeCount);
             System.out.println("\n" + "=".repeat(80));
             System.out.println(String.format("AI_ASSISTED_BATCH: %s", name));
             if (description != null && !description.isEmpty()) {
@@ -191,7 +193,7 @@ public class AiAssistedBatchBlock implements MigrationBlock {
 
             BlockResult.Builder resultBuilder = BlockResult.builder()
                     .success(successCount > 0)
-                    .message(String.format("Processed %d nodes with AI_ASSISTED (%d successful, %d failed)",
+                    .message(String.format("Processed %d nodes with AI backend (%d successful, %d failed)",
                             nodeCount, successCount, failureCount))
                     .outputVariable("processed_node_ids", processedNodeIds)
                     .outputVariable("failed_node_ids", failedNodeIds)

@@ -45,14 +45,25 @@ public class InteractiveValidationBlock implements MigrationBlock {
         long startTime = System.currentTimeMillis();
 
         try {
+            // Check if in interactive or step-by-step mode
+            boolean requiresUserConfirmation = context.isInteractiveMode() || context.isStepByStepMode();
+
             // Display validation message
             displayValidationPrompt(context);
 
             // Perform automatic checks based on validation type
             boolean autoCheckPassed = performAutomaticValidation(context);
 
-            // Request manual confirmation
-            boolean userConfirmed = requestUserConfirmation();
+            // Request manual confirmation (or auto-approve if not interactive)
+            boolean userConfirmed;
+            if (requiresUserConfirmation) {
+                userConfirmed = requestUserConfirmation();
+            } else {
+                // Auto-approve when not in interactive or step-by-step mode
+                userConfirmed = true;
+                logger.info("Auto-approving validation (non-interactive mode)");
+                System.out.println("✓ Auto-approved (non-interactive mode)");
+            }
 
             long executionTime = System.currentTimeMillis() - startTime;
 

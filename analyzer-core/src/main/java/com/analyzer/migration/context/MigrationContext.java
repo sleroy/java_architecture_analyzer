@@ -1,5 +1,7 @@
 package com.analyzer.migration.context;
 
+import com.analyzer.ai.AiBackend;
+import com.analyzer.ai.AiBackendFactory;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
@@ -27,12 +29,15 @@ public class MigrationContext {
     private final Configuration freemarkerConfig;
     private boolean dryRun;
     private boolean stepByStepMode;
+    private boolean interactiveMode;
+    private AiBackend aiBackend;
 
     public MigrationContext(Path projectRoot) {
         this.projectRoot = projectRoot;
         this.variables = new HashMap<>();
         this.freemarkerConfig = initializeFreeMarker();
         this.dryRun = false;
+        this.interactiveMode = true; // Default to interactive mode
         initializeBuiltInVariables();
     }
 
@@ -41,6 +46,7 @@ public class MigrationContext {
         this.variables = new HashMap<>();
         this.freemarkerConfig = initializeFreeMarker();
         this.dryRun = dryRun;
+        this.interactiveMode = true; // Default to interactive mode
         initializeBuiltInVariables();
     }
 
@@ -261,6 +267,48 @@ public class MigrationContext {
      */
     public void setStepByStepMode(boolean stepByStepMode) {
         this.stepByStepMode = stepByStepMode;
+    }
+
+    /**
+     * Check if context is in interactive mode.
+     * In interactive mode, validation blocks will prompt for user confirmation.
+     *
+     * @return true if interactive mode is enabled
+     */
+    public boolean isInteractiveMode() {
+        return interactiveMode;
+    }
+
+    /**
+     * Set interactive mode.
+     *
+     * @param interactiveMode true to enable interactive mode
+     */
+    public void setInteractiveMode(boolean interactiveMode) {
+        this.interactiveMode = interactiveMode;
+    }
+
+    /**
+     * Get the AI backend for executing AI-assisted tasks.
+     * If no backend is set, returns the default backend (Amazon Q).
+     *
+     * @return The AI backend instance
+     */
+    public AiBackend getAiBackend() {
+        if (aiBackend == null) {
+            // Default to Amazon Q for backward compatibility
+            aiBackend = AiBackendFactory.createDefault();
+        }
+        return aiBackend;
+    }
+
+    /**
+     * Set the AI backend for executing AI-assisted tasks.
+     *
+     * @param aiBackend The AI backend to use
+     */
+    public void setAiBackend(AiBackend aiBackend) {
+        this.aiBackend = aiBackend;
     }
 
     /**

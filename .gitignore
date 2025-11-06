@@ -21,7 +21,7 @@
 
 # Virtual machine crash logs
 hs_err_pid*
-
+.analysis/
 # Maven
 target/
 pom.xml.tag

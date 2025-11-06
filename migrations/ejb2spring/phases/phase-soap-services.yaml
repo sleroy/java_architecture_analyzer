@@ -19,7 +19,7 @@ migration-plan:
               description: "Query all JAX-WS SOAP endpoint classes"
               query-type: "BY_TAGS"
               tags:
-                - "WEBSERVICE_JAX_WS"
+                - "webservice.jaxws.detected"
               output-variable: "soap_endpoints"
             
             # Step 2: OPENREWRITE - Apply automated refactorings

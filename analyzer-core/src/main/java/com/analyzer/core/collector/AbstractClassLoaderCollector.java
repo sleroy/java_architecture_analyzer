@@ -25,7 +25,7 @@ import java.net.URLClassLoader;
  * <li>Runtime type information</li>
  * </ul>
  * <p>
- * Unlike {@link AbstractBinaryClassCollector} which uses ASM for low-level
+ * Unlike {@link JavaClassNodeBinaryCollector} which uses ASM for low-level
  * bytecode access,
  * this collector uses the standard Java ClassLoader mechanism, making it
  * suitable for
@@ -39,7 +39,7 @@ import java.net.URLClassLoader;
  * </pre>
  *
  * @see ClassNodeCollector
- * @see AbstractBinaryClassCollector
+ * @see JavaClassNodeBinaryCollector
  * @since 1.3.2 - Additional Collector Types
  */
 public abstract class AbstractClassLoaderCollector implements ClassNodeCollector {
