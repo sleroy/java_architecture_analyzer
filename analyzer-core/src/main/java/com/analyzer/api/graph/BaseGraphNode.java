@@ -1,10 +1,9 @@
 package com.analyzer.api.graph;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
 import com.analyzer.api.metrics.Metrics;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.*;
 
 /**
  * Abstract base class for graph nodes that provides common property management
@@ -24,8 +23,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public abstract class BaseGraphNode implements GraphNode {
 
     private final Map<String, Double> metrics = new HashMap<>();
-    private final Map<String, Object> properties;
-    private final Set<String> tags;
+    private final Map<String, Object> properties = new HashMap<>();
+    private final Set<String> tags = new TreeSet<>();
     @JsonProperty("id")
     private final String nodeId;
     private final String nodeType;
@@ -36,11 +35,19 @@ public abstract class BaseGraphNode implements GraphNode {
      * @param nodeId   Unique identifier for this node
      * @param nodeType Type classification for this node
      */
-    protected BaseGraphNode(String nodeId, String nodeType) {
+    protected BaseGraphNode(final String nodeId, final String nodeType) {
         this.nodeId = Objects.requireNonNull(nodeId, "Node ID cannot be null");
         this.nodeType = Objects.requireNonNull(nodeType, "Node type cannot be null");
-        this.properties = new HashMap<>();
-        this.tags = ConcurrentHashMap.newKeySet();
+    }
+
+    @Override
+    public Map<String, Object> getProperties() {
+        return properties;
+    }
+
+    @Override
+    public String getNodeId() {
+        return nodeId;
     }
 
     @Override
@@ -56,22 +63,43 @@ public abstract class BaseGraphNode implements GraphNode {
     @Override
     @com.fasterxml.jackson.annotation.JsonIgnore
     public Map<String, Object> getNodeProperties() {
-        return new HashMap<>(properties);
+        return Map.copyOf(properties);
+    }
+
+    @Override
+    public void enableTag(final String tag) {
+        tags.add(tag);
+    }
+
+    @Override
+    public boolean hasTag(final String tag) {
+        return tags.contains(tag);
+    }
+
+    @Override
+    public Set<String> getTags() {
+        return Collections.unmodifiableSet(tags);
+    }
+
+    @Override
+    public void removeTag(final String tag) {
+        tags.remove(tag);
+    }
+
+    public boolean hasAllTags(final String[] tags) {
+        if (tags == null || tags.length == 0)
+            return true;
+        return Arrays.stream(tags).allMatch(this::hasTag);
     }
 
     /**
-     * Sets a property value for this node.
+     * Get the metrics interface for this node.
+     * Metrics are stored in a separate map from properties.
      *
-     * @param key   Property key
-     * @param value Property value (null values remove the property)
+     * @return Metrics interface for reading/writing metrics
      */
-    public void setProperty(String key, Object value) {
-        Objects.requireNonNull(key, "Property key cannot be null");
-        if (value == null) {
-            properties.remove(key);
-        } else {
-            properties.put(key, value);
-        }
+    public Metrics getMetrics() {
+        return new NodeMetrics();
     }
 
     /**
@@ -82,9 +110,10 @@ public abstract class BaseGraphNode implements GraphNode {
      * @param defaultValue Default value if property is missing or wrong type
      * @return Property value cast to expected type, or default value
      */
-    public <T> T getProperty(String key, Class<T> expectedType, T defaultValue) {
-        Object value = properties.get(key);
-        if (value != null && expectedType.isInstance(value)) {
+    @Override
+    public <T> T getProperty(final String key, final Class<T> expectedType, final T defaultValue) {
+        final Object value = properties.get(key);
+        if (expectedType.isInstance(value)) {
             return expectedType.cast(value);
         }
         return defaultValue;
@@ -97,19 +126,9 @@ public abstract class BaseGraphNode implements GraphNode {
      * @param defaultValue Default value if property is missing
      * @return Property value or default
      */
-    public String getStringProperty(String key, String defaultValue) {
+    @Override
+    public String getStringProperty(final String key, final String defaultValue) {
         return getProperty(key, String.class, defaultValue);
-    }
-
-    /**
-     * Gets a boolean property value.
-     *
-     * @param key          Property key
-     * @param defaultValue Default value if property is missing
-     * @return Property value or default
-     */
-    public boolean getBooleanProperty(String key, boolean defaultValue) {
-        return getProperty(key, Boolean.class, defaultValue);
     }
 
     /**
@@ -119,7 +138,8 @@ public abstract class BaseGraphNode implements GraphNode {
      * @param defaultValue Default value if property is missing
      * @return Property value or default
      */
-    public int getIntProperty(String key, int defaultValue) {
+    @Override
+    public int getIntProperty(final String key, final int defaultValue) {
         return getProperty(key, Integer.class, defaultValue);
     }
 
@@ -129,8 +149,75 @@ public abstract class BaseGraphNode implements GraphNode {
      * @param key Property key
      * @return true if property exists and is not null
      */
-    public boolean hasProperty(String key) {
+    @Override
+    public boolean hasProperty(final String key) {
         return properties.containsKey(key) && properties.get(key) != null;
+    }
+
+    /**
+     * Gets a property value by key with unchecked cast.
+     * Use with caution - prefer type-safe getProperty methods when possible.
+     *
+     * @param <T>         Expected property type
+     * @param propertyKey Property key
+     * @return Property value cast to T, or null if not found
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> T getProperty(final java.lang.String propertyKey) {
+        return (T) properties.get(propertyKey);
+    }
+
+    /**
+     * Get metrics map for JSON serialization.
+     *
+     * @return metrics map
+     */
+    @JsonProperty("metrics")
+    @Override
+    public Map<String, Double> getMetricsMap() {
+        return Map.copyOf(metrics);
+    }
+
+    /**
+     * Set metrics map for JSON deserialization.
+     *
+     * @param metricsMap metrics to set
+     */
+    @JsonProperty("metrics")
+    public void setMetricsMap(final Map<String, Double> metricsMap) {
+        metrics.clear();
+        if (metricsMap != null) {
+            metrics.putAll(metricsMap);
+        }
+    }
+
+    /**
+     * Sets a property value for this node.
+     *
+     * @param key   Property key
+     * @param value Property value (null values remove the property)
+     */
+    @Override
+    public void setProperty(final String key, final Object value) {
+        Objects.requireNonNull(key, "Property key cannot be null");
+        if (value == null) {
+            properties.remove(key);
+        } else {
+            properties.put(key, value);
+        }
+    }
+
+    /**
+     * Gets a boolean property value.
+     *
+     * @param key          Property key
+     * @param defaultValue Default value if property is missing
+     * @return Property value or default
+     */
+    @Override
+    public boolean getBooleanProperty(final String key, final boolean defaultValue) {
+        return getProperty(key, Boolean.class, defaultValue);
     }
 
     /**
@@ -144,18 +231,18 @@ public abstract class BaseGraphNode implements GraphNode {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public int hashCode() {
+        return Objects.hash(nodeId);
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
         if (this == obj)
             return true;
         if (obj == null || getClass() != obj.getClass())
             return false;
-        BaseGraphNode that = (BaseGraphNode) obj;
+        final BaseGraphNode that = (BaseGraphNode) obj;
         return Objects.equals(nodeId, that.nodeId);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(nodeId);
     }
 
     @Override
@@ -164,105 +251,35 @@ public abstract class BaseGraphNode implements GraphNode {
                 getClass().getSimpleName(), nodeId, nodeType, properties.size());
     }
 
-    /**
-     * Gets a property value by key with unchecked cast.
-     * Use with caution - prefer type-safe getProperty methods when possible.
-     *
-     * @param <T>         Expected property type
-     * @param propertyKey Property key
-     * @return Property value cast to T, or null if not found
-     */
-    @SuppressWarnings("unchecked")
-    public <T> T getProperty(java.lang.String propertyKey) {
-        return (T) properties.get(propertyKey);
-    }
+    private class NodeMetrics implements Metrics {
+        @Override
+        public Number getMetric(final String metricName) {
+            return metrics.getOrDefault(metricName, 0.0d);
+        }
 
-    @Override
-    public void enableTag(String tag) {
-        this.tags.add(tag);
-    }
-
-    @Override
-    public boolean hasTag(String tag) {
-        return this.tags.contains(tag);
-    }
-
-    @Override
-    public Set<String> getTags() {
-        return Collections.unmodifiableSet(tags);
-    }
-
-    @Override
-    public void removeTag(String tag) {
-        this.tags.remove(tag);
-    }
-
-    public boolean hasAllTags(String[] tags) {
-        if (tags == null || tags.length == 0)
-            return true;
-        return Arrays.stream(tags).allMatch(this::hasTag);
-    }
-
-    /**
-     * Get the metrics interface for this node.
-     * Metrics are stored in a separate map from properties.
-     * 
-     * @return Metrics interface for reading/writing metrics
-     */
-    public Metrics getMetrics() {
-        return new Metrics() {
-            @Override
-            public Number getMetric(String metricName) {
-                return metrics.getOrDefault(metricName, 0.0d);
+        @Override
+        public void setMetric(final String metricName, final Number value) {
+            if (value == null) {
+                metrics.remove(metricName);
+            } else {
+                metrics.put(metricName, value.doubleValue());
             }
+        }
 
-            @Override
-            public void setMetric(String metricName, Number value) {
-                if (value == null) {
-                    metrics.remove(metricName);
-                } else {
-                    metrics.put(metricName, value.doubleValue());
+        @Override
+        public void setMaxMetric(final String metricName, final Number value) {
+            if (value != null) {
+                final double newValue = value.doubleValue();
+                final double currentValue = metrics.getOrDefault(metricName, 0.0);
+                if (newValue > currentValue) {
+                    metrics.put(metricName, newValue);
                 }
             }
+        }
 
-            @Override
-            public void setMaxMetric(String metricName, Number value) {
-                if (value != null) {
-                    double newValue = value.doubleValue();
-                    double currentValue = metrics.getOrDefault(metricName, 0.0);
-                    if (newValue > currentValue) {
-                        metrics.put(metricName, newValue);
-                    }
-                }
-            }
-
-            @Override
-            public Map<String, Double> getAllMetrics() {
-                return Collections.unmodifiableMap(metrics);
-            }
-        };
-    }
-
-    /**
-     * Get metrics map for JSON serialization.
-     * 
-     * @return metrics map
-     */
-    @JsonProperty("metrics")
-    public Map<String, Double> getMetricsMap() {
-        return new HashMap<>(metrics);
-    }
-
-    /**
-     * Set metrics map for JSON deserialization.
-     * 
-     * @param metricsMap metrics to set
-     */
-    @JsonProperty("metrics")
-    public void setMetricsMap(Map<String, Double> metricsMap) {
-        this.metrics.clear();
-        if (metricsMap != null) {
-            this.metrics.putAll(metricsMap);
+        @Override
+        public Map<String, Double> getAllMetrics() {
+            return Collections.unmodifiableMap(metrics);
         }
     }
 }

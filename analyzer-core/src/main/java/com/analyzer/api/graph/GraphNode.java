@@ -3,6 +3,7 @@ package com.analyzer.api.graph;
 import com.analyzer.api.metrics.Metrics;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.model.Package;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
@@ -21,6 +22,10 @@ import java.util.Set;
         @JsonSubTypes.Type(value = Package.class, name = "Package")
 })
 public interface GraphNode {
+
+    Map<String, Object> getProperties();
+
+    String getNodeId();
 
     /**
      * Gets the unique identifier for this node.
@@ -90,4 +95,21 @@ public interface GraphNode {
      */
     Metrics getMetrics();
 
+    <T> T getProperty(String key, Class<T> expectedType, T defaultValue);
+
+    String getStringProperty(String key, String defaultValue);
+
+    int getIntProperty(String key, int defaultValue);
+
+    boolean hasProperty(String key);
+
+    @SuppressWarnings("unchecked")
+    <T> T getProperty(String propertyKey);
+
+    @JsonProperty("metrics")
+    Map<String, Double> getMetricsMap();
+
+    void setProperty(String key, Object value);
+
+    boolean getBooleanProperty(String key, boolean defaultValue);
 }
