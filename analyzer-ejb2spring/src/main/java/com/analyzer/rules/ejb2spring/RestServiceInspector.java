@@ -27,7 +27,7 @@ import java.util.Map;
  * Identifies REST resources through @Path, @GET, @POST, @PUT, @DELETE
  * annotations.
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = { EjbMigrationTags.REST_JAX_RS })
+@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = { EjbMigrationTags.TAG_REST_JAX_RS })
 public class RestServiceInspector extends AbstractJavaClassInspector {
 
     @Inject
@@ -48,18 +48,18 @@ public class RestServiceInspector extends AbstractJavaClassInspector {
                 RestResourceInfo info = detector.getRestResourceInfo();
 
                 // Tag ProjectFile for dependency chains
-                projectFileDecorator.enableTag(EjbMigrationTags.REST_JAX_RS);
+                projectFileDecorator.enableTag(EjbMigrationTags.TAG_REST_JAX_RS);
 
                 // Tag JavaClassNode
-                classNode.enableTag(EjbMigrationTags.REST_JAX_RS);
-                classNode.enableTag(EjbMigrationTags.REST_RESOURCE_ENDPOINT);
+                classNode.enableTag(EjbMigrationTags.TAG_REST_JAX_RS);
+                classNode.enableTag(EjbMigrationTags.TAG_REST_RESOURCE_ENDPOINT);
 
                 // Store analysis data as property
                 classNode.setProperty("rest.resource.info", info);
 
                 // Store migration complexity metric
                 double complexity = calculateMigrationComplexity(info);
-                classNode.setProperty(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, complexity);
+                classNode.setProperty(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, complexity);
             }
         }
     }

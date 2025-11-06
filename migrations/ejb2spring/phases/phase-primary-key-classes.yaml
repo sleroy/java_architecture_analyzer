@@ -18,7 +18,7 @@ migration-plan:
               description: "Query all EJB primary key classes"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.primaryKey"
+                - "ejb.primary_key"
               output-variable: "primary_key_classes"
             
             - type: "OPENREWRITE"

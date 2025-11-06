@@ -43,7 +43,7 @@ import java.util.Set;
  * @see JdbcDataAccessPatternInspector Original file-centric version
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_APPLICATION_CLASS }, produces = {
-        EjbMigrationTags.DATA_ACCESS_LAYER,
+        EjbMigrationTags.TAG_DATA_ACCESS_LAYER,
 })
 public class JdbcDataAccessPatternInspector extends AbstractASMClassInspector {
 
@@ -228,19 +228,19 @@ public class JdbcDataAccessPatternInspector extends AbstractASMClassInspector {
 
         private void setJdbcAnalysisResults() {
             // Write all results to JavaClassNode properties (class-centric)
-            enableTag(EjbMigrationTags.DATA_ACCESS_LAYER);
+            enableTag(EjbMigrationTags.TAG_DATA_ACCESS_LAYER);
 
             // Set appropriate complexity tag
             String complexity = assessMigrationComplexity(metadata);
             switch (complexity) {
                 case "LOW":
-                    decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
+                    decorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
                     break;
                 case "MEDIUM":
-                    decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
+                    decorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
                     break;
                 case "HIGH":
-                    decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
+                    decorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
                     break;
             }
 

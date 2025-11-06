@@ -128,8 +128,8 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
     private void setBasicTagsForSupportedFile(JavaClassNode classNode, ProjectFile projectFile,
             NodeDecorator<ProjectFile> decorator) {
         // Set basic properties on ClassNode
-        classNode.setProperty(EjbMigrationTags.DATASOURCE_CONFIGURATION, true);
-        classNode.setProperty(EjbMigrationTags.RESOURCE_REFERENCE, true);
+        classNode.setProperty(EjbMigrationTags.TAG_DATASOURCE_CONFIGURATION, true);
+        classNode.setProperty(EjbMigrationTags.TAG_RESOURCE_REFERENCE, true);
         classNode.setProperty("resource.supported_file", true);
 
         // Create single POJO instead of multiple properties (follows guideline #5)
@@ -322,14 +322,14 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
     private void applyResourceManagementTags(JavaClassNode classNode, ResourceManagementMetadata metadata,
             NodeDecorator<ProjectFile> decorator) {
         // Basic resource configuration tags
-        classNode.setProperty(EjbMigrationTags.DATASOURCE_CONFIGURATION, metadata.hasDataSourceConfig());
-        classNode.setProperty(EjbMigrationTags.RESOURCE_REFERENCE, metadata.hasResourceRefs());
-        classNode.setProperty(EjbMigrationTags.JNDI_DATASOURCE_LOOKUP, metadata.hasJndiConfiguration());
-        classNode.setProperty(EjbMigrationTags.CONNECTION_POOLING, metadata.hasConnectionPoolConfig());
+        classNode.setProperty(EjbMigrationTags.TAG_DATASOURCE_CONFIGURATION, metadata.hasDataSourceConfig());
+        classNode.setProperty(EjbMigrationTags.TAG_RESOURCE_REFERENCE, metadata.hasResourceRefs());
+        classNode.setProperty(EjbMigrationTags.TAG_JNDI_DATASOURCE_LOOKUP, metadata.hasJndiConfiguration());
+        classNode.setProperty(EjbMigrationTags.TAG_CONNECTION_POOLING, metadata.hasConnectionPoolConfig());
 
         // JBoss-specific tags (per customer requirements)
-        classNode.setProperty(EjbMigrationTags.JBOSS_DATASOURCE, metadata.hasJBossSpecificConfig());
-        classNode.setProperty(EjbMigrationTags.VENDOR_SPECIFIC_JBOSS, metadata.hasJBossSpecificConfig());
+        classNode.setProperty(EjbMigrationTags.TAG_JBOSS_DATASOURCE, metadata.hasJBossSpecificConfig());
+        classNode.setProperty(EjbMigrationTags.TAG_VENDOR_SPECIFIC_JBOSS, metadata.hasJBossSpecificConfig());
 
         // Create single POJO instead of multiple properties (follows guideline #5)
         ResourceAnalysisResult analysisResult = new ResourceAnalysisResult(
@@ -343,14 +343,14 @@ public class DatabaseResourceManagementInspector extends AbstractSourceFileInspe
 
         // Migration priority and complexity using metrics
         if (metadata.hasComplexConfiguration()) {
-            decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+            decorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_PRIORITY,
                     EjbMigrationTags.PRIORITY_HIGH);
-            decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY,
+            decorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY,
                     EjbMigrationTags.COMPLEXITY_HIGH);
         } else if (metadata.hasResourceConfiguration()) {
-            decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+            decorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_PRIORITY,
                     EjbMigrationTags.PRIORITY_MEDIUM);
-            decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY,
+            decorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY,
                     EjbMigrationTags.COMPLEXITY_MEDIUM);
         }
     }

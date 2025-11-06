@@ -18,7 +18,7 @@ migration-plan:
               name: "query-home-interfaces"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.homeInterface"
+                - "ejb.home_interface"
               output-variable: "home_interfaces"
             
             - type: "OPENREWRITE"
@@ -63,7 +63,7 @@ migration-plan:
               name: "query-remote-interfaces"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.remoteInterface"
+                - "ejb.remote_interface"
               output-variable: "remote_interfaces"
             
             - type: "AI_ASSISTED_BATCH"
@@ -95,7 +95,7 @@ migration-plan:
               name: "query-local-interfaces"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.localInterface"
+                - "ejb.local_interface"
               output-variable: "local_interfaces"
             
             - type: "AI_ASSISTED_BATCH"
@@ -127,7 +127,7 @@ migration-plan:
               name: "query-localhome-interfaces"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.localHomeInterface"
+                - "ejb.local_home_interface"
               output-variable: "localhome_interfaces"
             
             - type: "AI_ASSISTED_BATCH"

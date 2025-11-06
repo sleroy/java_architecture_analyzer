@@ -51,14 +51,14 @@ import java.util.stream.Collectors;
  * @see EjbCreateMethodUsageInspector Original file-centric version
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_APPLICATION_CLASS }, produces = {
-        EjbMigrationTags.EJB_CREATE_METHOD,
-        EjbMigrationTags.EJB_CREATE_METHOD_USAGE,
-        EjbMigrationTags.EJB_HOME_INTERFACE,
-        EjbMigrationTags.EJB_CLIENT_CODE,
-        EjbMigrationTags.EJB_PARAMETERIZED_CREATE,
-        EjbMigrationTags.EJB_COMPLEX_INITIALIZATION,
-        EjbMigrationTags.EJB_DEPENDENCY_INJECTION_CANDIDATE,
-        EjbMigrationTags.EJB_JNDI_LOOKUP
+        EjbMigrationTags.TAG_EJB_CREATE_METHOD,
+        EjbMigrationTags.TAG_EJB_CREATE_METHOD_USAGE,
+        EjbMigrationTags.TAG_EJB_HOME_INTERFACE,
+        EjbMigrationTags.TAG_EJB_CLIENT_CODE,
+        EjbMigrationTags.TAG_EJB_PARAMETERIZED_CREATE,
+        EjbMigrationTags.TAG_EJB_COMPLEX_INITIALIZATION,
+        EjbMigrationTags.TAG_EJB_DEPENDENCY_INJECTION_CANDIDATE,
+        EjbMigrationTags.TAG_EJB_JNDI_LOOKUP
 })
 public class EjbCreateMethodUsageInspector extends AbstractASMClassInspector {
 
@@ -493,12 +493,12 @@ public class EjbCreateMethodUsageInspector extends AbstractASMClassInspector {
 
         private void addBeanCreateMethodResults() {
             // Write all results to JavaClassNode properties (class-centric)
-            enableTag(EjbMigrationTags.EJB_CREATE_METHOD);
+            enableTag(EjbMigrationTags.TAG_EJB_CREATE_METHOD);
 
             if (beanMetadata.getBeanType() == EjbBeanType.ENTITY_BEAN) {
-                enableTag(EjbMigrationTags.EJB_ENTITY_BEAN);
+                enableTag(EjbMigrationTags.TAG_EJB_ENTITY_BEAN);
             } else if (beanMetadata.getBeanType() == EjbBeanType.SESSION_BEAN) {
-                enableTag(EjbMigrationTags.EJB_SESSION_BEAN);
+                enableTag(EjbMigrationTags.TAG_EJB_SESSION_BEAN);
             }
 
             // Add complexity metrics
@@ -510,20 +510,20 @@ public class EjbCreateMethodUsageInspector extends AbstractASMClassInspector {
                 case "HIGH" -> EjbMigrationTags.COMPLEXITY_HIGH;
                 default -> EjbMigrationTags.COMPLEXITY_MEDIUM;
             };
-            decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, complexityValue);
-            decorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+            decorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, complexityValue);
+            decorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_PRIORITY,
                     EjbMigrationTags.PRIORITY_MEDIUM);
 
             // Add create method specific tags
             for (EjbCreateMethodInfo createMethod : beanMetadata.getEjbCreateMethods()) {
                 if (createMethod.getCreateMethodType() == CreateMethodType.PARAMETERIZED) {
-                    enableTag(EjbMigrationTags.EJB_PARAMETERIZED_CREATE);
+                    enableTag(EjbMigrationTags.TAG_EJB_PARAMETERIZED_CREATE);
                 }
                 if (!createMethod.getAnalysis().getInitializationPatterns().isEmpty()) {
-                    enableTag(EjbMigrationTags.EJB_COMPLEX_INITIALIZATION);
+                    enableTag(EjbMigrationTags.TAG_EJB_COMPLEX_INITIALIZATION);
                 }
                 if (!createMethod.getAnalysis().getDependencyLookups().isEmpty()) {
-                    enableTag(EjbMigrationTags.EJB_DEPENDENCY_INJECTION_CANDIDATE);
+                    enableTag(EjbMigrationTags.TAG_EJB_DEPENDENCY_INJECTION_CANDIDATE);
                 }
             }
 
@@ -540,14 +540,14 @@ public class EjbCreateMethodUsageInspector extends AbstractASMClassInspector {
 
         private void addHomeCreateMethodResults() {
             // Write all results to JavaClassNode properties (class-centric)
-            enableTag(EjbMigrationTags.EJB_HOME_INTERFACE);
-            enableTag(EjbMigrationTags.EJB_CREATE_METHOD);
+            enableTag(EjbMigrationTags.TAG_EJB_HOME_INTERFACE);
+            enableTag(EjbMigrationTags.TAG_EJB_CREATE_METHOD);
 
             if (homeMetadata.isRemoteHome()) {
-                enableTag(EjbMigrationTags.EJB_REMOTE_INTERFACE);
+                enableTag(EjbMigrationTags.TAG_EJB_REMOTE_INTERFACE);
             }
             if (homeMetadata.isLocalHome()) {
-                enableTag(EjbMigrationTags.EJB_LOCAL_INTERFACE);
+                enableTag(EjbMigrationTags.TAG_EJB_LOCAL_INTERFACE);
             }
 
             // Consolidate analysis data as single property
@@ -563,8 +563,8 @@ public class EjbCreateMethodUsageInspector extends AbstractASMClassInspector {
 
         private void addCreateMethodUsageResults() {
             // Write all results to JavaClassNode properties (class-centric)
-            enableTag(EjbMigrationTags.EJB_CLIENT_CODE);
-            enableTag(EjbMigrationTags.EJB_CREATE_METHOD_USAGE);
+            enableTag(EjbMigrationTags.TAG_EJB_CLIENT_CODE);
+            enableTag(EjbMigrationTags.TAG_EJB_CREATE_METHOD_USAGE);
 
             int totalCreateCalls = usageMetadata.getCallContexts().stream()
                     .mapToInt(context -> context.getCreateMethodCalls().size())
@@ -575,8 +575,8 @@ public class EjbCreateMethodUsageInspector extends AbstractASMClassInspector {
                     .anyMatch(call -> call.getCallContext().hasJndiLookup());
 
             if (hasJndiLookups) {
-                enableTag(EjbMigrationTags.EJB_JNDI_LOOKUP);
-                enableTag(EjbMigrationTags.EJB_DEPENDENCY_INJECTION_CANDIDATE);
+                enableTag(EjbMigrationTags.TAG_EJB_JNDI_LOOKUP);
+                enableTag(EjbMigrationTags.TAG_EJB_DEPENDENCY_INJECTION_CANDIDATE);
             }
 
             // Consolidate analysis data as single property

@@ -26,9 +26,9 @@ migration-plan:
               description: "Query all EJB components from analyzed codebase (tagged by EjbBinaryClassInspector)"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.sessionBean"
+                - "ejb.session_bean"
                 - "ejb.entityBean"
-                - "ejb.messageDrivenBean"
+                - "ejb.message_driven_bean"
               output-variable: "ejb_inventory"
               
             - type: "GRAPH_QUERY"
@@ -36,7 +36,7 @@ migration-plan:
               description: "Query all stateless session beans (tagged by EjbBinaryClassInspector)"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.stateless.sessionBean"
+                - "ejb.stateless.session_bean"
               output-variable: "stateless_beans"
               
             - type: "GRAPH_QUERY"
@@ -44,7 +44,7 @@ migration-plan:
               description: "Query all Container Managed Persistence entities (tagged by EjbBinaryClassInspector)"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.cmp.entityBean"
+                - "ejb.cmp.entity_bean"
               output-variable: "cmp_entities"
               
             - type: "GRAPH_QUERY"
@@ -52,7 +52,7 @@ migration-plan:
               description: "Query all Message-Driven Beans (tagged by EjbBinaryClassInspector)"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.messageDrivenBean"
+                - "ejb.message_driven_bean"
               output-variable: "mdb_beans"
               
             - type: "COMMAND"

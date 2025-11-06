@@ -28,7 +28,7 @@ import java.util.List;
  * dependencies
  * and adds resource requirements.
  */
-@InspectorDependencies(requires = {EjbMigrationTags.EJB_BEAN_DETECTED}, produces = {
+@InspectorDependencies(requires = {EjbMigrationTags.TAG_EJB_BEAN_DETECTED}, produces = {
         MessageDrivenBeanInspector.TAGS.TAG_EJB_MESSAGE_DRIVEN_BEAN,
         MessageDrivenBeanInspector.TAGS.TAG_EJB_MDB_DETECTED,
         MessageDrivenBeanInspector.TAGS.TAG_JMS_CONSUMER,

@@ -18,7 +18,7 @@ migration-plan:
               description: "Query all stateful session beans"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.stateful.sessionBean"
+                - "ejb.stateful.session_bean"
               output-variable: "stateful_beans"
             
             - type: "OPENREWRITE"

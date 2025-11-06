@@ -85,7 +85,7 @@ public class ConfigurationConstantsInspector extends AbstractJavaClassInspector 
             // Set tags according to the produces contract
             nodeDecorator.enableTag(EjbMigrationTags.TAG_SPRING_CONFIG_CONVERSION);
             nodeDecorator.enableTag(EjbMigrationTags.TAG_CODE_MODERNIZATION);
-            nodeDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
+            nodeDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
 
             // Set custom tags for more detailed analysis
             nodeDecorator.setProperty("config.constants.detected", true);

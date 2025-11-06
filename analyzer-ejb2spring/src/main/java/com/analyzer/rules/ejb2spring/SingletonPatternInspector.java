@@ -27,7 +27,7 @@ import java.util.List;
  * Identifies both classic and enum-based singleton patterns.
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
-        EjbMigrationTags.ANTIPATTERN_SINGLETON })
+        EjbMigrationTags.TAG_ANTIPATTERN_SINGLETON })
 public class SingletonPatternInspector extends AbstractJavaClassInspector {
 
     @Inject
@@ -48,15 +48,15 @@ public class SingletonPatternInspector extends AbstractJavaClassInspector {
                 SingletonInfo info = detector.getSingletonInfo();
 
                 // Tag ProjectFile and JavaClassNode
-                projectFileDecorator.enableTag(EjbMigrationTags.ANTIPATTERN_SINGLETON);
-                classNode.enableTag(EjbMigrationTags.ANTIPATTERN_SINGLETON);
+                projectFileDecorator.enableTag(EjbMigrationTags.TAG_ANTIPATTERN_SINGLETON);
+                classNode.enableTag(EjbMigrationTags.TAG_ANTIPATTERN_SINGLETON);
 
                 // Store analysis data
                 classNode.setProperty("antipattern.singleton.info", info);
 
                 // Calculate refactoring complexity
                 double complexity = calculateComplexity(info);
-                classNode.setProperty(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, complexity);
+                classNode.setProperty(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, complexity);
             }
         }
     }

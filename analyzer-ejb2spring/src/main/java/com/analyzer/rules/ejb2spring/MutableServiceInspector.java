@@ -88,7 +88,7 @@ public class MutableServiceInspector extends AbstractJavaClassInspector {
             MutableServiceInfo info = detector.getMutableServiceInfo();
 
             // Set tags according to the produces contract
-            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
             projectFileDecorator.enableTag(EjbMigrationTags.TAG_CODE_MODERNIZATION);
             projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
 

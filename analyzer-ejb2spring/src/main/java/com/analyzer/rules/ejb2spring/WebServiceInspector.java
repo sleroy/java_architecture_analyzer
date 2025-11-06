@@ -25,7 +25,7 @@ import java.util.List;
  * Identifies SOAP web services through @WebService and @WebMethod annotations.
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
-        EjbMigrationTags.WEBSERVICE_JAX_WS })
+        EjbMigrationTags.TAG_WEBSERVICE_JAX_WS })
 public class WebServiceInspector extends AbstractJavaClassInspector {
 
     @Inject
@@ -46,18 +46,18 @@ public class WebServiceInspector extends AbstractJavaClassInspector {
                 WebServiceInfo info = detector.getWebServiceInfo();
 
                 // Tag ProjectFile for dependency chains
-                projectFileDecorator.enableTag(EjbMigrationTags.WEBSERVICE_JAX_WS);
+                projectFileDecorator.enableTag(EjbMigrationTags.TAG_WEBSERVICE_JAX_WS);
 
                 // Tag JavaClassNode
-                classNode.enableTag(EjbMigrationTags.WEBSERVICE_JAX_WS);
-                classNode.enableTag(EjbMigrationTags.WEBSERVICE_SOAP_ENDPOINT);
+                classNode.enableTag(EjbMigrationTags.TAG_WEBSERVICE_JAX_WS);
+                classNode.enableTag(EjbMigrationTags.TAG_WEBSERVICE_SOAP_ENDPOINT);
 
                 // Store analysis data as property
                 classNode.setProperty("webservice.info", info);
 
                 // Store migration complexity metric
                 double complexity = calculateMigrationComplexity(info);
-                classNode.setProperty(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, complexity);
+                classNode.setProperty(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, complexity);
             }
         }
     }

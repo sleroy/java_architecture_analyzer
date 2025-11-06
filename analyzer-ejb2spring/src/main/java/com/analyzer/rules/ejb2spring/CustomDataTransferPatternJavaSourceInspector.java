@@ -45,11 +45,11 @@ import java.util.Set;
 @InspectorDependencies(need = {
         ApplicationPackageTagInspector.class
 }, produces = {
-        EjbMigrationTags.DATA_TRANSFER_OBJECT,
-        EjbMigrationTags.VALUE_OBJECT,
-        EjbMigrationTags.MAPPING_CUSTOM_LOGIC,
-        EjbMigrationTags.MAPPING_RESULTSET_MANUAL,
-        EjbMigrationTags.JDBC_DTO_USAGE
+        EjbMigrationTags.TAG_DATA_TRANSFER_OBJECT,
+        EjbMigrationTags.TAG_VALUE_OBJECT,
+        EjbMigrationTags.TAG_MAPPING_CUSTOM_LOGIC,
+        EjbMigrationTags.TAG_MAPPING_RESULTSET_MANUAL,
+        EjbMigrationTags.TAG_JDBC_DTO_USAGE
 })
 public class CustomDataTransferPatternJavaSourceInspector extends AbstractJavaParserInspector {
 
@@ -105,11 +105,11 @@ public class CustomDataTransferPatternJavaSourceInspector extends AbstractJavaPa
             boolean usesJdbcWithDtos = metadata.usesJdbcWithDtos();
 
             // Set tags on ProjectFile for dependency chain
-            projectFile.setProperty(EjbMigrationTags.DATA_TRANSFER_OBJECT, isDataTransferObject);
-            projectFile.setProperty(EjbMigrationTags.VALUE_OBJECT, isValueObject);
-            projectFile.setProperty(EjbMigrationTags.MAPPING_CUSTOM_LOGIC, hasCustomMappingLogic);
-            projectFile.setProperty(EjbMigrationTags.MAPPING_RESULTSET_MANUAL, hasManualResultSetMapping);
-            projectFile.setProperty(EjbMigrationTags.JDBC_DTO_USAGE, usesJdbcWithDtos);
+            projectFile.setProperty(EjbMigrationTags.TAG_DATA_TRANSFER_OBJECT, isDataTransferObject);
+            projectFile.setProperty(EjbMigrationTags.TAG_VALUE_OBJECT, isValueObject);
+            projectFile.setProperty(EjbMigrationTags.TAG_MAPPING_CUSTOM_LOGIC, hasCustomMappingLogic);
+            projectFile.setProperty(EjbMigrationTags.TAG_MAPPING_RESULTSET_MANUAL, hasManualResultSetMapping);
+            projectFile.setProperty(EjbMigrationTags.TAG_JDBC_DTO_USAGE, usesJdbcWithDtos);
 
             if (isDataTransferObject || isValueObject || hasCustomMappingLogic ||
                     hasManualResultSetMapping || usesJdbcWithDtos) {
@@ -122,9 +122,9 @@ public class CustomDataTransferPatternJavaSourceInspector extends AbstractJavaPa
                     case "HIGH" -> EjbMigrationTags.COMPLEXITY_HIGH;
                     default -> EjbMigrationTags.COMPLEXITY_MEDIUM;
                 };
-                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY,
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY,
                         complexityValue);
-                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_PRIORITY,
                         EjbMigrationTags.PRIORITY_MEDIUM);
 
                 // Create consolidated analysis result

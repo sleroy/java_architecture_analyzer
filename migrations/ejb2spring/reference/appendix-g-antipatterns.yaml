@@ -59,7 +59,7 @@ reference-data:
         - "Hidden dependencies"
         - "Hard to mock"
       detection: "Inspector: UtilityClassInspector"
-      inspector-tag: "antipattern.utilityClass"
+      inspector-tag: "antipattern.utility_class"
       refactoring-strategy: "Convert to @Component for complex logic, keep static for pure functions"
       estimated-effort: "1-2 hours per utility class"
       pattern-tag: "STATIC_UTILITY_REFACTORING"

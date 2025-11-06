@@ -19,7 +19,7 @@ migration-plan:
               description: "Query all classes with JDBC wrapper patterns"
               query-type: "BY_TAGS"
               tags:
-                - "dataAccess.dao.pattern"
+                - "data_access.dao.pattern"
               output-variable: "jdbc_wrappers"
             
             # Step 2: OPENREWRITE - Apply automated refactorings

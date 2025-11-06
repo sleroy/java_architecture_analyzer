@@ -52,8 +52,8 @@ import java.util.stream.Collectors;
         InspectorTags.TAG_SOURCE_FILE
 }, produces = {
         EjbDeploymentDescriptorInspector.TAGS.TAG_EJB_JAR_ANALYSIS,
-        com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_DECLARATIVE_TRANSACTION,
-        com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_CONTAINER_MANAGED_TRANSACTION,
+        com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_EJB_DECLARATIVE_TRANSACTION,
+        com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_EJB_CONTAINER_MANAGED_TRANSACTION,
         com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_SPRING_TRANSACTION_CONVERSION
 })
 public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector {
@@ -480,8 +480,8 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
 
         // Set transaction-related tags on ProjectFile
         if (!transactionConfigs.isEmpty()) {
-            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_DECLARATIVE_TRANSACTION, true);
-            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_CONTAINER_MANAGED_TRANSACTION,
+            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_EJB_DECLARATIVE_TRANSACTION, true);
+            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_EJB_CONTAINER_MANAGED_TRANSACTION,
                     true);
             projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_SPRING_TRANSACTION_CONVERSION,
                     true);

@@ -87,7 +87,7 @@ migration-plan:
               description: "Query all utility classes with complex logic"
               query-type: "BY_TAGS"
               tags:
-                - "antipattern.utilityClass"
+                - "antipattern.utility_class"
               output-variable: "utility_classes"
             
             - type: "AI_ASSISTED_BATCH"

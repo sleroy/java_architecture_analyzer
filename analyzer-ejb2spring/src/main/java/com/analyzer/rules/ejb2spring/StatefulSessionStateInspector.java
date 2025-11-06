@@ -61,12 +61,12 @@ import java.util.*;
  * @see StatefulSessionStateInspector Original file-centric version
  */
 @InspectorDependencies(requires = {
-        EjbMigrationTags.EJB_STATEFUL_SESSION_BEAN
+        EjbMigrationTags.TAG_EJB_STATEFUL_SESSION_BEAN
 }, produces = {
-        EjbMigrationTags.STATEFUL_SESSION_STATE,
-        EjbMigrationTags.CONVERSATIONAL_STATE,
-        EjbMigrationTags.CROSS_METHOD_DEPENDENCY,
-        EjbMigrationTags.SPRING_SCOPE_MIGRATION
+        EjbMigrationTags.TAG_STATEFUL_SESSION_STATE,
+        EjbMigrationTags.TAG_CONVERSATIONAL_STATE,
+        EjbMigrationTags.TAG_CROSS_METHOD_DEPENDENCY,
+        EjbMigrationTags.TAG_SPRING_SCOPE_MIGRATION
 })
 public class StatefulSessionStateInspector extends AbstractASMClassInspector {
 
@@ -328,12 +328,12 @@ public class StatefulSessionStateInspector extends AbstractASMClassInspector {
             setProperty("stateful_state.analysis_data", analysisData);
 
             // Enable tags for dependency resolution
-            enableTag(EjbMigrationTags.STATEFUL_SESSION_STATE);
-            enableTag(EjbMigrationTags.CONVERSATIONAL_STATE);
-            enableTag(EjbMigrationTags.SPRING_SCOPE_MIGRATION);
+            enableTag(EjbMigrationTags.TAG_STATEFUL_SESSION_STATE);
+            enableTag(EjbMigrationTags.TAG_CONVERSATIONAL_STATE);
+            enableTag(EjbMigrationTags.TAG_SPRING_SCOPE_MIGRATION);
 
             if (crossMethodDeps > 0) {
-                enableTag(EjbMigrationTags.CROSS_METHOD_DEPENDENCY);
+                enableTag(EjbMigrationTags.TAG_CROSS_METHOD_DEPENDENCY);
             }
 
             // Add summary properties for quick access

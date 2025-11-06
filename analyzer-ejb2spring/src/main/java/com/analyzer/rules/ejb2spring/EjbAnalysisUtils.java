@@ -276,29 +276,29 @@ public final class EjbAnalysisUtils {
             classNode.setProperty("ejb.conversational.state.fields", stateFields);
 
             // Enable appropriate tags
-            classNode.enableTag(EjbMigrationTags.EJB_CONVERSATIONAL_STATE_DETECTED);
-            classNode.enableTag(EjbMigrationTags.EJB_STATEFUL_STATE);
+            classNode.enableTag(EjbMigrationTags.TAG_EJB_CONVERSATIONAL_STATE_DETECTED);
+            classNode.enableTag(EjbMigrationTags.TAG_EJB_STATEFUL_STATE);
 
             if (collectionCount > 0) {
-                classNode.enableTag(EjbMigrationTags.EJB_COLLECTION_STATE);
+                classNode.enableTag(EjbMigrationTags.TAG_EJB_COLLECTION_STATE);
             }
 
             // Determine complexity based on field count and types
             if (totalStateFields > 5 || collectionCount > 2) {
-                classNode.enableTag(EjbMigrationTags.EJB_COMPLEX_STATE_PATTERN);
+                classNode.enableTag(EjbMigrationTags.TAG_EJB_COMPLEX_STATE_PATTERN);
                 classNode.getMetrics().setMaxMetric(
-                        EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY,
+                        EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY,
                         EjbMigrationTags.COMPLEXITY_HIGH);
             } else if (totalStateFields > 2 || collectionCount > 0) {
                 classNode.getMetrics().setMaxMetric(
-                        EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY,
+                        EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY,
                         EjbMigrationTags.COMPLEXITY_MEDIUM);
             }
 
             // Recommend Spring scope
             String scopeRecommendation = recommendSpringScope(totalStateFields, collectionCount);
             classNode.setProperty("ejb.spring.scope.recommendation", scopeRecommendation);
-            classNode.enableTag(EjbMigrationTags.SPRING_SCOPE_MIGRATION);
+            classNode.enableTag(EjbMigrationTags.TAG_SPRING_SCOPE_MIGRATION);
 
             logger.debug("Conversational state detected: {} fields ({} collections) -> recommend scope: {}",
                     totalStateFields, collectionCount, scopeRecommendation);
@@ -455,7 +455,7 @@ public final class EjbAnalysisUtils {
         String springScope = mapCdiScopeToSpring(cdiScopeDescriptor);
         classNode.setProperty("cdi.scope.detected", cdiScopeDescriptor);
         classNode.setProperty("ejb.spring.scope.recommendation", springScope);
-        classNode.enableTag(EjbMigrationTags.SPRING_SCOPE_MIGRATION);
+        classNode.enableTag(EjbMigrationTags.TAG_SPRING_SCOPE_MIGRATION);
 
         logger.debug("CDI scope detected: {} -> Spring scope: {}", cdiScopeDescriptor, springScope);
     }
