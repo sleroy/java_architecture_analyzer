@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ejb-jar PUBLIC "-//Sun Microsystems, Inc.//DTD Enterprise JavaBeans 2.0//EN"
+    "http://java.sun.com/dtd/ejb-jar_2_0.dtd">
+
+<!--
+    EJB 2.0 Deployment Descriptor for OrderService Stateless Session Bean
+
+    This descriptor defines:
+    - Session bean configuration
+    - Remote and local interfaces
+    - Transaction management
+
+    Note: This is legacy EJB 2.0 configuration. Modern applications use annotations.
+-->
+
+<ejb-jar>
+    <description>EJB 2.0 Stateless Session Bean Example - OrderService</description>
+    <display-name>OrderService Session Bean</display-name>
+
+    <enterprise-beans>
+        <!-- Session Bean Definition -->
+        <session>
+            <ejb-name>OrderServiceBean</ejb-name>
+
+            <!-- Remote Interface -->
+            <home>com.example.ejbapp.ejb2.session.OrderServiceHome</home>
+            <remote>com.example.ejbapp.ejb2.session.OrderService</remote>
+
+            <!-- Local Interface -->
+            <local-home>com.example.ejbapp.ejb2.session.OrderServiceLocalHome</local-home>
+            <local>com.example.ejbapp.ejb2.session.OrderServiceLocal</local>
+
+            <!-- Bean Class -->
+            <ejb-class>com.example.ejbapp.ejb2.session.OrderServiceBean</ejb-class>
+
+            <!-- Session Type: Stateless -->
+            <session-type>Stateless</session-type>
+
+            <!-- Transaction Management Type: Container-managed -->
+            <transaction-type>Container</transaction-type>
+
+            <!-- Optional: Security Identity -->
+            <security-identity>
+                <use-caller-identity/>
+            </security-identity>
+        </session>
+    </enterprise-beans>
+
+    <!-- Assembly Descriptor -->
+    <assembly-descriptor>
+        <!-- Container Transaction Management for all methods -->
+        <container-transaction>
+            <method>
+                <ejb-name>OrderServiceBean</ejb-name>
+                <method-name>*</method-name>
+            </method>
+            <!--
+                Transaction Attribute Options:
+                - Required: Join existing transaction or create new one
+                - RequiresNew: Always create new transaction
+                - Mandatory: Must be called within a transaction
+                - NotSupported: Execute without transaction
+                - Supports: Execute with or without transaction
+                - Never: Must not be called within a transaction
+            -->
+            <trans-attribute>Required</trans-attribute>
+        </container-transaction>
+    </assembly-descriptor>
+
+</ejb-jar>
