@@ -1,0 +1,146 @@
+# Test Plan for demo-ejb2-project
+# This test plan validates the migration framework using the demo-ejb2-project
+# WITHOUT modifying the original demo project files
+
+migration-plan:
+  name: "Demo EJB2 Project Test Plan"
+  version: "1.0.0"
+  description: |
+    Test plan for validating EJB 2 to Spring Boot migration using demo-ejb2-project.
+    
+    This plan ensures:
+    - Original demo-ejb2-project files are NOT modified
+    - Migration artifacts are created in a test output directory
+    - All operations are read-only on the source project
+  
+  variables:
+    # Test Configuration
+    test_mode: true
+    dry_run: false
+    
+    # Project paths - use relative paths from test working directory
+    project_root: "demo-ejb2-project"
+    
+    # Output Configuration
+    # Test artifacts will be created in demo-ejb2-project/target/
+    # Using target/ ensures test files are cleaned with 'mvn clean'
+    migration_output_dir: "demo-ejb2-project/target"
+    
+    # Spring Boot Configuration
+    artifact_id: "test-semeru-springboot"
+    group_id: "br.com.semeru.test"
+    package_base: "br.com.semeru.test"
+    spring_boot_version: "3.5.7"
+    java_version: "21"
+    
+    # Git Configuration (disabled for tests)
+    git_enabled: false
+    migration_branch_prefix: "test-migration"
+    
+    # Maven Configuration (use system defaults)
+    maven_java_home: "${java.home}"
+    maven_home: "${maven.home}"
+    maven_opts: "-Xmx512m"
+    
+    # Database Configuration (disabled for tests)
+    database_enabled: false
+    read_dependencies: false
+  
+  phases:
+    - id: "test-phase-1"
+      name: "Test Phase: Validation"
+      description: "Validate demo-ejb2-project structure without modifications"
+      
+      tasks:
+        - id: "test-task-001"
+          name: "Verify Demo Project Structure"
+          description: "Verify demo-ejb2-project exists and has expected structure"
+          
+          blocks:
+            - type: "COMMAND"
+              name: "check-demo-project"
+              description: "Check if demo-ejb2-project exists"
+              command: |
+                if [ ! -d "${project_root}" ]; then
+                  echo "ERROR: demo-ejb2-project not found at ${project_root}"
+                  exit 1
+                fi
+                
+                # Verify key directories exist
+                echo "Checking demo-ejb2-project structure..."
+                
+                if [ ! -f "${project_root}/pom.xml" ]; then
+                  echo "ERROR: pom.xml not found"
+                  exit 1
+                fi
+                
+                if [ ! -d "${project_root}/src/main/java" ]; then
+                  echo "ERROR: src/main/java not found"
+                  exit 1
+                fi
+                
+                echo "✓ Demo project structure validated"
+                echo "✓ Project root: ${project_root}"
+                echo "✓ All required directories present"
+              working-directory: "."
+              timeout-seconds: 10
+              requires_approval: false
+              
+        - id: "test-task-002"
+          name: "Count Java Source Files"
+          description: "Count Java files in demo-ejb2-project for verification"
+          
+          blocks:
+            - type: "COMMAND"
+              name: "count-java-files"
+              description: "Count Java source files"
+              command: |
+                echo "Counting Java files in demo-ejb2-project..."
+                
+                JAVA_FILE_COUNT=$(find ${project_root}/src/main/java -name "*.java" -type f 2>/dev/null | wc -l)
+                
+                echo "Found $JAVA_FILE_COUNT Java source files"
+                
+                if [ "$JAVA_FILE_COUNT" -eq 0 ]; then
+                  echo "WARNING: No Java files found in demo-ejb2-project"
+                  echo "This might be expected if the project structure is different"
+                fi
+                
+                echo "$JAVA_FILE_COUNT"
+              working-directory: "."
+              timeout-seconds: 10
+              output-variable: "java_file_count"
+              requires_approval: false
+              
+        - id: "test-task-003"
+          name: "Verify Read-Only Access"
+          description: "Ensure tests don't modify demo-ejb2-project"
+          
+          blocks:
+            - type: "COMMAND"
+              name: "verify-no-modifications"
+              description: "Check that demo-ejb2-project remains unmodified"
+              command: |
+                echo "Verifying demo-ejb2-project is not modified..."
+                
+                # Check if git is available and project is in git
+                if command -v git >/dev/null 2>&1 && [ -d "${project_root}/.git" ]; then
+                  cd "${project_root}"
+                  
+                  # Check for uncommitted changes
+                  if git diff --quiet && git diff --cached --quiet; then
+                    echo "✓ No modifications detected in demo-ejb2-project"
+                  else
+                    echo "WARNING: Uncommitted changes detected"
+                    echo "This test run may have modified source files"
+                    git status --short
+                  fi
+                  
+                  cd -
+                else
+                  echo "ℹ Git not available or project not in git repository"
+                  echo "Cannot verify if files were modified"
+                fi
+              working-directory: "."
+              timeout-seconds: 10
+              requires_approval: false

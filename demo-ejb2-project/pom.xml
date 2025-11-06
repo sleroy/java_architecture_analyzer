@@ -34,7 +34,7 @@
         <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
         
         <!-- Dependency versions -->
-        <version.jboss.spec.javaee.7.0>1.0.0.Final</version.jboss.spec.javaee.7.0>
+        <version.wildfly.bom>10.1.0.Final</version.wildfly.bom>
         <version.war.plugin>2.4</version.war.plugin>
         <version.compiler.plugin>3.1</version.compiler.plugin>
         <version.surefire.plugin>2.16</version.surefire.plugin>
@@ -43,16 +43,14 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- JBoss distributes a complete set of Java EE 7 APIs including a Bill
-                 of Materials (BOM). A BOM specifies the versions of a "stack" (or a collection) 
-                 of artifacts. We use this here so that we always get the correct versions 
-                 of artifacts. Here we use the jboss-javaee-7.0 stack (you can read this as 
-                 the JBoss stack of the Java EE 7 APIs). You can actually use this stack with 
-                 any version of JBoss AS that implements Java EE 7, not just JBoss AS 7! -->
+            <!-- WildFly BOM provides a complete set of Java EE 7 APIs.
+                 A BOM (Bill of Materials) specifies the versions of a "stack" of artifacts.
+                 Using the WildFly BOM ensures we get tested, compatible versions of all
+                 Java EE 7 APIs that work with JBoss AS 7 and WildFly servers. -->
             <dependency>
-                <groupId>org.jboss.spec</groupId>
-                <artifactId>jboss-javaee-7.0</artifactId>
-                <version>${version.jboss.spec.javaee.7.0}</version>
+                <groupId>org.wildfly.bom</groupId>
+                <artifactId>wildfly-javaee7</artifactId>
+                <version>${version.wildfly.bom}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -75,6 +73,7 @@
         <dependency>
             <groupId>org.jboss.spec.javax.ejb</groupId>
             <artifactId>jboss-ejb-api_3.1_spec</artifactId>
+            <version>1.0.2.Final</version>
             <scope>provided</scope>
         </dependency>
 
@@ -85,10 +84,18 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Import the JMS API (for Message-Driven Beans) -->
+        <dependency>
+            <groupId>org.jboss.spec.javax.jms</groupId>
+            <artifactId>jboss-jms-api_2.0_spec</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Import the JPA API -->
         <dependency>
             <groupId>org.hibernate.javax.persistence</groupId>
             <artifactId>hibernate-jpa-2.0-api</artifactId>
+            <version>1.0.1.Final</version>
             <scope>provided</scope>
         </dependency>
 
@@ -96,6 +103,7 @@
         <dependency>
             <groupId>org.jboss.spec.javax.ws.rs</groupId>
             <artifactId>jboss-jaxrs-api_1.1_spec</artifactId>
+            <version>1.0.1.Final</version>
             <scope>provided</scope>
         </dependency>
 
@@ -103,6 +111,7 @@
         <dependency>
             <groupId>org.jboss.spec.javax.faces</groupId>
             <artifactId>jboss-jsf-api_2.1_spec</artifactId>
+            <version>2.1.28.Final</version>
             <scope>provided</scope>
         </dependency>
 
