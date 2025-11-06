@@ -63,6 +63,10 @@ public final class InspectorTags {
      * Tag indicating if Java binary is available for this resource
      */
     public static final String RESOURCE_HAS_JAVA_BINARY = "resource.has_java_binary";
+    /**
+     * Tag indicating if source file is present for this Java class
+     */
+    public static final String TAG_SOURCE_FILE_PRESENT = "java.source_file_present";
 
     // ==================== FILE METADATA TAGS ====================
     public static final String TAG_JAVA_FORMAT = "java.format";

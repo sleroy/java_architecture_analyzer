@@ -30,18 +30,22 @@ import java.util.stream.Collectors;
 /**
  * Comprehensive inspector that analyzes ejb-jar.xml deployment descriptors.
  *
- * <p>This inspector performs complete analysis of EJB deployment descriptors including:
+ * <p>
+ * This inspector performs complete analysis of EJB deployment descriptors
+ * including:
  * <ul>
- *   <li>Parsing bean definitions (session, entity, message-driven beans)</li>
- *   <li>Extracting transaction configurations from assembly-descriptor</li>
- *   <li>Creating ClassNodes for beans and their interfaces</li>
- *   <li>Creating graph edges modeling EJB relationships</li>
- *   <li>Attaching deployment descriptor metadata to bean ClassNodes</li>
- *   <li>Storing summary statistics on the XML ProjectFile</li>
+ * <li>Parsing bean definitions (session, entity, message-driven beans)</li>
+ * <li>Extracting transaction configurations from assembly-descriptor</li>
+ * <li>Creating ClassNodes for beans and their interfaces</li>
+ * <li>Creating graph edges modeling EJB relationships</li>
+ * <li>Attaching deployment descriptor metadata to bean ClassNodes</li>
+ * <li>Storing summary statistics on the XML ProjectFile</li>
  * </ul>
  *
- * <p>Configuration files are not Java classes, so this inspector stores summary
- * data on ProjectFile while enriching actual bean ClassNodes with detailed metadata
+ * <p>
+ * Configuration files are not Java classes, so this inspector stores summary
+ * data on ProjectFile while enriching actual bean ClassNodes with detailed
+ * metadata
  * and creating proper graph relationships.
  */
 @InspectorDependencies(requires = {
@@ -62,8 +66,8 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
 
     @Inject
     public EjbDeploymentDescriptorInspector(ResourceResolver resourceResolver,
-                                            ClassNodeRepository classNodeRepository,
-                                            GraphRepository graphRepository, LocalCache localCache) {
+            ClassNodeRepository classNodeRepository,
+            GraphRepository graphRepository, LocalCache localCache) {
         super(resourceResolver, localCache);
         this.classNodeRepository = classNodeRepository;
         this.graphRepository = graphRepository;
@@ -80,7 +84,8 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
     }
 
     @Override
-    protected void processContent(String content, ProjectFile projectFile, NodeDecorator<ProjectFile> projectFileDecorator) {
+    protected void processContent(String content, ProjectFile projectFile,
+            NodeDecorator<ProjectFile> projectFileDecorator) {
         try {
             // Phase 1: Parse XML
             Document doc = parseXmlDocument(content);
@@ -295,7 +300,8 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
     }
 
     private String normalizeTransactionAttribute(String xmlAttr) {
-        if (xmlAttr == null) return null;
+        if (xmlAttr == null)
+            return null;
 
         return switch (xmlAttr) {
             case "Required" -> "REQUIRED";
@@ -397,7 +403,7 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
     }
 
     private void attachBeanMetadata(JavaClassNode beanNode, BeanMetadata bean,
-                                    List<TransactionConfiguration> allConfigs) {
+            List<TransactionConfiguration> allConfigs) {
         // Deployment descriptor metadata
         beanNode.setProperty("ejb.deployment.ejb_name", bean.ejbName);
         beanNode.setProperty("ejb.deployment.bean_type", bean.beanType);
@@ -436,21 +442,23 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
                 .toList();
 
         if (!beanConfigs.isEmpty()) {
+            List<Map<String, Object>> transactionConfigsList = new ArrayList<>();
             for (TransactionConfiguration config : beanConfigs) {
-                String configKey = "ejb.transaction." + config.methodName;
                 Map<String, Object> configValue = new HashMap<>();
+                configValue.put("methodName", config.methodName);
                 configValue.put("ejbAttr", config.ejbAttribute.name());
                 configValue.put("springProp", config.springPropagation.name());
                 configValue.put("readOnly", config.readOnly);
-                beanNode.setProperty(configKey, configValue);
+                transactionConfigsList.add(configValue);
             }
+            beanNode.setProperty("ejb.transaction.configurations", transactionConfigsList);
         }
     }
 
     private void storeSummary(ProjectFile projectFile, NodeDecorator<ProjectFile> decorator,
-                              Map<String, BeanMetadata> beans,
-                              List<TransactionConfiguration> transactionConfigs,
-                              int enrichedBeans) {
+            Map<String, BeanMetadata> beans,
+            List<TransactionConfiguration> transactionConfigs,
+            int enrichedBeans) {
         // Count beans by type
         long sessionBeans = beans.values().stream().filter(b -> "session".equals(b.beanType)).count();
         long entityBeans = beans.values().stream().filter(b -> "entity".equals(b.beanType)).count();
@@ -460,7 +468,6 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
         decorator.setMetric(TAGS.METRIC_SESSION_BEANS_COUNT, (int) sessionBeans);
         decorator.setMetric(TAGS.METRIC_ENTITY_BEANS_COUNT, (int) entityBeans);
         decorator.setMetric(TAGS.METRIC_MESSAGE_DRIVEN_BEANS_COUNT, (int) messageDrivenBeans);
-
 
         // Store analysis summary as a plain object
         Map<String, Object> summary = new HashMap<>();
@@ -474,8 +481,10 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
         // Set transaction-related tags on ProjectFile
         if (!transactionConfigs.isEmpty()) {
             projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_DECLARATIVE_TRANSACTION, true);
-            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_CONTAINER_MANAGED_TRANSACTION, true);
-            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_SPRING_TRANSACTION_CONVERSION, true);
+            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_CONTAINER_MANAGED_TRANSACTION,
+                    true);
+            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_SPRING_TRANSACTION_CONVERSION,
+                    true);
         }
     }
 

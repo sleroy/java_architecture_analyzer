@@ -260,6 +260,6 @@ public class DaoRepositoryInspector extends AbstractJavaClassInspector {
     }
 
     public static class TAGS {
-        public static final String TAG_IS_DAO = "dao_repository_inspector.is_dao";
+        public static final String TAG_IS_DAO = "java.dao.repository";
     }
 }

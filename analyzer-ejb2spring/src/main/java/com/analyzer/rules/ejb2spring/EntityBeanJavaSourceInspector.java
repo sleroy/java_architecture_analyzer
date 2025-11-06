@@ -6,9 +6,7 @@ import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
-import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.model.ProjectFile;
-import com.analyzer.core.cache.LocalCache;
 import com.analyzer.dev.inspectors.source.AbstractJavaClassInspector;
 import com.analyzer.api.resource.ResourceResolver;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
@@ -61,7 +59,7 @@ public class EntityBeanJavaSourceInspector extends AbstractJavaClassInspector {
                         Objects.requireNonNullElse(info.persistenceType, "UNKNOWN"));
 
                 // Set single consolidated analysis property on ClassNode
-                classNode.setProperty(PROPERTIES.ENTITY_BEAN_ANALYSIS, info);
+                classNode.setProperty(PROPERTIES.PROP_ENTITY_BEAN_ANALYSIS, info);
             }
         }
     }
@@ -72,12 +70,12 @@ public class EntityBeanJavaSourceInspector extends AbstractJavaClassInspector {
     }
 
     public static class TAGS {
-        public static final String TAG_IS_ENTITY_BEAN = "entity_bean_inspector.is_entity_bean";
-        public static final String TAG_BEAN_PERSISTENCE_TYPE = "entity_bean_inspector.bean_persistence_type";
+        public static final String TAG_IS_ENTITY_BEAN = "ejb.entity_bean";
+        public static final String TAG_BEAN_PERSISTENCE_TYPE = "ejb.persistence_type";
     }
 
     public static class PROPERTIES {
-        public static final String ENTITY_BEAN_ANALYSIS = "entity_bean.analysis";
+        public static final String PROP_ENTITY_BEAN_ANALYSIS = "entity_bean.analysis";
     }
 
     /**

@@ -18,13 +18,14 @@ public class InventoryExample {
 
     public static void main(String[] args) throws IOException {
 
-        String folder = "demo-ejb2-project";
+        final Path projectFolder = Paths.get("demo-ejb2-project").toAbsolutePath();
+        String folder = projectFolder.toString();
         Path configFile = Paths.get(folder).resolve(Project.DEFAULT_FILE_NAME);
         if (Files.exists(configFile)) {
             Files.delete(configFile);
         }
 
-        int exitCode = new CommandLine(new AnalyzerCLI()).execute("inventory", "--project", folder, "--java_version", "17", "--packages", "br");
+        int exitCode = new CommandLine(new AnalyzerCLI()).execute("inventory", "--project", folder, "--java_version", "17", "--packages", "com.example");
 
 
         logger.info("---------------------------------------------------------------");
@@ -35,9 +36,10 @@ public class InventoryExample {
         logger.info("");
         logger.info("");
 
-        int exitCode2 = new CommandLine(new AnalyzerCLI()).execute("json_export", "--project", folder, "--json-output", "/tmp/example");
+        final String targetFolder = projectFolder.resolve("target").resolve("export").toString();
+        int exitCode2 = new CommandLine(new AnalyzerCLI()).execute("json_export", "--project", folder, "--json-output", targetFolder);
 
-        int exitCode3 = new CommandLine(new AnalyzerCLI()).execute("csv_export", "--project", folder, "--output-dir", folder);
+        int exitCode3 = new CommandLine(new AnalyzerCLI()).execute("csv_export", "--project", folder, "--output-dir", targetFolder);
 
     }
 }

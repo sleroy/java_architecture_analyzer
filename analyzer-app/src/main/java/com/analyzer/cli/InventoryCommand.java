@@ -11,6 +11,7 @@ import com.analyzer.core.inspector.InspectorRegistry;
 import com.analyzer.core.model.Project;
 import com.analyzer.dev.detection.FileDetectionBeanFactory;
 import com.analyzer.core.resource.CompositeResourceResolver;
+import com.analyzer.rules.ai.AIInspectorBeanFactory;
 import com.analyzer.rules.std.StdInspectorBeanFactory;
 import com.analyzer.rules.ejb2spring.Ejb2SpringInspectorBeanFactory;
 import com.analyzer.rules.graph.GraphInspectorBeanFactory;
@@ -85,6 +86,7 @@ public class InventoryCommand implements Callable<Integer> {
             inspectorRegistry.registerComponents(Ejb2SpringInspectorBeanFactory.class);
             inspectorRegistry.registerComponents(GraphInspectorBeanFactory.class);
             inspectorRegistry.registerComponents(MetricsInspectorBeanFactory.class);
+            inspectorRegistry.registerComponents(AIInspectorBeanFactory.class);
 
             logger.info("{}", inspectorRegistry.getStatistics());
 

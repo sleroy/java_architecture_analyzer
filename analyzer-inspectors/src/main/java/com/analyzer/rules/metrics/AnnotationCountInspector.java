@@ -62,6 +62,11 @@ public class AnnotationCountInspector extends AbstractClassLoaderBasedInspector 
     }
 
     @Override
+    public boolean canProcess(final JavaClassNode objectToAnalyze) {
+        return super.canProcess(objectToAnalyze);
+    }
+
+    @Override
     protected void analyzeLoadedClass(Class<?> loadedClass, JavaClassNode classNode,
             NodeDecorator<JavaClassNode> decorator) {
         try {
