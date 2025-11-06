@@ -1,0 +1,59 @@
+# Example Configuration for demo-ejb2-project
+# This file demonstrates how to run the EJB 2 to Spring Boot migration
+# on the demo-ejb2-project example project
+#
+# Usage:
+#   cd /path/to/java_architecture_analyzer
+#   analyzer apply \
+#     --project demo-ejb2-project \
+#     --plan migrations/ejb2spring/jboss-to-springboot.yaml \
+#     --config migrations/ejb2spring/examples/demo-ejb2-project-example.yaml
+
+migration-plan:
+  name: "Demo EJB2 Project Migration Example"
+  description: |
+    Example configuration for migrating the demo-ejb2-project.
+    This configuration overrides default variables to work with the demo project structure.
+    
+    IMPORTANT: This configuration ensures the original demo-ejb2-project files
+    are NOT modified. All migration artifacts are created in a separate directory.
+  
+  variables:
+    # Project Configuration - Source Project (READ-ONLY)
+    # This is the original EJB 2.0 project - files here will NOT be modified
+    project_root: "${user.dir}/demo-ejb2-project"
+    
+    # Output Configuration
+    # Migration artifacts will be created in demo-ejb2-project/target/ (Maven convention)
+    # This folder is typically gitignored and cleaned with 'mvn clean'
+    migration_output_dir: "${user.dir}/demo-ejb2-project/target"
+    
+    # Spring Boot Project Configuration
+    # The migrated Spring Boot project will be created in:
+    # demo-ejb2-project/target/semeru-springboot/
+    artifact_id: "semeru-springboot"
+    group_id: "br.com.semeru"
+    package_base: "br.com.semeru"
+    
+    # Spring Boot Version
+    spring_boot_version: "3.5.7"
+    java_version: "21"
+    
+    # Git Branch Configuration
+    migration_branch_prefix: "migration"
+    
+    # Maven Environment - adjust paths for your system
+    maven_java_home: "/usr/lib/jvm/java-21-openjdk-amd64/"
+    maven_home: "/home/sleroy/mvn"
+    maven_opts: "-Xmx1024m"
+    
+    # Database Configuration (disabled for demo)
+    database_enabled: false
+    read_dependencies: false
+    
+    # Demo-specific settings
+    # Set to true to enable dry-run mode (no actual file modifications)
+    dry_run: false
+    
+  # No phases defined here - they come from the main plan
+  phases: []
