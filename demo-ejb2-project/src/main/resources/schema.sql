@@ -1,0 +1,14 @@
+-- Customer Table Schema for H2 Database
+-- EJB 2.0 Era JDBC CRUD Example
+
+CREATE TABLE IF NOT EXISTS CUSTOMER (
+    ID INTEGER PRIMARY KEY AUTO_INCREMENT,
+    NAME VARCHAR(100) NOT NULL,
+    EMAIL VARCHAR(100) NOT NULL,
+    PHONE VARCHAR(20),
+    CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Sample initial data (optional)
+-- INSERT INTO CUSTOMER (NAME, EMAIL, PHONE) VALUES ('John Doe', 'john.doe@example.com', '555-0100');
+-- INSERT INTO CUSTOMER (NAME, EMAIL, PHONE) VALUES ('Jane Smith', 'jane.smith@example.com', '555-0101');
