@@ -22,7 +22,7 @@ public class AmazonQBackend implements AiBackend {
         logger.debug("Executing Amazon Q CLI with piped input for prompt: {} characters, working directory: {}",
                 prompt.length(), workingDirectory);
 
-        if (!Files.notExists(workingDirectory)) {
+        if (!workingDirectory.toFile().isDirectory()) {
             throw new IllegalArgumentException("Working directory does not exist: " + workingDirectory);
         }
 

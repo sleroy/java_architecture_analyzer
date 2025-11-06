@@ -2,27 +2,30 @@ package com.example.ejbapp.service;
 
 import com.example.ejbapp.model.Member;
 
-import javax.ejb.Stateless;
-import javax.enterprise.event.Event;
-import javax.inject.Inject;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
- * Stateless bean example for notification management.
+ * Spring service for notification management.
  * Demonstrates event-driven architecture and business logic without external dependencies.
  */
-@Stateless
+@Service
+@Transactional
 public class NotificationService {
 
-    @Inject
-    private Logger log;
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
+    private final ApplicationEventPublisher eventPublisher;
 
-    @Inject
-    private Event<NotificationEvent> notificationEventSrc;
+    public NotificationService(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
 
     /**
      * Sends a welcome notification to a new member
@@ -37,7 +40,7 @@ public class NotificationService {
         event.setType(NotificationType.WELCOME);
         event.setTimestamp(LocalDateTime.now());
         
-        notificationEventSrc.fire(event);
+        eventPublisher.publishEvent(event);
         log.info("Welcome notification event fired for: " + member.getEmail());
     }
 
@@ -54,7 +57,7 @@ public class NotificationService {
         event.setType(NotificationType.GENERIC);
         event.setTimestamp(LocalDateTime.now());
         
-        notificationEventSrc.fire(event);
+        eventPublisher.publishEvent(event);
         log.info("Notification event fired successfully");
     }
 
@@ -73,7 +76,7 @@ public class NotificationService {
             event.setPriority(NotificationPriority.HIGH);
             event.setTimestamp(LocalDateTime.now());
             
-            notificationEventSrc.fire(event);
+            eventPublisher.publishEvent(event);
             log.info("Alert sent to: " + recipient);
         }
     }
@@ -92,13 +95,14 @@ public class NotificationService {
         event.setScheduledFor(scheduledFor);
         event.setTimestamp(LocalDateTime.now());
         
-        notificationEventSrc.fire(event);
+        eventPublisher.publishEvent(event);
         log.info("Reminder notification scheduled");
     }
 
     /**
      * Validates email format
      */
+    @Transactional(readOnly = true)
     public boolean isValidEmail(String email) {
         if (email == null || email.trim().isEmpty()) {
             return false;
@@ -110,19 +114,20 @@ public class NotificationService {
     /**
      * Validates notification content
      */
+    @Transactional(readOnly = true)
     public boolean validateNotification(String recipient, String subject, String message) {
         if (!isValidEmail(recipient)) {
-            log.warning("Invalid recipient email: " + recipient);
+            log.warn("Invalid recipient email: " + recipient);
             return false;
         }
         
         if (subject == null || subject.trim().isEmpty()) {
-            log.warning("Empty subject");
+            log.warn("Empty subject");
             return false;
         }
         
         if (message == null || message.trim().isEmpty()) {
-            log.warning("Empty message");
+            log.warn("Empty message");
             return false;
         }
         
@@ -132,6 +137,7 @@ public class NotificationService {
     /**
      * Formats notification history
      */
+    @Transactional(readOnly = true)
     public List<String> formatNotificationHistory(List<NotificationEvent> events) {
         log.info("Formatting " + events.size() + " notification events");
         
