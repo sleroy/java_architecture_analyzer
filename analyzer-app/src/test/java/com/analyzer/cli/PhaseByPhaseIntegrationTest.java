@@ -17,17 +17,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class PhaseByPhaseIntegrationTest {
 
-    private static final Path TEST_PROJECT = Paths.get("demo-ejb2-project");
+    // Fix: Point to repository root demo-ejb2-project, not
+    // analyzer-app/demo-ejb2-project
     private static final Path ANALYZER_ROOT = Paths.get(System.getProperty("user.dir"));
-    private static final String PLAN_PATH = ANALYZER_ROOT.resolve("../migrations/ejb2spring/jboss-to-springboot.yaml")
-                                                         .toString();
+    private static final Path REPO_ROOT = ANALYZER_ROOT.getParent(); // Go up from analyzer-app to repo root
+    private static final Path TEST_PROJECT = REPO_ROOT.resolve("demo-ejb2-project").toAbsolutePath();
+    private static final String PLAN_PATH = REPO_ROOT.resolve("migrations/ejb2spring/jboss-to-springboot.yaml")
+            .toString();
 
     @BeforeAll
     static void setUp() throws Exception {
+        // Verify the test project exists (should already exist from inventory)
         if (!Files.exists(TEST_PROJECT)) {
-            Files.createDirectories(TEST_PROJECT);
+            throw new IllegalStateException(
+                    "Test project not found at: " + TEST_PROJECT +
+                            "\nPlease run 'inventory' command first to create the analysis database.");
         }
+
+        // Verify the database exists
+        Path dbPath = TEST_PROJECT.resolve(".analysis/graph.mv.db");
+        if (!Files.exists(dbPath)) {
+            throw new IllegalStateException(
+                    "Database not found at: " + dbPath +
+                            "\nPlease run 'inventory' command first.");
+        }
+
         System.out.println("Test Project: " + TEST_PROJECT);
+        System.out.println("Database: " + dbPath);
         System.out.println("Main Plan: " + PLAN_PATH);
     }
 
@@ -44,7 +60,7 @@ public class PhaseByPhaseIntegrationTest {
     // Helper method: Run a specific phase with dry-run
     private int runPhase(final String phaseId) {
         return execute("apply", "--project", TEST_PROJECT.toString(), "--plan", PLAN_PATH,
-                "--phase", phaseId/*, "--dry-run"*/, "-Djava_version=21",
+                "--phase", phaseId/* , "--dry-run" */, "-Djava_version=21",
                 "-Dspring_boot_version=3.5.7", "-Dproject_root=" + TEST_PROJECT);
     }
 
