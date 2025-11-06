@@ -50,6 +50,8 @@ public class JavaClassNode extends BaseGraphNode {
     // Source type constants
     public static final String SOURCE_TYPE_SOURCE = "source";
     public static final String SOURCE_TYPE_BINARY = "binary";
+    private static final String TAG_SOURCE_FILE_PRESENT = "java.source_file_present";
+
 
     // Inspector execution tracking for convergence detection
     @JsonIgnore
@@ -89,7 +91,7 @@ public class JavaClassNode extends BaseGraphNode {
      * @return Configured JavaClassNode instance
      */
     public static JavaClassNode create(final String fullyQualifiedName, final String classType,
-            final String sourceType, final String projectFileId, final String sourceFilePath) {
+                                       final String sourceType, final String projectFileId, final String sourceFilePath) {
         final JavaClassNode node = new JavaClassNode(fullyQualifiedName);
         node.setClassType(classType);
         node.setSourceType(sourceType);
@@ -200,6 +202,11 @@ public class JavaClassNode extends BaseGraphNode {
         setProperty(PROP_SOURCE_FILE_PATH, sourceFilePath);
     }
 
+    public void setSourceFilePath(@NotNull final Path filePath) {
+        Validate.notNull(filePath);
+        setSourceFilePath(filePath.toString());
+    }
+
     public int getMethodCount() {
         final Number metric = getMetrics().getMetric(METRIC_METHOD_COUNT);
         return metric != null ? metric.intValue() : 0;
@@ -264,6 +271,8 @@ public class JavaClassNode extends BaseGraphNode {
         return packageName == null || packageName.trim().isEmpty();
     }
 
+    // ==================== INSPECTOR EXECUTION TRACKING ====================
+
     /**
      * Checks if this class was discovered from source code analysis.
      *
@@ -272,8 +281,6 @@ public class JavaClassNode extends BaseGraphNode {
     public boolean isFromSource() {
         return SOURCE_TYPE_SOURCE.equals(getSourceType());
     }
-
-    // ==================== INSPECTOR EXECUTION TRACKING ====================
 
     /**
      * Checks if this class was discovered from binary analysis.
@@ -371,6 +378,8 @@ public class JavaClassNode extends BaseGraphNode {
         inspectorExecutionTimes.clear();
     }
 
+    // ==================== Object Methods ====================
+
     @Override
     public String getDisplayLabel() {
         final String simpleName = getSimpleName();
@@ -383,8 +392,6 @@ public class JavaClassNode extends BaseGraphNode {
             return String.format("%s (%s, %s, %s)", simpleName, classType, sourceType, getPackageName());
         }
     }
-
-    // ==================== Object Methods ====================
 
     @Override
     public boolean equals(final Object obj) {
@@ -405,7 +412,7 @@ public class JavaClassNode extends BaseGraphNode {
     @Override
     public String toString() {
         return String.format("JavaClassNode{fqn='%s', type='%s', sourceType='%s', projectFileId='%s', " +
-                "methodCount=%d, fieldCount=%d, properties=%d, tags=%d}",
+                        "methodCount=%d, fieldCount=%d, properties=%d, tags=%d}",
                 getFullyQualifiedName(),
                 getClassType(),
                 getSourceType(),
@@ -438,8 +445,16 @@ public class JavaClassNode extends BaseGraphNode {
         Validate.notNull(filePath);
         addSourceAliasPath(filePath.toString());
     }
-    public void setSourceFilePath(@NotNull final Path filePath) {
-        Validate.notNull(filePath);
-        setSourceFilePath(filePath.toString());
+
+    public boolean isSourceFilePresent() {
+        return hasTag(TAG_SOURCE_FILE_PRESENT);
+    }
+
+    public void setSourceFilePresent(final boolean sourceFilePresent) {
+        if (!sourceFilePresent) {
+            removeTag(TAG_SOURCE_FILE_PRESENT);
+        } else {
+            enableTag(TAG_SOURCE_FILE_PRESENT);
+        }
     }
 }

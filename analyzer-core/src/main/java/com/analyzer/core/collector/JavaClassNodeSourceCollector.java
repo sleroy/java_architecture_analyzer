@@ -220,6 +220,7 @@ public class JavaClassNodeSourceCollector implements ClassNodeCollector {
         final JavaClassNode classNode = new JavaClassNode(fqn);
         classNode.setSourceFilePath(source.getFilePath().toString());
         classNode.setSourceType(FORMAT_SOURCE);
+        classNode.setSourceFilePresent(true);
         classNode.addSourceAliasPath(source.getFilePath().toString());
         return classNode;
     }

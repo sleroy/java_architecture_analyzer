@@ -51,7 +51,7 @@ public final class EjbMigrationTags {
     /**
      * Tag for EJB entity bean components
      */
-    public static final String EJB_ENTITY_BEAN = "ejb.entityBean";
+    public static final String EJB_ENTITY_BEAN = "ejb.entity_bean";
 
     /**
      * Tag for EJB CMP entity bean components
@@ -552,7 +552,7 @@ public final class EjbMigrationTags {
     /**
      * Tag for Data Access Object (DAO) pattern implementations
      */
-    public static final String DATA_ACCESS_OBJECT_PATTERN = "dataAccess.dao.pattern";
+    public static final String DATA_ACCESS_OBJECT_PATTERN = "java.dao.pattern";
 
     /**
      * Tag for Data Transfer Object patterns used with JDBC
