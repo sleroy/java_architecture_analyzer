@@ -2,12 +2,12 @@ package com.analyzer.api.graph;
 
 import com.analyzer.core.graph.NodeTypeRegistry;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.jboss.forge.roaster._shade.org.apache.commons.lang3.Validate;
 
+import javax.validation.constraints.NotNull;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.analyzer.core.inspector.InspectorTags.TAG_JAVA_DETECTED;
@@ -16,7 +16,7 @@ import static com.analyzer.core.inspector.InspectorTags.TAG_JAVA_DETECTED;
  * Graph node representing a Java class discovered through source code or
  * bytecode analysis.
  * Extends BaseGraphNode to provide class-specific properties and behavior.
- * 
+ *
  * <p>
  * Key Properties:
  * </p>
@@ -39,6 +39,7 @@ public class JavaClassNode extends BaseGraphNode {
     public static final String PROP_CLASS_TYPE = "classType";
     public static final String PROP_SOURCE_TYPE = "sourceType";
     public static final String PROP_SOURCE_FILE_PATH = "sourceFilePath";
+    public static final String PROP_SOURCE_ALIAS_PATHS = "sourceAliasPaths";
     public static final String METRIC_METHOD_COUNT = "methodCount";
     public static final String METRIC_FIELD_COUNT = "fieldCount";
     public static final String METRIC_CYCLOMATIC_COMPLEXITY = "cyclomaticComplexity";
@@ -54,20 +55,20 @@ public class JavaClassNode extends BaseGraphNode {
     @JsonIgnore
     private final Map<String, LocalDateTime> inspectorExecutionTimes = new ConcurrentHashMap<>();
     @JsonIgnore
-    private LocalDateTime lastModified = LocalDateTime.now();
+    private final LocalDateTime lastModified = LocalDateTime.now();
 
     /**
      * Creates a JavaClassNode with the specified fully qualified name.
      * The fully qualified name is used as both the node ID and as a property.
-     * 
+     *
      * @param fullyQualifiedName Complete class name including package
      */
-    public JavaClassNode(String fullyQualifiedName) {
+    public JavaClassNode(final String fullyQualifiedName) {
         super(fullyQualifiedName, NodeTypeRegistry.getTypeId(JavaClassNode.class));
         setProperty(PROP_FULLY_QUALIFIED_NAME, fullyQualifiedName);
         enableTag(TAG_JAVA_DETECTED);
         // Extract and set simple name and package name
-        int lastDotIndex = fullyQualifiedName.lastIndexOf('.');
+        final int lastDotIndex = fullyQualifiedName.lastIndexOf('.');
         if (lastDotIndex >= 0) {
             setProperty(PROP_PACKAGE_NAME, fullyQualifiedName.substring(0, lastDotIndex));
             setProperty(PROP_SIMPLE_NAME, fullyQualifiedName.substring(lastDotIndex + 1));
@@ -78,8 +79,31 @@ public class JavaClassNode extends BaseGraphNode {
     }
 
     /**
+     * Creates a JavaClassNode from analysis results with all properties set.
+     *
+     * @param fullyQualifiedName Complete class name
+     * @param classType          Type of class (class, interface, etc.)
+     * @param sourceType         How it was discovered (source or binary)
+     * @param projectFileId      Associated project file ID
+     * @param sourceFilePath     Path to source file (if available)
+     * @return Configured JavaClassNode instance
+     */
+    public static JavaClassNode create(final String fullyQualifiedName, final String classType,
+            final String sourceType, final String projectFileId, final String sourceFilePath) {
+        final JavaClassNode node = new JavaClassNode(fullyQualifiedName);
+        node.setClassType(classType);
+        node.setSourceType(sourceType);
+        node.setProjectFileId(projectFileId);
+        if (sourceFilePath != null) {
+            node.setSourceFilePath(sourceFilePath);
+        }
+        node.addSourceAliasPath(sourceFilePath);
+        return node;
+    }
+
+    /**
      * Gets the project file ID that contains this class.
-     * 
+     *
      * @return Project file ID, or null if not set
      */
     public String getProjectFileId() {
@@ -88,16 +112,16 @@ public class JavaClassNode extends BaseGraphNode {
 
     /**
      * Sets the project file ID that contains this class.
-     * 
+     *
      * @param projectFileId Project file identifier
      */
-    public void setProjectFileId(String projectFileId) {
+    public void setProjectFileId(final String projectFileId) {
         setProperty(PROP_PROJECT_FILE_ID, projectFileId);
     }
 
     /**
      * Gets the simple class name (without package).
-     * 
+     *
      * @return Simple class name
      */
     public String getSimpleName() {
@@ -106,7 +130,7 @@ public class JavaClassNode extends BaseGraphNode {
 
     /**
      * Gets the package name containing this class.
-     * 
+     *
      * @return Package name, or empty string for default package
      */
     public String getPackageName() {
@@ -115,7 +139,7 @@ public class JavaClassNode extends BaseGraphNode {
 
     /**
      * Gets the fully qualified class name.
-     * 
+     *
      * @return Complete class name including package
      */
     public String getFullyQualifiedName() {
@@ -124,7 +148,7 @@ public class JavaClassNode extends BaseGraphNode {
 
     /**
      * Gets the class type (class, interface, enum, annotation, record).
-     * 
+     *
      * @return Class type, or "class" as default
      */
     public String getClassType() {
@@ -133,16 +157,16 @@ public class JavaClassNode extends BaseGraphNode {
 
     /**
      * Sets the class type.
-     * 
+     *
      * @param classType Type of class (class, interface, enum, annotation, record)
      */
-    public void setClassType(String classType) {
+    public void setClassType(final String classType) {
         setProperty(PROP_CLASS_TYPE, classType);
     }
 
     /**
      * Gets how this class was discovered (source or binary analysis).
-     * 
+     *
      * @return Source type
      */
     public String getSourceType() {
@@ -151,16 +175,16 @@ public class JavaClassNode extends BaseGraphNode {
 
     /**
      * Sets how this class was discovered.
-     * 
+     *
      * @param sourceType SOURCE_TYPE_SOURCE or SOURCE_TYPE_BINARY
      */
-    public void setSourceType(String sourceType) {
+    public void setSourceType(final String sourceType) {
         setProperty(PROP_SOURCE_TYPE, sourceType);
     }
 
     /**
      * Gets the source file path if available.
-     * 
+     *
      * @return Source file path or null
      */
     public String getSourceFilePath() {
@@ -169,105 +193,105 @@ public class JavaClassNode extends BaseGraphNode {
 
     /**
      * Sets the source file path.
-     * 
+     *
      * @param sourceFilePath Path to the source file containing this class
      */
-    public void setSourceFilePath(String sourceFilePath) {
+    public void setSourceFilePath(final String sourceFilePath) {
         setProperty(PROP_SOURCE_FILE_PATH, sourceFilePath);
     }
 
     public int getMethodCount() {
-        Number metric = getMetrics().getMetric(METRIC_METHOD_COUNT);
+        final Number metric = getMetrics().getMetric(METRIC_METHOD_COUNT);
         return metric != null ? metric.intValue() : 0;
     }
 
-    public void setMethodCount(int methodCount) {
+    public void setMethodCount(final int methodCount) {
         getMetrics().setMetric(METRIC_METHOD_COUNT, methodCount);
     }
 
     public int getFieldCount() {
-        Number metric = getMetrics().getMetric(METRIC_FIELD_COUNT);
+        final Number metric = getMetrics().getMetric(METRIC_FIELD_COUNT);
         return metric != null ? metric.intValue() : 0;
     }
 
-    public void setFieldCount(int fieldCount) {
+    public void setFieldCount(final int fieldCount) {
         getMetrics().setMetric(METRIC_FIELD_COUNT, fieldCount);
     }
 
     public int getCyclomaticComplexity() {
-        Number metric = getMetrics().getMetric(METRIC_CYCLOMATIC_COMPLEXITY);
+        final Number metric = getMetrics().getMetric(METRIC_CYCLOMATIC_COMPLEXITY);
         return metric != null ? metric.intValue() : 0;
     }
 
-    public void setCyclomaticComplexity(int cyclomaticComplexity) {
+    public void setCyclomaticComplexity(final int cyclomaticComplexity) {
         getMetrics().setMetric(METRIC_CYCLOMATIC_COMPLEXITY, cyclomaticComplexity);
     }
 
     public int getWeightedMethods() {
-        Number metric = getMetrics().getMetric(METRIC_WEIGHTED_METHODS);
+        final Number metric = getMetrics().getMetric(METRIC_WEIGHTED_METHODS);
         return metric != null ? metric.intValue() : 0;
     }
 
-    public void setWeightedMethods(int weightedMethods) {
+    public void setWeightedMethods(final int weightedMethods) {
         getMetrics().setMetric(METRIC_WEIGHTED_METHODS, weightedMethods);
     }
 
     public int getAfferentCoupling() {
-        Number metric = getMetrics().getMetric(METRIC_AFFERENT_COUPLING);
+        final Number metric = getMetrics().getMetric(METRIC_AFFERENT_COUPLING);
         return metric != null ? metric.intValue() : 0;
     }
 
-    public void setAfferentCoupling(int afferentCoupling) {
+    public void setAfferentCoupling(final int afferentCoupling) {
         getMetrics().setMetric(METRIC_AFFERENT_COUPLING, afferentCoupling);
     }
 
     public int getEfferentCoupling() {
-        Number metric = getMetrics().getMetric(METRIC_EFFERENT_COUPLING);
+        final Number metric = getMetrics().getMetric(METRIC_EFFERENT_COUPLING);
         return metric != null ? metric.intValue() : 0;
     }
 
-    public void setEfferentCoupling(int efferentCoupling) {
+    public void setEfferentCoupling(final int efferentCoupling) {
         getMetrics().setMetric(METRIC_EFFERENT_COUPLING, efferentCoupling);
     }
 
     /**
      * Checks if this class is in the default package.
-     * 
+     *
      * @return true if in default package (no package declaration)
      */
     public boolean isInDefaultPackage() {
-        String packageName = getPackageName();
+        final String packageName = getPackageName();
         return packageName == null || packageName.trim().isEmpty();
     }
 
     /**
      * Checks if this class was discovered from source code analysis.
-     * 
+     *
      * @return true if discovered from source code
      */
     public boolean isFromSource() {
         return SOURCE_TYPE_SOURCE.equals(getSourceType());
     }
 
+    // ==================== INSPECTOR EXECUTION TRACKING ====================
+
     /**
      * Checks if this class was discovered from binary analysis.
-     * 
+     *
      * @return true if discovered from binary code
      */
     public boolean isFromBinary() {
         return SOURCE_TYPE_BINARY.equals(getSourceType());
     }
 
-    // ==================== INSPECTOR EXECUTION TRACKING ====================
-
     /**
      * Marks that an inspector has been executed on this class node.
      * Updates lastModified timestamp to trigger re-analysis in dependent
      * inspectors.
-     * 
+     *
      * @param inspectorName Name of the inspector that executed
      */
-    public void markInspectorExecuted(String inspectorName) {
+    public void markInspectorExecuted(final String inspectorName) {
         markInspectorExecuted(inspectorName, LocalDateTime.now());
     }
 
@@ -276,11 +300,11 @@ public class JavaClassNode extends BaseGraphNode {
      * time.
      * Does NOT update lastModified - that should only happen when the node's data
      * actually changes.
-     * 
+     *
      * @param inspectorName Name of the inspector that executed
      * @param executionTime Time when the inspector executed
      */
-    public void markInspectorExecuted(String inspectorName, LocalDateTime executionTime) {
+    public void markInspectorExecuted(final String inspectorName, final LocalDateTime executionTime) {
         inspectorExecutionTimes.put(inspectorName, executionTime);
         // REMOVED: lastModified = LocalDateTime.now();
         // lastModified should only be updated when node data changes, not when an
@@ -289,11 +313,11 @@ public class JavaClassNode extends BaseGraphNode {
 
     /**
      * Gets the time when a specific inspector was last executed on this node.
-     * 
+     *
      * @param inspectorName Name of the inspector
      * @return Optional containing execution time, or empty if inspector hasn't run
      */
-    public Optional<LocalDateTime> getInspectorExecutionTime(String inspectorName) {
+    public Optional<LocalDateTime> getInspectorExecutionTime(final String inspectorName) {
         return Optional.ofNullable(inspectorExecutionTimes.get(inspectorName));
     }
 
@@ -301,12 +325,12 @@ public class JavaClassNode extends BaseGraphNode {
      * Checks if an inspector's results are up-to-date for this node.
      * An inspector is up-to-date if it has executed after the node's last
      * modification.
-     * 
+     *
      * @param inspectorName Name of the inspector to check
      * @return true if inspector results are current, false otherwise
      */
-    public boolean isInspectorUpToDate(String inspectorName) {
-        Optional<LocalDateTime> executionTime = getInspectorExecutionTime(inspectorName);
+    public boolean isInspectorUpToDate(final String inspectorName) {
+        final Optional<LocalDateTime> executionTime = getInspectorExecutionTime(inspectorName);
         if (executionTime.isEmpty()) {
             return false;
         }
@@ -315,7 +339,7 @@ public class JavaClassNode extends BaseGraphNode {
 
     /**
      * Gets the time this node was last modified.
-     * 
+     *
      * @return Last modification timestamp
      */
     public LocalDateTime getLastModified() {
@@ -324,7 +348,7 @@ public class JavaClassNode extends BaseGraphNode {
 
     /**
      * Gets all inspector execution times for this node.
-     * 
+     *
      * @return Unmodifiable map of inspector names to execution times
      */
     public Map<String, LocalDateTime> getAllInspectorExecutionTimes() {
@@ -333,7 +357,7 @@ public class JavaClassNode extends BaseGraphNode {
 
     /**
      * Checks if any inspector has been executed on this node.
-     * 
+     *
      * @return true if at least one inspector has run
      */
     public boolean hasAnyInspectorBeenExecuted() {
@@ -349,9 +373,9 @@ public class JavaClassNode extends BaseGraphNode {
 
     @Override
     public String getDisplayLabel() {
-        String simpleName = getSimpleName();
-        String classType = getClassType();
-        String sourceType = getSourceType();
+        final String simpleName = getSimpleName();
+        final String classType = getClassType();
+        final String sourceType = getSourceType();
 
         if (isInDefaultPackage()) {
             return String.format("%s (%s, %s)", simpleName, classType, sourceType);
@@ -360,38 +384,16 @@ public class JavaClassNode extends BaseGraphNode {
         }
     }
 
-    /**
-     * Creates a JavaClassNode from analysis results with all properties set.
-     * 
-     * @param fullyQualifiedName Complete class name
-     * @param classType          Type of class (class, interface, etc.)
-     * @param sourceType         How it was discovered (source or binary)
-     * @param projectFileId      Associated project file ID
-     * @param sourceFilePath     Path to source file (if available)
-     * @return Configured JavaClassNode instance
-     */
-    public static JavaClassNode create(String fullyQualifiedName, String classType,
-            String sourceType, String projectFileId, String sourceFilePath) {
-        JavaClassNode node = new JavaClassNode(fullyQualifiedName);
-        node.setClassType(classType);
-        node.setSourceType(sourceType);
-        node.setProjectFileId(projectFileId);
-        if (sourceFilePath != null) {
-            node.setSourceFilePath(sourceFilePath);
-        }
-        return node;
-    }
-
     // ==================== Object Methods ====================
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(final Object obj) {
         if (this == obj)
             return true;
         if (obj == null || getClass() != obj.getClass())
             return false;
 
-        JavaClassNode that = (JavaClassNode) obj;
+        final JavaClassNode that = (JavaClassNode) obj;
         return Objects.equals(getId(), that.getId());
     }
 
@@ -412,5 +414,32 @@ public class JavaClassNode extends BaseGraphNode {
                 getFieldCount(),
                 getNodeProperties().size(),
                 getTags().size());
+    }
+
+    public void addSourceAliasPath(final String filePath) {
+        final Collection<String> sourceAlias = getProperty(PROP_SOURCE_ALIAS_PATHS);
+        if (sourceAlias == null) {
+            setProperty(PROP_SOURCE_ALIAS_PATHS, new HashSet<>(List.of(filePath)));
+            return;
+        }
+        sourceAlias.add(filePath);
+        setProperty(PROP_SOURCE_ALIAS_PATHS, sourceAlias);
+    }
+
+    public Collection<String> getSourceAliasPaths() {
+        final Collection<String> property = getProperty(PROP_SOURCE_ALIAS_PATHS);
+        if (property == null) {
+            return new HashSet<>();
+        }
+        return property;
+    }
+
+    public void addSourceAliasPath(@NotNull final Path filePath) {
+        Validate.notNull(filePath);
+        addSourceAliasPath(filePath.toString());
+    }
+    public void setSourceFilePath(@NotNull final Path filePath) {
+        Validate.notNull(filePath);
+        setSourceFilePath(filePath.toString());
     }
 }

@@ -78,20 +78,20 @@ public class AiAssistedBlock implements TemplateAwareBlock {
                         name, processedPrompt.length(), processedPrompt.substring(0, 2048) + "...");
             }
 
-            // Execute Amazon Q CLI
-            String response = executeAmazonQ(processedPrompt, context);
+            // Execute AI backend
+            String response = executeAiBackend(processedPrompt, context);
 
             // Save conversation to file
             Path conversationFile = saveConversation(context.getProjectRoot(), processedPrompt, response);
 
             long executionTime = System.currentTimeMillis() - startTime;
 
-            logger.info("Amazon Q response received for '{}': {} characters, saved to: {}",
+            logger.info("AI backend response received for '{}': {} characters, saved to: {}",
                     name, response.length(), conversationFile);
 
             BlockResult.Builder resultBuilder = BlockResult.builder()
                     .success(true)
-                    .message("Amazon Q response generated successfully")
+                    .message("AI backend response generated successfully")
                     .outputVariable("prompt", processedPrompt)
                     .outputVariable("conversation_file", conversationFile.toString())
                     .executionTimeMs(executionTime);
@@ -107,155 +107,28 @@ public class AiAssistedBlock implements TemplateAwareBlock {
             return resultBuilder.build();
 
         } catch (Exception e) {
-            logger.error("Failed to execute Amazon Q for '{}': {}", name, e.getMessage(), e);
+            logger.error("Failed to execute AI backend for '{}': {}", name, e.getMessage(), e);
             return BlockResult.failure(
-                    "Failed to execute Amazon Q",
+                    "Failed to execute AI backend",
                     e.getMessage());
         }
     }
 
     /**
-     * Execute Amazon Q CLI with the given prompt using piped input.
+     * Execute AI backend with the given prompt.
+     * Uses the backend configured in the migration context (Amazon Q, Gemini, etc.)
      */
-    private String executeAmazonQ(String prompt, MigrationContext context) throws IOException, InterruptedException {
+    private String executeAiBackend(String prompt, MigrationContext context) throws IOException, InterruptedException {
         Path workingDir = workingDirectoryTemplate.resolve(context);
-        logger.debug("Executing Amazon Q CLI with piped input for prompt: {} characters, working directory: {}",
-                prompt.length(), workingDir);
 
-        // Build the command for non-interactive chat mode
-        ProcessBuilder processBuilder = new ProcessBuilder("q", "chat", "--no-interactive", "--trust-all-tools");
-        // Don't merge stderr into stdout - capture them separately
-        processBuilder.redirectErrorStream(false);
+        // Get the AI backend from context
+        com.analyzer.ai.AiBackend backend = context.getAiBackend();
 
-        // Set working directory for the process
-        processBuilder.directory(workingDir.toFile());
+        logger.debug("Executing {} with prompt: {} characters, working directory: {}",
+                backend.getCliCommand(), prompt.length(), workingDir);
 
-        // Set environment to ensure proper execution
-        processBuilder.environment().put("CI", "true");
-
-        // Start the process
-        Process process = processBuilder.start();
-
-        // Capture stdout and stderr separately
-        StringBuilder stdoutOutput = new StringBuilder();
-        StringBuilder stderrOutput = new StringBuilder();
-
-        // Read stdout in a separate thread
-        Thread stdoutReader = new Thread(() -> {
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    stdoutOutput.append(line).append("\n");
-                    // Use info level for better visibility
-                    logger.info("Amazon Q stdout: {}", line);
-                }
-            } catch (IOException e) {
-                logger.debug("Stdout reading interrupted: {}", e.getMessage());
-            }
-        });
-
-        // Read stderr in a separate thread
-        Thread stderrReader = new Thread(() -> {
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    stderrOutput.append(line).append("\n");
-                    logger.warn("Amazon Q stderr: {}", line);
-                }
-            } catch (IOException e) {
-                logger.debug("Stderr reading interrupted: {}", e.getMessage());
-            }
-        });
-
-        // Write prompt to stdin in a separate thread
-        Thread stdinWriter = new Thread(() -> {
-            try (BufferedWriter writer = new BufferedWriter(
-                    new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8))) {
-
-                logger.info("Writing prompt to Amazon Q CLI stdin");
-                writer.write(prompt);
-                writer.newLine();
-                writer.flush();
-
-                // Close stdin to signal end of input
-                writer.close();
-                logger.info("Prompt sent and stdin closed");
-
-            } catch (IOException e) {
-                logger.warn("Stdin writing failed: {}", e.getMessage());
-            }
-        });
-
-        stdoutReader.start();
-        stderrReader.start();
-        stdinWriter.start();
-
-        // Wait for process to complete with timeout
-        boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
-
-        if (!finished) {
-            logger.warn("Amazon Q CLI timed out after {} seconds, forcibly terminating", timeoutSeconds);
-            process.destroyForcibly();
-            stdoutReader.interrupt();
-            stderrReader.interrupt();
-            stdinWriter.interrupt();
-
-            // Give the forcible termination a moment to complete
-            try {
-                process.waitFor(5, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            throw new IOException("Amazon Q CLI timed out after " + timeoutSeconds + " seconds");
-        }
-
-        // Wait for all threads to complete
-        try {
-            stdoutReader.join(5000); // Wait max 5 seconds for stdout reading to complete
-            stderrReader.join(5000); // Wait max 5 seconds for stderr reading to complete
-            stdinWriter.join(1000); // Wait max 1 second for stdin writing to complete
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
-        // Check exit code
-        int exitCode = process.exitValue();
-        String stdoutContent = stdoutOutput.toString().trim();
-        String stderrContent = stderrOutput.toString().trim();
-
-        if (exitCode != 0) {
-            // Log stderr content at error level if process failed
-            if (!stderrContent.isEmpty()) {
-                logger.error("Amazon Q CLI stderr output: {}", stderrContent);
-            }
-
-            String errorMessage = String.format("Amazon Q CLI failed with exit code %d. Stdout: %s, Stderr: %s",
-                    exitCode, stdoutContent, stderrContent);
-            throw new IOException(errorMessage);
-        }
-
-        // Log stderr content at warn level even if process succeeded (might contain
-        // warnings)
-        if (!stderrContent.isEmpty()) {
-            logger.warn("Amazon Q CLI completed with stderr output: {}", stderrContent);
-        }
-
-        logger.info("Amazon Q CLI completed successfully, stdout length: {} characters, stderr length: {} characters",
-                stdoutContent.length(), stderrContent.length());
-
-        // Use stdout as the main response, but validate we got some content
-        if (stdoutContent.isEmpty()) {
-            if (!stderrContent.isEmpty()) {
-                throw new IOException("Amazon Q CLI completed but returned no stdout output. Stderr: " + stderrContent);
-            } else {
-                throw new IOException("Amazon Q CLI completed but returned no output");
-            }
-        }
-
-        return stdoutContent;
+        // Execute using the backend abstraction
+        return backend.executePrompt(prompt, workingDir, timeoutSeconds);
     }
 
     /**

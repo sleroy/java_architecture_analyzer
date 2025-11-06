@@ -18,7 +18,7 @@ migration-plan:
               description: "Query all message-driven beans"
               query-type: "BY_TAGS"
               tags:
-                - "EJB_MESSAGE_DRIVEN_BEAN"
+                - "ejb.messageDrivenBean"
               output-variable: "mdb_beans"
             
             - type: "OPENREWRITE"

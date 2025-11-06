@@ -192,6 +192,22 @@ public final class EjbMigrationTags {
     public static final String CONVERSATIONAL_STATE = "ejb.conversationalState";
 
     /**
+     * Tag for conversational state detected in class
+     */
+    public static final String EJB_CONVERSATIONAL_STATE_DETECTED = "ejb.conversational.state.detected";
+
+    /**
+     * Tag for complex conversational state patterns (many fields, collections,
+     * etc.)
+     */
+    public static final String EJB_COMPLEX_STATE_PATTERN = "ejb.conversational.state.complex";
+
+    /**
+     * Tag for conversational state involving collections
+     */
+    public static final String EJB_COLLECTION_STATE = "ejb.conversational.state.collection";
+
+    /**
      * Tag for cross-method state dependencies
      */
     public static final String CROSS_METHOD_DEPENDENCY = "ejb.crossMethodDependency";
@@ -205,6 +221,16 @@ public final class EjbMigrationTags {
      * Tag for session synchronization patterns
      */
     public static final String EJB_SESSION_SYNCHRONIZATION = "ejb.stateful.sessionSynchronization";
+
+    /**
+     * Tag for classes that implement Serializable
+     */
+    public static final String EJB_SERIALIZABLE_DETECTED = "ejb.serializable.detected";
+
+    /**
+     * Tag for fields that reference other EJB components
+     */
+    public static final String EJB_FIELD_EJB_REFERENCE = "ejb.field.ejb.reference";
 
     // ==================== CLIENT PATTERN TAGS ====================
 

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ejb-jar PUBLIC "-//Sun Microsystems, Inc.//DTD Enterprise JavaBeans 2.0//EN" 
+    "http://java.sun.com/dtd/ejb-jar_2_0.dtd">
+
+<!-- 
+    EJB 2.0 Deployment Descriptor for Product CMP Entity Bean
+    
+    This descriptor defines:
+    - Entity bean configuration
+    - CMP fields (container-managed persistence)
+    - Primary key class
+    - EJB-QL queries for finder methods
+    - Remote and local interfaces
+    
+    Note: This is legacy EJB 2.0 configuration. Modern applications use JPA annotations.
+-->
+
+<ejb-jar>
+    <description>EJB 2.0 Container Managed Persistence Entity Bean Example</description>
+    <display-name>Product CMP Entity Bean</display-name>
+
+    <enterprise-beans>
+        <!-- Entity Bean Definition -->
+        <entity>
+            <description>Product Entity Bean with Container Managed Persistence</description>
+            <display-name>ProductBean</display-name>
+            <ejb-name>ProductBean</ejb-name>
+
+            <!-- Remote Interface -->
+            <home>br.com.semeru.ejb2.cmp.ProductHome</home>
+            <remote>br.com.semeru.ejb2.cmp.Product</remote>
+
+            <!-- Local Interface -->
+            <local-home>br.com.semeru.ejb2.cmp.ProductLocalHome</local-home>
+            <local>br.com.semeru.ejb2.cmp.ProductLocal</local>
+
+            <!-- Bean Class -->
+            <ejb-class>br.com.semeru.ejb2.cmp.ProductBean</ejb-class>
+
+            <!-- Persistence Type: Container Managed -->
+            <persistence-type>Container</persistence-type>
+
+            <!-- Primary Key Class -->
+            <prim-key-class>java.lang.String</prim-key-class>
+
+            <!-- Reentrant -->
+            <reentrant>False</reentrant>
+
+            <!-- CMP Version 2.x -->
+            <cmp-version>2.x</cmp-version>
+
+            <!-- Abstract Schema Name (used in EJB-QL) -->
+            <abstract-schema-name>Product</abstract-schema-name>
+
+            <!-- CMP Fields Definition -->
+            <cmp-field>
+                <description>Product ID (Primary Key)</description>
+                <field-name>productId</field-name>
+            </cmp-field>
+
+            <cmp-field>
+                <description>Product Name</description>
+                <field-name>productName</field-name>
+            </cmp-field>
+
+            <cmp-field>
+                <description>Product Description</description>
+                <field-name>description</field-name>
+            </cmp-field>
+
+            <cmp-field>
+                <description>Product Price</description>
+                <field-name>price</field-name>
+            </cmp-field>
+
+            <cmp-field>
+                <description>Quantity in Stock</description>
+                <field-name>quantityInStock</field-name>
+            </cmp-field>
+
+            <cmp-field>
+                <description>Product Category</description>
+                <field-name>category</field-name>
+            </cmp-field>
+
+            <!-- Primary Key Field -->
+            <primkey-field>productId</primkey-field>
+
+            <!-- EJB-QL Queries for Finder Methods -->
+            
+            <!-- findAll Query -->
+            <query>
+                <query-method>
+                    <method-name>findAll</method-name>
+                    <method-params/>
+                </query-method>
+                <ejb-ql>
+                    <![CDATA[
+                        SELECT OBJECT(p) FROM Product p
+                    ]]>
+                </ejb-ql>
+            </query>
+
+            <!-- findByCategory Query -->
+            <query>
+                <query-method>
+                    <method-name>findByCategory</method-name>
+                    <method-params>
+                        <method-param>java.lang.String</method-param>
+                    </method-params>
+                </query-method>
+                <ejb-ql>
+                    <![CDATA[
+                        SELECT OBJECT(p) FROM Product p 
+                        WHERE p.category = ?1
+                    ]]>
+                </ejb-ql>
+            </query>
+
+            <!-- findByPriceLessThan Query -->
+            <query>
+                <query-method>
+                    <method-name>findByPriceLessThan</method-name>
+                    <method-params>
+                        <method-param>java.math.BigDecimal</method-param>
+                    </method-params>
+                </query-method>
+                <ejb-ql>
+                    <![CDATA[
+                        SELECT OBJECT(p) FROM Product p 
+                        WHERE p.price < ?1
+                    ]]>
+                </ejb-ql>
+            </query>
+
+            <!-- findInStock Query -->
+            <query>
+                <query-method>
+                    <method-name>findInStock</method-name>
+                    <method-params/>
+                </query-method>
+                <ejb-ql>
+                    <![CDATA[
+                        SELECT OBJECT(p) FROM Product p 
+                        WHERE p.quantityInStock > 0
+                    ]]>
+                </ejb-ql>
+            </query>
+
+        </entity>
+    </enterprise-beans>
+
+    <!-- Assembly Descriptor (optional) -->
+    <assembly-descriptor>
+        <!-- Container Transaction Management -->
+        <container-transaction>
+            <method>
+                <ejb-name>ProductBean</ejb-name>
+                <method-name>*</method-name>
+            </method>
+            <trans-attribute>Required</trans-attribute>
+        </container-transaction>
+    </assembly-descriptor>
+
+</ejb-jar>
