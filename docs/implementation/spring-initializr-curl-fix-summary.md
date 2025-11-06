@@ -15,14 +15,14 @@ curl: (3) URL using bad/illegal format or missing URL
 
 2. **Invalid Spring Boot Version**: The migration plan was configured for Spring Boot 2.7.18, but Spring Initializr no longer supports versions below 3.4.0.
 
-3. **Invalid Java Package Name**: Variable substitution created `br.com.semeru.semeru-springboot` which contains invalid hyphens for Java packages.
+3. **Invalid Java Package Name**: Variable substitution created `com.example.ejbapp.example/springboot` which contains invalid hyphens for Java packages.
 
 4. **Java Version Compatibility**: Spring Boot 3.x requires Java 17+, but the configuration specified Java 8/11.
 
 ### Original Failing Command
 ```bash
 curl -G https://start.spring.io/starter.zip \
-  -d packageName=br.com.semeru.semeru-springboot \  # Invalid package name with hyphens
+  -d packageName=com.example.ejbapp.example/springboot \  # Invalid package name with hyphens
   -d bootVersion=2.7.18 \                          # Unsupported version
   # ... other parameters
 ```
@@ -69,11 +69,11 @@ curl -X POST https://start.spring.io/starter.zip \
   -d type=maven-project \
   -d language=java \
   -d bootVersion=${spring_boot_version} \
-  -d baseDir=semeru-springboot \
+  -d baseDir=example/springboot \
   -d groupId=${group_id} \
   -d artifactId=${artifact_id} \
-  -d name="Semeru Spring Boot Application" \
-  -d description="Semeru application migrated from JBoss EJB 2 to Spring Boot" \
+  -d name="Unicorn Spring Boot Application" \
+  -d description="Unicorn application migrated from JBoss EJB 2 to Spring Boot" \
   -d packageName=${group_id}.springboot \
   -d packaging=jar \
   -d javaVersion=${java_version} \
@@ -182,9 +182,9 @@ To test the fix:
 curl -X POST https://start.spring.io/starter.zip \
   -d type=maven-project \
   -d bootVersion=3.4.0 \
-  -d groupId=br.com.semeru \
-  -d artifactId=semeru-springboot \
-  -d packageName=br.com.semeru.springboot \
+  -d groupId=com.example.ejbapp \
+  -d artifactId=example/springboot \
+  -d packageName=com.example.ejbapp.springboot \
   -d javaVersion=17 \
   -d dependencies=web,data-jpa,validation \
   -o test-project.zip

@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class PhaseByPhaseIntegrationTest {
 
-    private static final Path TEST_PROJECT = Paths.get("/home/sleroy/git/semeru-ejb-maven");
+    private static final Path TEST_PROJECT = Paths.get("demo-ejb2-project");
     private static final Path ANALYZER_ROOT = Paths.get(System.getProperty("user.dir"));
     private static final String PLAN_PATH = ANALYZER_ROOT.resolve("../migrations/ejb2spring/jboss-to-springboot.yaml")
                                                          .toString();

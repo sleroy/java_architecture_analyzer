@@ -33,7 +33,7 @@ migration-plan:
                 # Trim whitespace from detected version
                 DETECTED_JAVA=$(echo "${detected_java_version}" | tr -d '[:space:]')
                 echo "Using detected Java version: $DETECTED_JAVA"
-                curl 'https://start.spring.io/starter.zip?type=maven-project&language=java&bootVersion=${spring_boot_version}&baseDir=${artifact_id}&groupId=${group_id}&artifactId=${artifact_id}&name=Semeru+Spring+Boot+Application&description=Semeru+application+migrated+from+JBoss+EJB+2+to+Spring+Boot&packageName=${group_id}.springboot&packaging=jar&javaVersion=21&dependencies=web,data-jpa,validation,actuator,devtools,configuration-processor,h2,mail,security,data-jdbc,jdbc,web-services' -o springboot-baseline.zip
+                curl 'https://start.spring.io/starter.zip?type=maven-project&language=java&bootVersion=${spring_boot_version}&baseDir=${artifact_id}&groupId=${group_id}&artifactId=${artifact_id}&name=Unicorn+Spring+Boot+Application&description=Unicorn+application+migrated+from+JBoss+EJB+2+to+Spring+Boot&packageName=${group_id}.springboot&packaging=jar&javaVersion=21&dependencies=web,data-jpa,validation,actuator,devtools,configuration-processor,h2,mail,security,data-jdbc,jdbc,web-services' -o springboot-baseline.zip
               working-directory: "${project_root}"
               timeout-seconds: 60
 
@@ -142,9 +142,9 @@ migration-plan:
           blocks:
             - type: "FILE_OPERATION"
               name: "create-main-application-class"
-              description: "Create SemeruApplication.java main class"
+              description: "Create UnicornApplication.java main class"
               operation: "CREATE"
-              path: "${project_root}/${artifact_id}/src/main/java/${package_base}/SemeruApplication.java"
+              path: "${project_root}/${artifact_id}/src/main/java/${package_base}/UnicornApplication.java"
               content: |
                 package ${package_base};
 
@@ -152,9 +152,9 @@ migration-plan:
                 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
                 @SpringBootApplication
-                public class SemeruApplication {
+                public class UnicornApplication {
                     public static void main(String[] args) {
-                        SpringApplication.run(SemeruApplication.class, args);
+                        SpringApplication.run(UnicornApplication.class, args);
                     }
                 }
 
@@ -169,7 +169,7 @@ migration-plan:
                 server.port=8080
 
                 # Logging Configuration
-                logging.level.br.com.semeru=DEBUG
+                logging.level.com.example.ejbapp=DEBUG
                 logging.level.org.springframework=INFO
 
         - id: "task-102"

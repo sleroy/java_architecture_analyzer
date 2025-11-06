@@ -90,7 +90,7 @@ analyzer apply --project /path/to/project \
                --plan migrations/ejb2spring/jboss-to-springboot.yaml
 
 # Verify POM is valid
-cd semeru-springboot
+cd example/springboot
 mvn validate
 
 # Check POM contains Maven properties

@@ -30,10 +30,10 @@ migration-plan:
     
     # Spring Boot Project Configuration
     # The migrated Spring Boot project will be created in:
-    # demo-ejb2-project/target/semeru-springboot/
-    artifact_id: "semeru-springboot"
-    group_id: "br.com.semeru"
-    package_base: "br.com.semeru"
+    # demo-ejb2-project/target/example/springboot/
+    artifact_id: "example/springboot"
+    group_id: "com.example.ejbapp"
+    package_base: "com.example.ejbapp"
     
     # Spring Boot Version
     spring_boot_version: "3.5.7"

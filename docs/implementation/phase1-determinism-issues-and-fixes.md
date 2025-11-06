@@ -187,7 +187,7 @@ Migration failed at Phase 1
 
 ### After
 ```
-[INFO] Building Semeru Spring Boot Application 1.0.0-SNAPSHOT
+[INFO] Building Unicorn Spring Boot Application 1.0.0-SNAPSHOT
 [INFO] Compiling 1 source file with javac [debug parameters release 21] to target/classes
 [INFO] BUILD SUCCESS
 Phase 1 completed successfully

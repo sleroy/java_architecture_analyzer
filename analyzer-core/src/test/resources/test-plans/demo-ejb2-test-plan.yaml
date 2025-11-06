@@ -27,9 +27,9 @@ migration-plan:
     migration_output_dir: "demo-ejb2-project/target"
     
     # Spring Boot Configuration
-    artifact_id: "test-semeru-springboot"
-    group_id: "br.com.semeru.test"
-    package_base: "br.com.semeru.test"
+    artifact_id: "test-example/springboot"
+    group_id: "com.example.ejbapp.test"
+    package_base: "com.example.ejbapp.test"
     spring_boot_version: "3.5.7"
     java_version: "21"
     

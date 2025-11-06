@@ -17,10 +17,10 @@ Implement four inspectors to detect common code antipatterns, enabling replaceme
 
 **phase9-10-modernization.yaml (5 greps):**
 ```bash
-grep -rn "extends" ${project_root}/semeru-springboot/src --include="*.java"
-grep -rn 'private static.*getInstance' ${project_root}/semeru-springboot/src
-grep -rn 'public static.*Utils' ${project_root}/semeru-springboot/src  
-grep -rn 'throws.*Exception.*Exception' ${project_root}/semeru-springboot/src
+grep -rn "extends" ${project_root}/example/springboot/src --include="*.java"
+grep -rn 'private static.*getInstance' ${project_root}/example/springboot/src
+grep -rn 'public static.*Utils' ${project_root}/example/springboot/src  
+grep -rn 'throws.*Exception.*Exception' ${project_root}/example/springboot/src
 ```
 
 **appendix-g-antipatterns.yaml (4 greps):**

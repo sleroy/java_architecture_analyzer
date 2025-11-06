@@ -20,7 +20,7 @@ public class DryRunExample {
         // Build command arguments with variable overrides
         String[] commandArgs = {
                 "apply",
-                "--project", "/home/sleroy/git/semeru-ejb-maven", // Replace with your actual project path
+                "--project", "demo-ejb2-project", // Replace with your actual project path
                 "--plan", "migration-plans/jboss-to-springboot-phase0-1.yaml",
                 "--dry-run",
                 "--verbose",

@@ -128,7 +128,7 @@ maven_opts: "-Xmx1024m"
 **Before:**
 ```yaml
 - type: "COMMAND"
-  command: "cd ${project_root}/semeru-springboot && mvn test -Dtest=*DaoTest"
+  command: "cd ${project_root}/example/springboot && mvn test -Dtest=*DaoTest"
 ```
 
 **After:**
@@ -138,7 +138,7 @@ maven_opts: "-Xmx1024m"
   goals: "test"
   java-home: "${maven_java_home}"
   maven-home: "${maven_home}"
-  working-directory: "${project_root}/semeru-springboot"
+  working-directory: "${project_root}/example/springboot"
   properties:
     test: "*DaoTest"
 ```
