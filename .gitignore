@@ -86,3 +86,4 @@ plugins/*.jar
 # Local configuration
 *.local
 local.properties
+example-springboot/

@@ -1,28 +1,33 @@
 package com.example.ejbapp.service;
 
 import com.example.ejbapp.model.Member;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import javax.ejb.Stateless;
-import javax.enterprise.event.Event;
-import javax.inject.Inject;
 import javax.persistence.EntityManager;
-import java.util.logging.Logger;
+import javax.persistence.PersistenceContext;
 
-@Stateless
+@Service
+@Transactional
 public class MemberRegistration {
 
-    @Inject
-    private Logger log;
+    private static final Logger log = LoggerFactory.getLogger(MemberRegistration.class);
 
-    @Inject
+    @PersistenceContext
     private EntityManager em;
 
-    @Inject
-    private Event<Member> memberEventSrc;
+    private final ApplicationEventPublisher eventPublisher;
+
+    public MemberRegistration(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
 
     public void register(Member member) throws Exception {
         log.info("Registering " + member.getName());
         em.persist(member);
-        memberEventSrc.fire(member);
+        eventPublisher.publishEvent(member);
     }
 }
