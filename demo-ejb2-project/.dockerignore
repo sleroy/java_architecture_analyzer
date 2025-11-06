@@ -1,0 +1,32 @@
+# Exclude build artifacts and IDE files from Docker build context
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation (included in image but not needed for build)
+README.md
+DOCKER_DEPLOYMENT.md
+
+# Deployment artifacts
+deployments/
+
+# Logs
+*.log
