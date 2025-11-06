@@ -19,7 +19,7 @@ migration-plan:
               description: "Query all Bean Managed Persistence entity beans"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.bmp.entityBean"
+                - "ejb.bmp.entity_bean"
               output-variable: "bmp_entities"
             
             # Step 2: OPENREWRITE - Apply automated refactorings

@@ -36,11 +36,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @InspectorDependencies(need = { BinaryJavaClassNodeInspectorV2.class, ApplicationPackageTagInspector.class }, requires = {
         InspectorTags.TAG_JAVA_DETECTED }, produces = {
-                EjbMigrationTags.EJB_CMP_FIELD_MAPPING,
-                EjbMigrationTags.EJB_CMP_FIELD,
-                EjbMigrationTags.EJB_CMR_RELATIONSHIP,
-                EjbMigrationTags.EJB_PRIMARY_KEY_CLASS,
-                EjbMigrationTags.JPA_CONVERSION_CANDIDATE
+                EjbMigrationTags.TAG_EJB_CMP_FIELD_MAPPING,
+                EjbMigrationTags.TAG_EJB_CMP_FIELD,
+                EjbMigrationTags.TAG_EJB_CMR_RELATIONSHIP,
+                EjbMigrationTags.TAG_EJB_PRIMARY_KEY_CLASS,
+                EjbMigrationTags.TAG_JPA_CONVERSION_CANDIDATE
         })
 public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeInspector {
 
@@ -128,16 +128,16 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
         private void setAllTagsAndProperties() {
             // Honor produces contract - set ALL produced tags on ProjectFile for dependency
             // chains
-            setTag(EjbMigrationTags.EJB_CMP_FIELD_MAPPING, true);
-            setTag(EjbMigrationTags.EJB_CMP_FIELD, true);
-            setTag(EjbMigrationTags.EJB_CMR_RELATIONSHIP, true);
-            setTag(EjbMigrationTags.EJB_PRIMARY_KEY_CLASS, true);
-            setTag(EjbMigrationTags.JPA_CONVERSION_CANDIDATE, true);
+            setTag(EjbMigrationTags.TAG_EJB_CMP_FIELD_MAPPING, true);
+            setTag(EjbMigrationTags.TAG_EJB_CMP_FIELD, true);
+            setTag(EjbMigrationTags.TAG_EJB_CMR_RELATIONSHIP, true);
+            setTag(EjbMigrationTags.TAG_EJB_PRIMARY_KEY_CLASS, true);
+            setTag(EjbMigrationTags.TAG_JPA_CONVERSION_CANDIDATE, true);
 
             // Set analysis properties on ClassNode for export data
-            setProperty(EjbMigrationTags.EJB_CMP_FIELD_MAPPING, true);
-            setProperty(EjbMigrationTags.EJB_CMP_ENTITY, true);
-            setProperty(EjbMigrationTags.JPA_CONVERSION_CANDIDATE, true);
+            setProperty(EjbMigrationTags.TAG_EJB_CMP_FIELD_MAPPING, true);
+            setProperty(EjbMigrationTags.TAG_EJB_CMP_ENTITY, true);
+            setProperty(EjbMigrationTags.TAG_JPA_CONVERSION_CANDIDATE, true);
 
             // Generate basic recommendations
             List<String> recommendations = List.of("Convert CMP entity to JPA @Entity");
@@ -150,11 +150,11 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
         private void setDetailedAnalysisResults() {
             // Set field and relationship analysis properties on ClassNode
             if (!metadata.getCmpFields().isEmpty()) {
-                setProperty(EjbMigrationTags.EJB_CMP_FIELD, metadata.getCmpFields().size());
+                setProperty(EjbMigrationTags.TAG_EJB_CMP_FIELD, metadata.getCmpFields().size());
             }
 
             if (!metadata.getCmrRelationships().isEmpty()) {
-                setProperty(EjbMigrationTags.EJB_CMR_RELATIONSHIP, metadata.getCmrRelationships().size());
+                setProperty(EjbMigrationTags.TAG_EJB_CMR_RELATIONSHIP, metadata.getCmrRelationships().size());
             }
 
             // Set primary key analysis properties
@@ -162,7 +162,7 @@ public class CmpFieldMappingJavaBinaryInspector extends AbstractBinaryClassNodeI
                     .anyMatch(field -> field.getName().toLowerCase().contains("id") ||
                             field.getName().toLowerCase().contains("key"));
             if (hasPrimaryKey) {
-                setProperty(EjbMigrationTags.EJB_PRIMARY_KEY_CLASS, true);
+                setProperty(EjbMigrationTags.TAG_EJB_PRIMARY_KEY_CLASS, true);
             }
 
             // Assess migration complexity and set appropriate tags on ProjectFile

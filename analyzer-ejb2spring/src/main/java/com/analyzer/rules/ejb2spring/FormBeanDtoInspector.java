@@ -113,7 +113,7 @@ public class FormBeanDtoInspector extends AbstractJavaClassInspector {
 
             // Set tags according to the produces contract
             projectFileDecorator.enableTag(TAGS.TAG_IS_DTO);
-            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
 
             // Set appropriate Spring Boot migration target
             if (info.isMutable) {

@@ -28,9 +28,9 @@ import java.util.Set;
         produces = {
         EjbDeploymentDescriptorDetector.TAGS.TAG_DESCRIPTOR_TYPE,
         EjbDeploymentDescriptorDetector.TAGS.TAG_FILE_TYPE,
-        com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_DEPLOYMENT_DESCRIPTOR,
-        com.analyzer.rules.ejb2spring.EjbMigrationTags.VENDOR_DEPLOYMENT_DESCRIPTOR,
-        com.analyzer.rules.ejb2spring.EjbMigrationTags.JPA_CONVERSION_CANDIDATE,
+        com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_EJB_DEPLOYMENT_DESCRIPTOR,
+        com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_VENDOR_DEPLOYMENT_DESCRIPTOR,
+        com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_JPA_CONVERSION_CANDIDATE,
 })
 public class EjbDeploymentDescriptorDetector implements Inspector<ProjectFile> {
 
@@ -88,11 +88,11 @@ public class EjbDeploymentDescriptorDetector implements Inspector<ProjectFile> {
 
         // Set EJB-specific migration tags from EjbMigrationTags
         if ("ejb-jar.xml".equals(fileName)) {
-            projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.EJB_DEPLOYMENT_DESCRIPTOR);
+            projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_EJB_DEPLOYMENT_DESCRIPTOR);
         } else if ("persistence.xml".equals(fileName) || "orm.xml".equals(fileName)) {
-            projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.JPA_CONVERSION_CANDIDATE);
+            projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_JPA_CONVERSION_CANDIDATE);
         } else if ("web.xml".equals(fileName) || "application.xml".equals(fileName)) {
-            projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.VENDOR_DEPLOYMENT_DESCRIPTOR);
+            projectFileDecorator.enableTag(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_VENDOR_DEPLOYMENT_DESCRIPTOR);
         } else {
         }
     }

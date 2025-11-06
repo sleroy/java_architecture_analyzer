@@ -25,7 +25,7 @@ import java.util.List;
  * Identifies generic exception throws and catches, and empty catch blocks.
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
-        EjbMigrationTags.ANTIPATTERN_EXCEPTION_GENERIC })
+        EjbMigrationTags.TAG_ANTIPATTERN_EXCEPTION_GENERIC })
 public class ExceptionAntipatternInspector extends AbstractJavaClassInspector {
 
     @Inject
@@ -46,15 +46,15 @@ public class ExceptionAntipatternInspector extends AbstractJavaClassInspector {
                 ExceptionAntipatternInfo info = detector.getExceptionAntipatternInfo();
 
                 // Tag ProjectFile and JavaClassNode
-                projectFileDecorator.enableTag(EjbMigrationTags.ANTIPATTERN_EXCEPTION_GENERIC);
-                classNode.enableTag(EjbMigrationTags.ANTIPATTERN_EXCEPTION_GENERIC);
+                projectFileDecorator.enableTag(EjbMigrationTags.TAG_ANTIPATTERN_EXCEPTION_GENERIC);
+                classNode.enableTag(EjbMigrationTags.TAG_ANTIPATTERN_EXCEPTION_GENERIC);
 
                 // Store analysis data
                 classNode.setProperty("antipattern.exception.info", info);
 
                 // Calculate refactoring complexity
                 double complexity = calculateComplexity(info);
-                classNode.setProperty(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, complexity);
+                classNode.setProperty(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, complexity);
             }
         }
     }

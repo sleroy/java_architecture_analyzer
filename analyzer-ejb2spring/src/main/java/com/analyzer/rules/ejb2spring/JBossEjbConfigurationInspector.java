@@ -47,9 +47,9 @@ import java.util.Set;
  */
 @InspectorDependencies(
         need = {EjbDeploymentDescriptorDetector.class}, produces = {
-        EjbMigrationTags.JBOSS_CONFIGURATION,
-        EjbMigrationTags.VENDOR_SPECIFIC_CONFIG,
-        EjbMigrationTags.SPRING_BOOT_MIGRATION_CANDIDATE
+        EjbMigrationTags.TAG_JBOSS_CONFIGURATION,
+        EjbMigrationTags.TAG_VENDOR_SPECIFIC_CONFIG,
+        EjbMigrationTags.TAG_SPRING_BOOT_MIGRATION_CANDIDATE
 })
 public class JBossEjbConfigurationInspector extends AbstractSourceFileInspector {
 
@@ -159,9 +159,9 @@ public class JBossEjbConfigurationInspector extends AbstractSourceFileInspector 
      */
     private void setProducedTags(NodeDecorator<ProjectFile> projectFileDecorator, JBossConfiguration config) {
         // Set the main produced tags on ProjectFile (dependency chain)
-        projectFileDecorator.setProperty(EjbMigrationTags.JBOSS_CONFIGURATION, true);
-        projectFileDecorator.setProperty(EjbMigrationTags.VENDOR_SPECIFIC_CONFIG, true);
-        projectFileDecorator.setProperty(EjbMigrationTags.SPRING_BOOT_MIGRATION_CANDIDATE, true);
+        projectFileDecorator.setProperty(EjbMigrationTags.TAG_JBOSS_CONFIGURATION, true);
+        projectFileDecorator.setProperty(EjbMigrationTags.TAG_VENDOR_SPECIFIC_CONFIG, true);
+        projectFileDecorator.setProperty(EjbMigrationTags.TAG_SPRING_BOOT_MIGRATION_CANDIDATE, true);
     }
 
     /**

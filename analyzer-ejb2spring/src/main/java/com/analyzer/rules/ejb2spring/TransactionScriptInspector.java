@@ -89,7 +89,7 @@ public class TransactionScriptInspector extends AbstractJavaClassInspector {
             projectFileDecorator.enableTag(EjbMigrationTags.TAG_EJB_BEAN_MANAGED_TRANSACTION);
             projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_TRANSACTION_CONVERSION);
             projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_SERVICE_CONVERSION);
-            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
 
             // Set property on class node for detailed analysis
             classNode.setProperty("transaction.analysis", info);
@@ -105,7 +105,7 @@ public class TransactionScriptInspector extends AbstractJavaClassInspector {
 
             // Set migration complexity based on transaction patterns
             if (info.hasNestedTransactions || info.hasMultipleTransactionScopes) {
-                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_HIGH);
             }
         }
     }

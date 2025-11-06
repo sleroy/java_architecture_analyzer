@@ -66,7 +66,7 @@ public class ServletInspector extends AbstractJavaClassInspector {
                 // Set tags according to the produces contract
                 projectFileDecorator.enableTag(TAGS.TAG_IS_SERVLET);
                 projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
-                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
 
                 // Set property on class node for detailed analysis
                 classNode.setProperty("servlet.analysis", info);

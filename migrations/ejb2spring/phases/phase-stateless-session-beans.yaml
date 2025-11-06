@@ -19,7 +19,7 @@ migration-plan:
               description: "Query all stateless session beans"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.stateless.sessionBean"
+                - "ejb.stateless.session_bean"
               output-variable: "stateless_beans"
             
             # Step 2: OPENREWRITE - Apply automated refactorings

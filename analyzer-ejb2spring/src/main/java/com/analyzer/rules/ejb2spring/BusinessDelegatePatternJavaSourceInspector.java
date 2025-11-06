@@ -36,10 +36,10 @@ import java.util.Set;
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, need = {
         EntityBeanJavaSourceInspector.class }, produces = {
-                EjbMigrationTags.EJB_BUSINESS_DELEGATE,
-                EjbMigrationTags.EJB_SERVICE_LOCATOR,
-                EjbMigrationTags.EJB_CLIENT_CODE,
-                EjbMigrationTags.EJB_JNDI_LOOKUP
+                EjbMigrationTags.TAG_EJB_BUSINESS_DELEGATE,
+                EjbMigrationTags.TAG_EJB_SERVICE_LOCATOR,
+                EjbMigrationTags.TAG_EJB_CLIENT_CODE,
+                EjbMigrationTags.TAG_EJB_JNDI_LOOKUP
         })
 public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaParserInspector {
 
@@ -85,13 +85,13 @@ public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaPars
         boolean usesServiceLocator = metadata.usesServiceLocator();
         boolean hasJndiLookup = metadata.hasJndiLookup();
 
-        projectFile.setProperty(EjbMigrationTags.EJB_BUSINESS_DELEGATE, isBusinessDelegate);
-        projectFile.setProperty(EjbMigrationTags.EJB_SERVICE_LOCATOR, isServiceLocator || usesServiceLocator);
-        projectFile.setProperty(EjbMigrationTags.EJB_CLIENT_CODE, usesBusinessDelegate);
-        projectFile.setProperty(EjbMigrationTags.EJB_JNDI_LOOKUP, hasJndiLookup);
+        projectFile.setProperty(EjbMigrationTags.TAG_EJB_BUSINESS_DELEGATE, isBusinessDelegate);
+        projectFile.setProperty(EjbMigrationTags.TAG_EJB_SERVICE_LOCATOR, isServiceLocator || usesServiceLocator);
+        projectFile.setProperty(EjbMigrationTags.TAG_EJB_CLIENT_CODE, usesBusinessDelegate);
+        projectFile.setProperty(EjbMigrationTags.TAG_EJB_JNDI_LOOKUP, hasJndiLookup);
 
         if (isBusinessDelegate || isServiceLocator || usesBusinessDelegate || hasJndiLookup) {
-            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_PRIORITY,
                     EjbMigrationTags.PRIORITY_HIGH);
         }
 
@@ -108,7 +108,7 @@ public class BusinessDelegatePatternJavaSourceInspector extends AbstractJavaPars
                     case "HIGH" -> EjbMigrationTags.COMPLEXITY_HIGH;
                     default -> EjbMigrationTags.COMPLEXITY_MEDIUM;
                 };
-                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY,
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY,
                         complexityValue);
 
                 // Generate migration recommendations

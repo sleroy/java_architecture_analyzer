@@ -19,7 +19,7 @@ migration-plan:
               description: "Query all Container Managed Persistence entity beans"
               query-type: "BY_TAGS"
               tags:
-                - "ejb.cmp.entityBean"
+                - "ejb.cmp.entity_bean"
               output-variable: "cmp_entities"
             
             # Step 2: OPENREWRITE - Apply automated refactorings

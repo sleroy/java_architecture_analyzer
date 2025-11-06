@@ -164,22 +164,22 @@ public class ApplicationServerConfigDetector implements Inspector<ProjectFile> {
         // Set configuration type tags with migration priority
         if (isSecurityConfig(fileName)) {
             projectFileDecorator.setProperty(TAGS.TAG_CONFIG_SECURITY, true);
-            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_PRIORITY,
                     EjbMigrationTags.PRIORITY_HIGH);
         } else if (isDataSourceConfig(fileName)) {
             projectFileDecorator.setProperty(TAGS.TAG_CONFIG_DATASOURCE, true);
-            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_PRIORITY,
                     EjbMigrationTags.PRIORITY_MEDIUM);
         } else if (isMessagingConfig(fileName)) {
             projectFileDecorator.setProperty(TAGS.TAG_CONFIG_MESSAGING, true);
-            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_PRIORITY,
                     EjbMigrationTags.PRIORITY_MEDIUM);
         } else if (isWebConfig(fileName)) {
             projectFileDecorator.setProperty(TAGS.TAG_CONFIG_WEB, true);
-            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_PRIORITY,
                     EjbMigrationTags.PRIORITY_MEDIUM);
         } else {
-            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_PRIORITY,
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_PRIORITY,
                     EjbMigrationTags.PRIORITY_LOW);
         }
     }

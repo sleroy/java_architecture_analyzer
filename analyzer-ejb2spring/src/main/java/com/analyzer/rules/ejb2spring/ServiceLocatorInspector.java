@@ -41,7 +41,7 @@ import java.util.Set;
  * </p>
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
-        EjbMigrationTags.EJB_SERVICE_LOCATOR,
+        EjbMigrationTags.TAG_EJB_SERVICE_LOCATOR,
         EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION,
 })
 public class ServiceLocatorInspector extends AbstractJavaClassInspector {
@@ -69,9 +69,9 @@ public class ServiceLocatorInspector extends AbstractJavaClassInspector {
             ServiceLocatorInfo info = detector.getServiceLocatorInfo();
 
             // Set tags according to the produces contract
-            projectFileDecorator.enableTag(EjbMigrationTags.EJB_SERVICE_LOCATOR);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_EJB_SERVICE_LOCATOR);
             projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
-            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
 
             // Set property on class node for detailed analysis
             classNode.setProperty("service.locator.analysis", info);

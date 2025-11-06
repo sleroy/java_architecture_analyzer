@@ -25,7 +25,7 @@ import java.util.List;
  * Identifies classes with all static methods and private constructor.
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
-        EjbMigrationTags.ANTIPATTERN_UTILITY_CLASS })
+        EjbMigrationTags.TAG_ANTIPATTERN_UTILITY_CLASS })
 public class UtilityClassInspector extends AbstractJavaClassInspector {
 
     @Inject
@@ -46,15 +46,15 @@ public class UtilityClassInspector extends AbstractJavaClassInspector {
                 UtilityClassInfo info = detector.getUtilityClassInfo();
 
                 // Tag ProjectFile and JavaClassNode
-                projectFileDecorator.enableTag(EjbMigrationTags.ANTIPATTERN_UTILITY_CLASS);
-                classNode.enableTag(EjbMigrationTags.ANTIPATTERN_UTILITY_CLASS);
+                projectFileDecorator.enableTag(EjbMigrationTags.TAG_ANTIPATTERN_UTILITY_CLASS);
+                classNode.enableTag(EjbMigrationTags.TAG_ANTIPATTERN_UTILITY_CLASS);
 
                 // Store analysis data
                 classNode.setProperty("antipattern.utility.info", info);
 
                 // Calculate refactoring complexity
                 double complexity = calculateComplexity(info);
-                classNode.setProperty(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, complexity);
+                classNode.setProperty(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, complexity);
             }
         }
     }

@@ -91,7 +91,7 @@ public class UtilityHelperInspector extends AbstractJavaClassInspector {
             // Set tags according to the produces contract
             projectFileDecorator.enableTag(TAGS.TAG_IS_UTILITY);
             projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
-            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
+            projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
 
             // Set property on class node for detailed analysis
             classNode.setProperty("utility.analysis", info.toString());

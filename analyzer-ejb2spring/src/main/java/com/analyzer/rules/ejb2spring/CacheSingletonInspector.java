@@ -54,7 +54,7 @@ import java.util.List;
  *      Cache</a>
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
-        EjbMigrationTags.EJB_CACHING_PATTERN,
+        EjbMigrationTags.TAG_EJB_CACHING_PATTERN,
         EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION,
 })
 public class CacheSingletonInspector extends AbstractJavaClassInspector {
@@ -88,7 +88,7 @@ public class CacheSingletonInspector extends AbstractJavaClassInspector {
             CacheSingletonInfo info = detector.getCacheSingletonInfo();
 
             // Set tags according to the produces contract
-            projectFileDecorator.setProperty(EjbMigrationTags.EJB_CACHING_PATTERN, true);
+            projectFileDecorator.setProperty(EjbMigrationTags.TAG_EJB_CACHING_PATTERN, true);
             projectFileDecorator.setProperty(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION, true);
 
             // Set property on class node for detailed analysis

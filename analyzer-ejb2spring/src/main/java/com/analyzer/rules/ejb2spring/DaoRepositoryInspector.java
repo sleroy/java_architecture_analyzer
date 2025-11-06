@@ -43,8 +43,8 @@ import java.util.*;
  */
 @InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
         DaoRepositoryInspector.TAGS.TAG_IS_DAO,
-        EjbMigrationTags.JPA_REPOSITORY_CONVERSION,
-        EjbMigrationTags.DATA_ACCESS_OBJECT_PATTERN,
+        EjbMigrationTags.TAG_JPA_REPOSITORY_CONVERSION,
+        EjbMigrationTags.TAG_DATA_ACCESS_OBJECT_PATTERN,
         EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION,
 })
 public class DaoRepositoryInspector extends AbstractJavaClassInspector {
@@ -101,17 +101,17 @@ public class DaoRepositoryInspector extends AbstractJavaClassInspector {
 
             // Set tags according to the produces contract
             projectFileDecorator.enableTag(TAGS.TAG_IS_DAO);
-            projectFileDecorator.enableTag(EjbMigrationTags.DATA_ACCESS_OBJECT_PATTERN);
+            projectFileDecorator.enableTag(EjbMigrationTags.TAG_DATA_ACCESS_OBJECT_PATTERN);
             projectFileDecorator.enableTag(EjbMigrationTags.TAG_SPRING_COMPONENT_CONVERSION);
 
             // Choose between JPA repository or standard @Repository based on JDBC usage
             if (info.jdbcCallCount > 0) {
-                projectFileDecorator.enableTag(EjbMigrationTags.JPA_REPOSITORY_CONVERSION);
-                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
+                projectFileDecorator.enableTag(EjbMigrationTags.TAG_JPA_REPOSITORY_CONVERSION);
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_MEDIUM);
                 projectFileDecorator.setProperty("spring.conversion.target", "JpaRepository");
             } else {
                 projectFileDecorator.setProperty("spring.conversion.target", "@Repository");
-                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
+                projectFileDecorator.getMetrics().setMaxMetric(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, EjbMigrationTags.COMPLEXITY_LOW);
             }
 
             // Set property on class node for detailed analysis
