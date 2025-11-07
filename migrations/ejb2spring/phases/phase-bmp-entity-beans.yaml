@@ -28,7 +28,7 @@ migration-plan:
               description: "Remove EJB-specific annotations and prepare for JPA"
               recipe: "com.analyzer.ejb2spring.MigrateBMPEntity"
               file-pattern: "**/*.java"
-              base-directory: "${project_root}/${artifact_id}/src/main/java"
+              base-directory: "${refactoring_project_path}/src/main/java"
             
             # Step 3: AI_ASSISTED_BATCH - Process each BMP entity
             - type: "AI_ASSISTED_BATCH"
@@ -161,7 +161,7 @@ migration-plan:
                 - NO JPA/Hibernate query generation used
                 
                 Please migrate this BMP entity bean following these guidelines, preserving ALL SQL logic in the custom repository.
-              working-directory: "${project_root}/${artifact_id}/src/main/java"
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Migrating BMP entity"
               timeout-seconds: 600
             
@@ -196,7 +196,7 @@ migration-plan:
                 8. Ensure NO JPA/Hibernate auto-queries are being used
                 
                 Please compile ONLY the classes that were migrated and fix any errors.
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
             
             # Step 5: INTERACTIVE_VALIDATION

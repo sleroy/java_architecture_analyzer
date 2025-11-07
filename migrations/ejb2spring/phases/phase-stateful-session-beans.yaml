@@ -28,7 +28,7 @@ migration-plan:
               description: "Replace @Stateful with @Component and @Scope"
               recipe: "com.analyzer.ejb2spring.MigrateStatefulSession"
               file-pattern: "**/*.java"
-              base-directory: "${project_root}/${artifact_id}/src/main/java"
+              base-directory: "${refactoring_project_path}/src/main/java"
             
             # Step 3: AI_ASSISTED_BATCH - Process each stateful session bean
             - type: "AI_ASSISTED_BATCH"
@@ -151,7 +151,7 @@ migration-plan:
                 - Cleanup methods implemented (@PreDestroy)
                 
                 Please migrate this stateful session bean to a Spring session-scoped component.
-              working-directory: "${project_root}/${artifact_id}/src/main/java"
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Migrating stateful session bean"
               timeout-seconds: 600
             
@@ -185,7 +185,7 @@ migration-plan:
                 7. Fix any circular dependency issues
                 
                 Please compile ONLY the classes that were migrated, and fix any errors.
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
             
             # Step 5: INTERACTIVE_VALIDATION

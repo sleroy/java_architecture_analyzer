@@ -28,7 +28,7 @@ migration-plan:
               description: "Replace JAX-RS annotations with Spring MVC"
               recipe: "com.analyzer.ejb2spring.MigrateJaxRsToSpring"
               file-pattern: "**/*.java"
-              base-directory: "${project_root}/${artifact_id}/src/main/java"
+              base-directory: "${refactoring_project_path}/src/main/java"
             
             # Step 3: AI_ASSISTED_BATCH - Process each resource
             - type: "AI_ASSISTED_BATCH"
@@ -150,7 +150,7 @@ migration-plan:
                 6. Check exception handling
                 
                 Please compile and test endpoints.
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
             
             # Step 5: INTERACTIVE_VALIDATION

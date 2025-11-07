@@ -25,7 +25,7 @@ migration-plan:
               name: "remove-home-references"
               recipe: "com.analyzer.ejb2spring.RemoveEJBHomeInterface"
               file-pattern: "**/*.java"
-              base-directory: "${project_root}/${artifact_id}/src/main/java"
+              base-directory: "${refactoring_project_path}/src/main/java"
             
             - type: "AI_ASSISTED_BATCH"
               name: "ai-remove-home-interfaces"
@@ -160,7 +160,7 @@ migration-plan:
                 4. Fix any broken references
                 
                 Compile and verify.
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
             
             - type: "INTERACTIVE_VALIDATION"
