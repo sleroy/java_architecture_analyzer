@@ -1,28 +1,25 @@
 package com.example.ejbapp.service;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import javax.ejb.Stateless;
+import javax.inject.Inject;
 import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
- * Spring service for audit logging.
+ * Stateless bean example for audit logging.
  * Demonstrates database operations, querying, and business logic.
  */
-@Service
-@Transactional
+@Stateless
 public class AuditService {
 
-    private static final Logger log = LoggerFactory.getLogger(AuditService.class);
+    @Inject
+    private Logger log;
 
-    @PersistenceContext
+    @Inject
     private EntityManager em;
 
     /**
@@ -78,7 +75,6 @@ public class AuditService {
     /**
      * Retrieves audit entries for a specific user
      */
-    @Transactional(readOnly = true)
     public List<AuditEntry> getAuditEntriesForUser(String username, int maxResults) {
         log.info("Retrieving audit entries for user: " + username);
         
@@ -95,7 +91,6 @@ public class AuditService {
     /**
      * Retrieves audit entries for a specific entity
      */
-    @Transactional(readOnly = true)
     public List<AuditEntry> getAuditEntriesForEntity(String entityType, Long entityId) {
         log.info("Retrieving audit entries for entity: " + entityType + " [" + entityId + "]");
         
@@ -112,7 +107,6 @@ public class AuditService {
     /**
      * Retrieves recent audit entries
      */
-    @Transactional(readOnly = true)
     public List<AuditEntry> getRecentAuditEntries(int maxResults) {
         log.info("Retrieving recent audit entries");
         
@@ -128,7 +122,6 @@ public class AuditService {
     /**
      * Counts audit entries for a specific action
      */
-    @Transactional(readOnly = true)
     public long countActionsByType(String action) {
         log.info("Counting audit entries for action: " + action);
         
@@ -144,7 +137,6 @@ public class AuditService {
     /**
      * Generates an audit report summary
      */
-    @Transactional(readOnly = true)
     public String generateAuditReport(String username, LocalDateTime fromDate, LocalDateTime toDate) {
         log.info("Generating audit report for user: " + username);
         

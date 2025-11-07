@@ -2,30 +2,27 @@ package com.example.ejbapp.service;
 
 import com.example.ejbapp.model.Member;
 
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import javax.ejb.Stateless;
+import javax.enterprise.event.Event;
+import javax.inject.Inject;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
- * Spring service for notification management.
+ * Stateless bean example for notification management.
  * Demonstrates event-driven architecture and business logic without external dependencies.
  */
-@Service
-@Transactional
+@Stateless
 public class NotificationService {
 
-    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
-    private final ApplicationEventPublisher eventPublisher;
+    @Inject
+    private Logger log;
 
-    public NotificationService(ApplicationEventPublisher eventPublisher) {
-        this.eventPublisher = eventPublisher;
-    }
+    @Inject
+    private Event<NotificationEvent> notificationEventSrc;
 
     /**
      * Sends a welcome notification to a new member
@@ -35,12 +32,12 @@ public class NotificationService {
         
         NotificationEvent event = new NotificationEvent();
         event.setRecipient(member.getEmail());
-        event.setSubject("Welcome to Unicorn!");
+        event.setSubject("Welcome to Semeru!");
         event.setMessage(buildWelcomeMessage(member.getName()));
         event.setType(NotificationType.WELCOME);
         event.setTimestamp(LocalDateTime.now());
         
-        eventPublisher.publishEvent(event);
+        notificationEventSrc.fire(event);
         log.info("Welcome notification event fired for: " + member.getEmail());
     }
 
@@ -57,7 +54,7 @@ public class NotificationService {
         event.setType(NotificationType.GENERIC);
         event.setTimestamp(LocalDateTime.now());
         
-        eventPublisher.publishEvent(event);
+        notificationEventSrc.fire(event);
         log.info("Notification event fired successfully");
     }
 
@@ -76,7 +73,7 @@ public class NotificationService {
             event.setPriority(NotificationPriority.HIGH);
             event.setTimestamp(LocalDateTime.now());
             
-            eventPublisher.publishEvent(event);
+            notificationEventSrc.fire(event);
             log.info("Alert sent to: " + recipient);
         }
     }
@@ -95,14 +92,13 @@ public class NotificationService {
         event.setScheduledFor(scheduledFor);
         event.setTimestamp(LocalDateTime.now());
         
-        eventPublisher.publishEvent(event);
+        notificationEventSrc.fire(event);
         log.info("Reminder notification scheduled");
     }
 
     /**
      * Validates email format
      */
-    @Transactional(readOnly = true)
     public boolean isValidEmail(String email) {
         if (email == null || email.trim().isEmpty()) {
             return false;
@@ -114,20 +110,19 @@ public class NotificationService {
     /**
      * Validates notification content
      */
-    @Transactional(readOnly = true)
     public boolean validateNotification(String recipient, String subject, String message) {
         if (!isValidEmail(recipient)) {
-            log.warn("Invalid recipient email: " + recipient);
+            log.warning("Invalid recipient email: " + recipient);
             return false;
         }
         
         if (subject == null || subject.trim().isEmpty()) {
-            log.warn("Empty subject");
+            log.warning("Empty subject");
             return false;
         }
         
         if (message == null || message.trim().isEmpty()) {
-            log.warn("Empty message");
+            log.warning("Empty message");
             return false;
         }
         
@@ -137,7 +132,6 @@ public class NotificationService {
     /**
      * Formats notification history
      */
-    @Transactional(readOnly = true)
     public List<String> formatNotificationHistory(List<NotificationEvent> events) {
         log.info("Formatting " + events.size() + " notification events");
         
@@ -166,14 +160,14 @@ public class NotificationService {
      */
     private String buildWelcomeMessage(String memberName) {
         return "Hello " + memberName + ",\n\n" +
-               "Welcome to Unicorn! We're excited to have you as a new member.\n\n" +
+               "Welcome to Semeru! We're excited to have you as a new member.\n\n" +
                "Get started by:\n" +
                "- Exploring your dashboard\n" +
                "- Updating your profile\n" +
                "- Connecting with other members\n\n" +
                "If you have any questions, please don't hesitate to contact us.\n\n" +
                "Best regards,\n" +
-               "The Unicorn Team";
+               "The Semeru Team";
     }
 
     /**
