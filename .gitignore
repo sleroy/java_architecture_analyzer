@@ -89,3 +89,4 @@ local.properties
 example-springboot/
 graph-data.json
 project-analysis.json
+*.iml
