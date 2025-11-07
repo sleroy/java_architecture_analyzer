@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Each phase execution is a one-liner using helper methods.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Disabled("This test is not yet ready for prime time")
 public class PhaseByPhaseIntegrationTest {
 
     // Fix: Point to repository root demo-ejb2-project, not
@@ -61,7 +60,7 @@ public class PhaseByPhaseIntegrationTest {
     // Helper method: Run a specific phase with dry-run
     private int runPhase(final String phaseId) {
         return execute("apply", "--project", TEST_PROJECT.toString(), "--plan", PLAN_PATH,
-                "--phase", phaseId/* , "--dry-run" */, "-Djava_version=21",
+                "--phase", phaseId , "--dry-run" , "-Djava_version=21",
                 "-Dspring_boot_version=3.5.7", "-Dproject_root=" + TEST_PROJECT);
     }
 
