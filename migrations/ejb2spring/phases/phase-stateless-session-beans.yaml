@@ -43,7 +43,7 @@ migration-plan:
                 - Class Name: ${current_node.simpleName}
                 - Fully Qualified Name: ${current_node.fullyQualifiedName}
                 - Package: ${current_node.packageName}
-                - Migration Complexity: ${current_node.properties["ejb.session_bean.migrationComplexity"]!'UNKNOWN'}
+                - Migration Complexity: ${current_node.getStringProperty("ejb.session_bean.migrationComplexity", "UNKNOWN")}
                 
                 Locations including cached items in .analysis that should be ignored : 
                 <#list current_node.sourceAliasPaths?filter(path -> path?ends_with(".java")) as bean>
@@ -51,8 +51,8 @@ migration-plan:
                 </#list>
                 
                 <#-- Context-aware instructions based on node properties -->
-                <#if current_node.properties["factory.bean.analysis"]??>
-                <#assign factoryAnalysis = current_node.properties["factory.bean.analysis"]>
+                <#if current_node.hasProperty("factory.bean.analysis")>
+                <#assign factoryAnalysis = current_node.getProperty("factory.bean.analysis")>
                 <#if (factoryAnalysis.factoryMethodCount > 0)>
                 
                 **⚠️ FACTORY PATTERN DETECTED:**
@@ -68,8 +68,8 @@ migration-plan:
                 </#if>
                 </#if>
                 
-                <#if current_node.properties["mutable.service.analysis"]??>
-                <#assign mutableAnalysis = current_node.properties["mutable.service.analysis"]>
+                <#if current_node.hasProperty("mutable.service.analysis")>
+                <#assign mutableAnalysis = current_node.getProperty("mutable.service.analysis")>
                 <#if (mutableAnalysis.mutableFieldCount > 0)>
                 
                 **⚠️ MUTABLE STATE DETECTED:**
@@ -81,14 +81,15 @@ migration-plan:
                 **State Management Instructions:**
                 - Stateless beans should NOT have mutable instance state
                 - Convert mutable fields to method parameters or request-scoped beans
+                - You inject the EntityManager directly into your singleton-scoped (stateless) service or repository class using the standard JPA annotation:
                 - If state is truly needed, consider using @Scope("request") or @Scope("prototype")
                 - Logger fields are OK as they are thread-safe
                 - CDI Event sources (@Inject Event<T>) are OK as they are proxies
                 </#if>
                 </#if>
                 
-                <#if current_node.properties["ejb.conversational.state.fields"]??>
-                <#assign stateFields = current_node.properties["ejb.conversational.state.fields"]>
+                <#if current_node.hasProperty("ejb.conversational.state.fields")>
+                <#assign stateFields = current_node.getProperty("ejb.conversational.state.fields")>
                 <#if (stateFields?size > 0)>
                 
                 **⚠️ CONVERSATIONAL STATE IN STATELESS BEAN:**
@@ -101,8 +102,8 @@ migration-plan:
                 </#if>
                 </#if>
                 
-                <#if current_node.properties["resource.analysis_result"]??>
-                <#assign resourceAnalysis = current_node.properties["resource.analysis_result"]>
+                <#if current_node.hasProperty("resource.analysis_result")>
+                <#assign resourceAnalysis = current_node.getProperty("resource.analysis_result")>
                 <#if (resourceAnalysis.dataSourceCount > 0 || resourceAnalysis.resourceRefCount > 0)>
                 
                 **📊 RESOURCE USAGE DETECTED:**

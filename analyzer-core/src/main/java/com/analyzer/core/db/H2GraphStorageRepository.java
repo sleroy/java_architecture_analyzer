@@ -31,12 +31,196 @@ public class H2GraphStorageRepository {
         this(config, new JsonSerializationService());
     }
 
-    public H2GraphStorageRepository(final GraphDatabaseSessionManager config, final JsonSerializationService jsonSerializer) {
+    public H2GraphStorageRepository(final GraphDatabaseSessionManager config,
+            final JsonSerializationService jsonSerializer) {
         this.config = config;
         this.jsonSerializer = jsonSerializer;
     }
 
     // ==================== NODE OPERATIONS ====================
+
+    /**
+     * Find all nodes using the provided SqlSession.
+     * This version allows the caller to manage the session lifecycle,
+     * which is necessary to avoid H2 CLOB lazy-loading issues.
+     *
+     * @param session The SqlSession to use
+     * @return List of all nodes
+     */
+    public List<GraphNodeEntity> findAll(final org.apache.ibatis.session.SqlSession session) {
+        final NodeMapper mapper = session.getMapper(NodeMapper.class);
+        return mapper.findAll();
+    }
+
+    /**
+     * Find nodes by type using the provided SqlSession.
+     *
+     * @param session  The SqlSession to use
+     * @param nodeType The node type
+     * @return List of nodes
+     */
+    public List<GraphNodeEntity> findNodesByType(final org.apache.ibatis.session.SqlSession session,
+            final String nodeType) {
+        final NodeMapper mapper = session.getMapper(NodeMapper.class);
+        return mapper.findByType(nodeType);
+    }
+
+    /**
+     * Find all edges using the provided SqlSession.
+     *
+     * @param session The SqlSession to use
+     * @return List of all edges
+     */
+    public List<GraphEdgeEntity> findAllEdges(final org.apache.ibatis.session.SqlSession session) {
+        final EdgeMapper mapper = session.getMapper(EdgeMapper.class);
+        return mapper.findAll();
+    }
+
+    /**
+     * Find edges by type using the provided SqlSession.
+     *
+     * @param session  The SqlSession to use
+     * @param edgeType The edge type
+     * @return List of edges
+     */
+    public List<GraphEdgeEntity> findEdgesByType(final org.apache.ibatis.session.SqlSession session,
+            final String edgeType) {
+        final EdgeMapper mapper = session.getMapper(EdgeMapper.class);
+        return mapper.findByType(edgeType);
+    }
+
+    /**
+     * Find a node by ID using the provided SqlSession.
+     *
+     * @param session The SqlSession to use
+     * @param nodeId  The node ID
+     * @return GraphNodeEntity or null if not found
+     */
+    public GraphNodeEntity findNodeById(final org.apache.ibatis.session.SqlSession session, final String nodeId) {
+        final NodeMapper mapper = session.getMapper(NodeMapper.class);
+        return mapper.findById(nodeId);
+    }
+
+    /**
+     * Find nodes by tag using the provided SqlSession.
+     *
+     * @param session The SqlSession to use
+     * @param tag     The tag to search for
+     * @return List of nodes containing this tag
+     */
+    public List<GraphNodeEntity> findNodesByTag(final org.apache.ibatis.session.SqlSession session, final String tag) {
+        final NodeMapper mapper = session.getMapper(NodeMapper.class);
+        return mapper.findByTag(tag);
+    }
+
+    /**
+     * Find nodes by any tags using the provided SqlSession.
+     *
+     * @param session The SqlSession to use
+     * @param tags    List of tags (OR condition)
+     * @return List of nodes containing any of these tags
+     */
+    public List<GraphNodeEntity> findNodesByAnyTags(final org.apache.ibatis.session.SqlSession session,
+            final List<String> tags) {
+        final NodeMapper mapper = session.getMapper(NodeMapper.class);
+        return mapper.findByAnyTags(tags);
+    }
+
+    /**
+     * Find nodes by all tags using the provided SqlSession.
+     *
+     * @param session The SqlSession to use
+     * @param tags    List of tags (AND condition)
+     * @return List of nodes containing all of these tags
+     */
+    public List<GraphNodeEntity> findNodesByAllTags(final org.apache.ibatis.session.SqlSession session,
+            final List<String> tags) {
+        final NodeMapper mapper = session.getMapper(NodeMapper.class);
+        return mapper.findByAllTags(tags);
+    }
+
+    /**
+     * Find nodes by type and any tags using the provided SqlSession.
+     *
+     * @param session  The SqlSession to use
+     * @param nodeType The node type
+     * @param tags     List of tags (OR condition)
+     * @return List of nodes of this type containing any of these tags
+     */
+    public List<GraphNodeEntity> findNodesByTypeAndAnyTags(final org.apache.ibatis.session.SqlSession session,
+            final String nodeType, final List<String> tags) {
+        final NodeMapper mapper = session.getMapper(NodeMapper.class);
+        return mapper.findByTypeAndAnyTags(nodeType, tags);
+    }
+
+    /**
+     * Find nodes by type and all tags using the provided SqlSession.
+     *
+     * @param session  The SqlSession to use
+     * @param nodeType The node type
+     * @param tags     List of tags (AND condition)
+     * @return List of nodes of this type containing all of these tags
+     */
+    public List<GraphNodeEntity> findNodesByTypeAndAllTags(final org.apache.ibatis.session.SqlSession session,
+            final String nodeType, final List<String> tags) {
+        final NodeMapper mapper = session.getMapper(NodeMapper.class);
+        return mapper.findByTypeAndAllTags(nodeType, tags);
+    }
+
+    /**
+     * Check if node exists using the provided SqlSession.
+     *
+     * @param session The SqlSession to use
+     * @param nodeId  The node ID
+     * @return true if exists
+     */
+    public boolean nodeExists(final org.apache.ibatis.session.SqlSession session, final String nodeId) {
+        final NodeMapper mapper = session.getMapper(NodeMapper.class);
+        return mapper.exists(nodeId);
+    }
+
+    /**
+     * Find outgoing edges using the provided SqlSession.
+     *
+     * @param session The SqlSession to use
+     * @param nodeId  Source node ID
+     * @return List of edges
+     */
+    public List<GraphEdgeEntity> findOutgoingEdges(final org.apache.ibatis.session.SqlSession session,
+            final String nodeId) {
+        final EdgeMapper mapper = session.getMapper(EdgeMapper.class);
+        return mapper.findBySourceId(nodeId);
+    }
+
+    /**
+     * Find incoming edges using the provided SqlSession.
+     *
+     * @param session The SqlSession to use
+     * @param nodeId  Target node ID
+     * @return List of edges
+     */
+    public List<GraphEdgeEntity> findIncomingEdges(final org.apache.ibatis.session.SqlSession session,
+            final String nodeId) {
+        final EdgeMapper mapper = session.getMapper(EdgeMapper.class);
+        return mapper.findByTargetId(nodeId);
+    }
+
+    /**
+     * Find nodes by property value using the provided SqlSession.
+     *
+     * @param session  The SqlSession to use
+     * @param jsonPath JSON path (e.g., '$.java.fullyQualifiedName')
+     * @param value    Property value to match
+     * @return List of matching nodes
+     */
+    public List<GraphNodeEntity> findNodesByPropertyValue(final org.apache.ibatis.session.SqlSession session,
+            final String jsonPath, final String value) {
+        final NodeMapper mapper = session.getMapper(NodeMapper.class);
+        return mapper.findByPropertyValue(jsonPath, value);
+    }
+
+    // ==================== NODE OPERATIONS (Legacy - for backward compatibility)
+    // ====================
 
     /**
      * Find a node by its ID.

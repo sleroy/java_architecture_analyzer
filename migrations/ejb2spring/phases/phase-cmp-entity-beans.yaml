@@ -30,75 +30,195 @@ migration-plan:
               file-pattern: "**/*.java"
               base-directory: "${project_root}/${artifact_id}/src/main/java"
             
-            # Step 3: AI_ASSISTED_BATCH - Process each CMP entity with Amazon Q
+            # Step 3: AI_ASSISTED_BATCH - Process each CMP entity
             - type: "AI_ASSISTED_BATCH"
               name: "ai-migrate-cmp-entities"
               description: "AI-assisted migration for each CMP entity bean"
-              input-nodes: "${cmp_entities}"
+              input-nodes: cmp_entities
               prompt: |
                 You are migrating a Container Managed Persistence (CMP) EJB entity bean to a modern JPA entity with Spring Data repository.
                 
-                **Current CMP Entity:**
+                **Current Node Information:**
                 - Node ID: ${current_node_id}
-                - Class Name: ${current_node.className}
+                - Class Name: ${current_node.simpleName}
+                - Fully Qualified Name: ${current_node.fullyQualifiedName}
                 - Package: ${current_node.packageName}
+                - Node Type: ${current_node.nodeType}
+                
+                **Node Tags:**
+                <#list current_node.tags as tag>
+                - ${tag}
+                </#list>
+                
+                **Node Properties:**
+                <#list current_node.properties?keys as key>
+                - ${key}: ${current_node.getPropertyToString(key)}
+                </#list>
+                
+                **Source Locations:**
+                <#list current_node.sourceAliasPaths?filter(path -> path?ends_with(".java")) as sourcePath>
+                - ${sourcePath}
+                </#list>
+                
+                ---
+                
+                <#-- Context-aware instructions based on node properties -->
+                <#if current_node.hasProperty("cmp.fields")>
+                <#assign cmpFields = current_node.getProperty("cmp.fields")>
+                
+                **📋 CMP FIELDS DETECTED:**
+                This entity has ${cmpFields?size} container-managed fields:
+                <#list cmpFields as field>
+                - ${field.name} (${field.type})
+                </#list>
+                
+                **Field Migration Instructions:**
+                - Convert all CMP fields to JPA @Column annotated fields
+                - Maintain proper Java types and column names
+                - Add validation annotations if needed (@NotNull, @Size, etc.)
+                </#if>
+                
+                <#if current_node.hasProperty("cmp.relationships")>
+                <#assign relationships = current_node.getProperty("cmp.relationships")>
+                
+                **🔗 CMR RELATIONSHIPS DETECTED:**
+                This entity has ${relationships?size} container-managed relationships:
+                <#list relationships as rel>
+                - ${rel.fieldName}: ${rel.type} (${rel.cardinality})
+                </#list>
+                
+                **Relationship Migration Instructions:**
+                - Convert CMR relationships to JPA relationships
+                - Use @OneToMany, @ManyToOne, @ManyToMany, @OneToOne as appropriate
+                - Configure cascade types based on original EJB relationships
+                - Add @JoinColumn or @JoinTable annotations
+                - Use @JsonIgnore or @JsonManagedReference/@JsonBackReference for bidirectional relationships
+                </#if>
+                
+                <#if current_node.hasProperty("ejb.primary_key.composite")>
+                
+                **⚠️ COMPOSITE PRIMARY KEY DETECTED:**
+                - This entity uses a composite primary key
+                - Create an @Embeddable key class or use @IdClass
+                - Ensure proper equals() and hashCode() implementation
+                </#if>
+                
+                <#if current_node.hasProperty("cmp.finder.methods")>
+                <#assign finderMethods = current_node.getProperty("cmp.finder.methods")>
+                
+                **🔍 FINDER METHODS DETECTED:**
+                This entity has ${finderMethods?size} EJB-QL finder methods:
+                <#list finderMethods as finder>
+                - ${finder.name}
+                </#list>
+                
+                **Finder Migration Instructions:**
+                - Convert ejbSelectXXX methods to Spring Data query methods
+                - Use method naming conventions (findByXXX, findAllByXXX)
+                - Or use @Query annotation for complex queries
+                - EJB-QL queries can often be converted to JPQL
+                </#if>
                 
                 **Migration Tasks:**
                 
                 1. **Convert CMP Entity to JPA Entity:**
                    - Replace @Entity (javax.ejb) with @Entity (jakarta.persistence)
                    - Add @Table annotation with table name
-                   - Convert CMP fields to JPA fields with @Column annotations
+                   - Convert all CMP fields to JPA @Column fields
                    - Add @Id and @GeneratedValue for primary key
-                   - Convert CMR relationships to JPA relationships (@OneToMany, @ManyToOne, @ManyToMany)
-                   - Remove EJB-specific methods (ejbCreate, ejbPostCreate, ejbLoad, ejbStore)
+                   - For composite keys, create @Embeddable class or use @IdClass
+                   - Remove ALL EJB-specific methods (ejbCreate, ejbPostCreate, ejbLoad, ejbStore, ejbRemove)
+                   - Remove EntityBean interface implementation
+                   - Remove EntityContext field
                 
-                2. **Create Spring Data JPA Repository:**
-                   - Create a repository interface extending JpaRepository<EntityName, PrimaryKeyType>
-                   - Add custom query methods if needed (derived from CMP finder methods)
+                2. **Convert CMR Relationships to JPA:**
+                   - Map one-to-many: @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL)
+                   - Map many-to-one: @ManyToOne with @JoinColumn
+                   - Map many-to-many: @ManyToMany with @JoinTable
+                   - Map one-to-one: @OneToOne with proper cascade
+                   - Set appropriate fetch types (LAZY vs EAGER)
+                   - Add orphanRemoval = true for composition relationships
+                   - Use @JsonIgnore on back-references to prevent circular serialization
+                
+                3. **Create Spring Data JPA Repository:**
+                   - Create repository interface extending JpaRepository<EntityName, PrimaryKeyType>
+                   - Add custom query methods using method naming conventions
+                   - For complex queries, use @Query with JPQL or native SQL
                    - Place repository in appropriate package (e.g., com.example.repository)
+                   - Use query derivation: findByNameAndStatus(String name, String status)
                 
-                3. **Migration Guidelines:**
-                   - Preserve all business logic in the entity
-                   - Use proper JPA cascade types for relationships
-                   - Add @JsonIgnore or @JsonManagedReference/@JsonBackReference for bidirectional relationships to avoid circular dependencies
+                4. **Handle Finder Methods:**
+                   - Convert ejbSelectXXX methods to repository query methods
+                   - Use Spring Data method naming: findBy, findAllBy, countBy, existsBy
+                   - Convert EJB-QL to JPQL for @Query annotations
+                   - Use @Param for named parameters
+                   - Add pagination with Pageable parameters if needed
+                
+                5. **Migration Guidelines:**
                    - Use Jakarta namespace (jakarta.persistence.*) not javax
-                   - Follow Spring Data naming conventions for query methods
+                   - Follow JPA best practices for relationships
+                   - Use proper cascade types (avoid CascadeType.ALL unless needed)
+                   - Set fetch types appropriately (LAZY for collections)
+                   - Add validation annotations (@NotNull, @Size, @Email, etc.)
+                   - Document relationship ownership clearly
+                   - Test bidirectional relationships carefully
+                   - Ensure proper equals()/hashCode() using business keys, not IDs
+                
+                6. **IMPORTANT - No JPA/Hibernate Auto-Generation:**
+                   - We are NOT using JPA/Hibernate for persistence operations
+                   - JPA entities are used ONLY for structure and mapping
+                   - Actual database operations use Spring JdbcTemplate
+                   - Repository methods should use JdbcTemplate, not JPA methods
                 
                 **Expected Output:**
-                - Updated JPA entity class with all proper annotations
-                - New Spring Data repository interface
-                - Update any service classes that reference this entity
+                - Updated JPA entity class with proper annotations
+                - All CMP fields converted to @Column fields
+                - All CMR relationships converted to JPA relationships
+                - New Spring Data repository interface with query methods
+                - Repository implementation using JdbcTemplate (not JPA)
+                - No javax.* imports remaining (all using jakarta.*)
+                - Updated service classes that use the repository
                 
                 Please migrate this CMP entity bean following these guidelines.
-              working-directory: "${project_root}"
+              working-directory: "${project_root}/${artifact_id}/src/main/java"
               progress-message: "Migrating CMP entity"
               timeout-seconds: 600
             
-            # Step 4: AI_ASSISTED - Compile and validate all changes
+            # Step 4: AI_ASSISTED - Compile and validate
             - type: "AI_ASSISTED"
               name: "compile-cmp-entities"
-              description: "Compile all migrated CMP entities and fix any compilation errors"
+              description: "Compile all migrated CMP entities"
               prompt: |
                 All CMP entities have been migrated to JPA entities with Spring Data repositories.
                 
                 **Summary:**
-                - Total entities processed: ${node_count}
-                - Successful migrations: ${success_count}
-                - Failed migrations: ${failure_count}
+                - Total beans processed: ${node_count}
+                
+                **Class IDs:**
+                <#list cmp_entities as bean>
+                - ${bean}
+                </#list>
+                
+                **Classes:**
+                <#list cmp_entities_names as className>
+                - ${className}
+                </#list>
                 
                 **Tasks:**
-                1. Run Maven compile to check for compilation errors
+                1. Run Maven compile to check for errors
                 2. Fix any import issues (ensure using jakarta.persistence.* not javax.persistence.*)
                 3. Resolve any missing dependencies in pom.xml
-                4. Fix any JPA relationship issues
+                4. Fix any JPA relationship configuration issues
                 5. Verify all repository interfaces are properly configured
+                6. Check @Column, @JoinColumn, and @JoinTable annotations
+                7. Ensure proper cascade and fetch type configurations
+                8. Test bidirectional relationships
                 
-                Please compile the project and fix any errors related to the CMP-to-JPA migration.
+                Please compile ONLY the classes that were migrated and fix any errors.
               working-directory: "${project_root}"
               timeout-seconds: 300
             
-            # Step 5: INTERACTIVE_VALIDATION - Human checkpoint
+            # Step 5: INTERACTIVE_VALIDATION
             - type: "INTERACTIVE_VALIDATION"
               name: "verify-cmp-migration"
               validation-type: "MANUAL_CONFIRM"
@@ -106,9 +226,7 @@ migration-plan:
                 CMP Entity Bean migration completed.
                 
                 **Migration Summary:**
-                - CMP entities processed: ${node_count}
-                - Successful migrations: ${success_count}
-                - Failed migrations: ${failure_count}
+                - Beans processed: ${node_count}
                 
                 **Review Checklist:**
                 1. All CMP entities converted to JPA entities
@@ -118,12 +236,16 @@ migration-plan:
                 5. No javax.* imports remaining (all using jakarta.*)
                 6. Primary keys properly annotated with @Id and @GeneratedValue
                 7. Table names specified with @Table annotation
+                8. Relationships have proper cascade and fetch types
+                9. Bidirectional relationships configured correctly
+                10. Repository methods use JdbcTemplate, not JPA auto-generation
                 
                 **Next Steps:**
-                - Review the migrated entities
-                - Test repository methods
-                - Verify database schema generation
+                - Review the migrated entities and relationships
+                - Test repository methods with actual database
+                - Verify relationship loading and cascading
+                - Check database schema generation/validation
                 
-                Please verify the CMP entity migration and confirm to proceed.
+                Please verify and confirm to proceed.
               required: true
               timeout-seconds: 1800
