@@ -99,6 +99,8 @@ public interface GraphNode {
 
     String getStringProperty(String key, String defaultValue);
 
+    String getPropertyToString(String key);
+
     int getIntProperty(String key, int defaultValue);
 
     boolean hasProperty(String key);

@@ -13,6 +13,7 @@ migration-plan:
           description: "Convert MDBs to Spring JMS listeners"
           
           blocks:
+            # Step 1: GRAPH_QUERY - Find all message-driven beans
             - type: "GRAPH_QUERY"
               name: "query-mdbs"
               description: "Query all message-driven beans"
@@ -21,6 +22,7 @@ migration-plan:
                 - "ejb.message_driven_bean"
               output-variable: "mdb_beans"
             
+            # Step 2: OPENREWRITE - Apply automated refactorings
             - type: "OPENREWRITE"
               name: "refactor-mdb-annotations"
               description: "Replace @MessageDriven with @Component"
@@ -28,88 +30,191 @@ migration-plan:
               file-pattern: "**/*.java"
               base-directory: "${project_root}/${artifact_id}/src/main/java"
             
+            # Step 3: AI_ASSISTED_BATCH - Process each MDB
             - type: "AI_ASSISTED_BATCH"
               name: "ai-migrate-mdbs"
               description: "AI-assisted migration for each MDB"
-              input-nodes: "${mdb_beans}"
+              input-nodes: mdb_beans
               prompt: |
                 You are migrating a Message-Driven Bean to a Spring JMS listener.
                 
-                **Current MDB:**
+                **Current Node Information:**
                 - Node ID: ${current_node_id}
-                - Class Name: ${current_node.className}
+                - Class Name: ${current_node.simpleName}
+                - Fully Qualified Name: ${current_node.fullyQualifiedName}
                 - Package: ${current_node.packageName}
+                - Node Type: ${current_node.nodeType}
+                
+                **Node Tags:**
+                <#list current_node.tags as tag>
+                - ${tag}
+                </#list>
+                
+                **Node Properties:**
+                <#list current_node.properties?keys as key>
+                - ${key}: ${current_node.getPropertyToString(key)}
+                </#list>
+                
+                **Source Locations:**
+                <#list current_node.sourceAliasPaths?filter(path -> path?ends_with(".java")) as sourcePath>
+                - ${sourcePath}
+                </#list>
+                
+                ---
+                
+                <#-- Context-aware instructions based on node properties -->
+                <#if current_node.hasProperty("jms.destination.name")>
+                
+                **📨 JMS DESTINATION DETECTED:**
+                - Destination: ${current_node.getStringProperty("jms.destination.name", "unknown")}
+                <#if current_node.hasProperty("jms.destination.type")>
+                - Type: ${current_node.getStringProperty("jms.destination.type", "unknown")}
+                </#if>
+                <#if current_node.hasProperty("jms.message.selector")>
+                - Message Selector: ${current_node.getStringProperty("jms.message.selector", "")}
+                </#if>
+                </#if>
+                
+                <#if current_node.hasProperty("ejb.transaction.attribute")>
+                
+                **Transaction Attribute: ${current_node.getStringProperty("ejb.transaction.attribute", "REQUIRED")}**
+                - Map this to Spring's @Transactional configuration
+                </#if>
+                
+                <#if current_node.hasProperty("resource.analysis_result")>
+                <#assign resourceAnalysis = current_node.getProperty("resource.analysis_result")>
+                <#if (resourceAnalysis.resourceRefCount > 0)>
+                
+                **📊 RESOURCE USAGE DETECTED:**
+                - Resource References: ${resourceAnalysis.resourceRefCount}
+                
+                **Resource Migration Instructions:**
+                - Replace @Resource injections with Spring constructor injection
+                - Use application.properties for JMS configuration
+                </#if>
+                </#if>
                 
                 **Migration Tasks:**
                 
                 1. **Convert to Spring JMS Listener:**
                    - Replace @MessageDriven with @Component
-                   - Remove MessageListener interface
-                   - Replace onMessage() with @JmsListener annotated method
+                   - Remove MessageListener interface implementation
+                   - Replace onMessage(Message message) with @JmsListener annotated method
                    - Extract destination name from @MessageDriven annotation
+                   - Remove @ActivationConfigProperty annotations
                 
                 2. **Configure JMS Listener:**
-                   - Add @JmsListener(destination = "queueName")
+                   - Add @JmsListener(destination = "queueName") to message handling method
                    - Use appropriate destination type (queue or topic)
-                   - Configure concurrency if needed
+                   - Configure concurrency if needed: concurrency = "3-10"
                    - Set up error handling with @SendTo for replies
+                   - For topics, use @JmsListener(destination = "topicName", subscription = "subscriptionName")
                 
                 3. **Message Processing:**
                    - Convert Message parameter to specific type (TextMessage, ObjectMessage, etc.)
-                   - Or use @Payload for automatic conversion
-                   - Handle message acknowledgment properly
-                   - Preserve transaction boundaries
+                   - Or use @Payload annotation for automatic message conversion
+                   - Handle message acknowledgment properly (Spring does this automatically in most cases)
+                   - Preserve transaction boundaries with @Transactional
+                   - Use @Header to extract JMS headers if needed
                 
-                4. **Configuration:**
+                4. **Transaction Management:**
+                   - Add @Transactional to methods that need transactions
+                   - Spring JMS supports container-managed transactions
+                   - Configure acknowledgment mode in application.properties if needed
+                
+                5. **Error Handling:**
+                   - Implement error handling with try-catch or use @JmsListener error handlers
+                   - Configure dead letter queue in application.properties
+                   - Use Spring's ErrorHandler or BackOff strategies
+                
+                6. **Configuration:**
                    - Ensure spring-boot-starter-artemis or activemq is in dependencies
-                   - Configure connection factory in application.properties
-                   - Set up message converter if needed
+                   - Configure connection factory in application.properties:
+                     ```
+                     spring.artemis.mode=native
+                     spring.artemis.host=localhost
+                     spring.artemis.port=61616
+                     ```
+                   - Set up message converter if needed (MappingJackson2MessageConverter)
+                   - Configure JMS template for sending messages if needed
+                
+                7. **Migration Guidelines:**
+                   - Use Jakarta namespace (jakarta.jms.* not javax.jms.*)
+                   - Prefer @Payload for automatic message conversion
+                   - Use @SendTo for response messages
+                   - Document expected message format
+                   - Test message processing thoroughly
+                   - Consider using Spring Integration for complex message flows
                 
                 **Expected Output:**
                 - Spring @Component with @JmsListener method
-                - Proper message handling
+                - Proper message handling with type conversion
                 - Error handling configured
-                - JMS configuration updated
+                - Transaction boundaries preserved
+                - JMS configuration updated in application.properties
                 
-                Please migrate this MDB.
-              working-directory: "${project_root}"
+                Please migrate this Message-Driven Bean to a Spring JMS listener.
+              working-directory: "${project_root}/${artifact_id}/src/main/java"
               progress-message: "Migrating message-driven bean"
               timeout-seconds: 600
             
+            # Step 4: AI_ASSISTED - Compile and configure JMS
             - type: "AI_ASSISTED"
               name: "compile-jms-listeners"
               description: "Compile and configure JMS"
               prompt: |
-                All MDBs migrated to JMS listeners.
+                All MDBs have been migrated to Spring JMS listeners.
                 
                 **Summary:**
-                - MDBs processed: ${node_count}
-                - Successful: ${success_count}
-                - Failed: ${failure_count}
+                - Total beans processed: ${node_count}
+                
+                **Class IDs:**
+                <#list mdb_beans as bean>
+                - ${bean}
+                </#list>
+                
+                **Classes:**
+                <#list mdb_beans_names as className>
+                - ${className}
+                </#list>
                 
                 **Tasks:**
-                1. Add spring-boot-starter-artemis to pom.xml
-                2. Configure JMS in application.properties
-                3. Compile project
-                4. Verify @JmsListener configuration
+                1. Add spring-boot-starter-artemis (or activemq) to pom.xml if not present
+                2. Configure JMS properties in application.properties:
+                   - Connection factory settings
+                   - Default destination settings
+                   - Listener container configuration
+                3. Run Maven compile to check for errors
+                4. Verify all @JmsListener annotations are correctly configured
+                5. Check message conversion is working
+                6. Ensure transaction configuration is correct
+                7. Test message processing
                 
-                Please complete JMS configuration.
+                Please compile ONLY the classes that were migrated, update JMS configuration, and fix any errors.
               working-directory: "${project_root}"
               timeout-seconds: 300
             
+            # Step 5: INTERACTIVE_VALIDATION
             - type: "INTERACTIVE_VALIDATION"
               name: "verify-mdb-migration"
               validation-type: "MANUAL_CONFIRM"
               message: |
-                MDB migration completed.
+                Message-Driven Bean migration completed.
                 
-                **Summary:** ${node_count} MDBs (${success_count} successful)
+                **Migration Summary:**
+                - Beans processed: ${node_count}
                 
-                **Review:**
-                1. JMS listeners configured
-                2. Destinations properly mapped
-                3. Error handling in place
+                **Review Checklist:**
+                1. All @MessageDriven replaced with @Component + @JmsListener
+                2. JMS listeners properly configured
+                3. Destinations correctly mapped
+                4. Message processing working
+                5. Error handling in place
+                6. Transaction boundaries preserved
+                7. JMS dependencies added to pom.xml
+                8. application.properties configured
+                9. All services compile successfully
                 
-                Confirm to proceed.
+                Please verify and confirm to proceed.
               required: true
               timeout-seconds: 1800

@@ -30,85 +30,176 @@ migration-plan:
               file-pattern: "**/*.java"
               base-directory: "${project_root}/${artifact_id}/src/main/java"
             
-            # Step 3: AI_ASSISTED_BATCH - Process each BMP entity with Amazon Q
+            # Step 3: AI_ASSISTED_BATCH - Process each BMP entity
             - type: "AI_ASSISTED_BATCH"
               name: "ai-migrate-bmp-entities"
               description: "AI-assisted migration for each BMP entity bean"
-              input-nodes: "${bmp_entities}"
+              input-nodes: bmp_entities
               prompt: |
                 You are migrating a Bean Managed Persistence (BMP) EJB entity bean to a modern JPA entity with custom repository implementation.
                 
-                **Current BMP Entity:**
+                **Current Node Information:**
                 - Node ID: ${current_node_id}
-                - Class Name: ${current_node.className}
+                - Class Name: ${current_node.simpleName}
+                - Fully Qualified Name: ${current_node.fullyQualifiedName}
                 - Package: ${current_node.packageName}
+                - Node Type: ${current_node.nodeType}
+                
+                **Node Tags:**
+                <#list current_node.tags as tag>
+                - ${tag}
+                </#list>
+                
+                **Node Properties:**
+                <#list current_node.properties?keys as key>
+                - ${key}: ${current_node.getPropertyToString(key)}
+                </#list>
+                
+                **Source Locations:**
+                <#list current_node.sourceAliasPaths?filter(path -> path?ends_with(".java")) as sourcePath>
+                - ${sourcePath}
+                </#list>
+                
+                ---
+                
+                <#-- Context-aware instructions based on node properties -->
+                <#if current_node.hasProperty("bmp.sql.queries")>
+                <#assign sqlQueries = current_node.getProperty("bmp.sql.queries")>
+                
+                **💾 CUSTOM SQL DETECTED:**
+                This BMP entity has ${sqlQueries?size} custom SQL queries that must be preserved:
+                <#list sqlQueries as query>
+                - ${query.methodName}: ${query.queryType}
+                </#list>
+                
+                **SQL Preservation Instructions:**
+                - Extract ALL SQL from ejbLoad, ejbStore, ejbFindXXX methods
+                - Preserve exact SQL logic in custom repository implementation
+                - Use Spring JdbcTemplate for JDBC operations
+                - Do NOT use JPA/Hibernate query generation
+                </#if>
+                
+                <#if current_node.hasProperty("ejb.primary_key.composite")>
+                
+                **⚠️ COMPOSITE PRIMARY KEY DETECTED:**
+                - This entity uses a composite primary key
+                - You'll need to create an @Embeddable key class or use @IdClass
+                - Ensure proper equals() and hashCode() implementation
+                </#if>
+                
+                <#if current_node.hasProperty("resource.analysis_result")>
+                <#assign resourceAnalysis = current_node.getProperty("resource.analysis_result")>
+                <#if (resourceAnalysis.dataSourceCount > 0)>
+                
+                **📊 DATASOURCE USAGE DETECTED:**
+                - DataSources: ${resourceAnalysis.dataSourceCount}
+                
+                **DataSource Migration:**
+                - Replace @Resource DataSource with constructor-injected Spring DataSource
+                - Spring Boot auto-configures DataSource from application.properties
+                </#if>
+                </#if>
                 
                 **Migration Tasks:**
                 
                 1. **Convert BMP Entity to JPA Entity:**
                    - Add @Entity (jakarta.persistence) annotation
-                   - Add @Table annotation with table name
-                   - Convert fields to JPA fields with @Column annotations
-                   - Add @Id and @GeneratedValue for primary key
-                   - Remove EJB lifecycle methods (ejbCreate, ejbPostCreate, ejbActivate, ejbPassivate)
-                   - Extract SQL from ejbLoad/ejbStore methods
+                   - Add @Table annotation with table name from ejbCreate/SQL
+                   - Convert CMP fields to JPA fields with @Column annotations
+                   - Add @Id and @GeneratedValue for primary key (or @EmbeddedId for composite)
+                   - Remove ALL EJB lifecycle methods (ejbCreate, ejbPostCreate, ejbActivate, ejbPassivate)
+                   - Remove EntityBean interface implementation
+                   - Remove EntityContext field
                 
-                2. **Create Custom Repository Implementation:**
+                2. **Extract and Preserve SQL Logic:**
+                   - Extract ALL SQL statements from ejbLoad method (SELECT)
+                   - Extract ALL SQL statements from ejbStore method (UPDATE/INSERT)
+                   - Extract ALL SQL statements from ejbRemove method (DELETE)
+                   - Extract ALL SQL from ejbFindByXXX methods
+                   - Document each SQL query with comments
+                   - Note: We are NOT using JPA/Hibernate - preserve raw SQL!
+                
+                3. **Create Custom Repository Implementation:**
                    - Create repository interface extending JpaRepository<EntityName, PrimaryKeyType>
-                   - Create custom repository implementation with preserved SQL logic from BMP methods
-                   - Convert ejbLoad SQL to custom findById implementation if needed
-                   - Convert ejbStore SQL to custom save implementation if needed
-                   - Convert ejbFindByXXX methods to custom query methods
-                   - Use JdbcTemplate or @Query with native SQL for complex queries
+                   - Create custom repository implementation class with @Repository
+                   - Inject JdbcTemplate via constructor
+                   - Convert ejbLoad SQL to custom findById using JdbcTemplate.queryForObject()
+                   - Convert ejbStore SQL to custom save using JdbcTemplate.update()
+                   - Convert ejbFindByXXX methods to custom query methods using JdbcTemplate.query()
+                   - Use RowMapper for result set mapping
+                   - Add @Transactional to write operations
                 
-                3. **Preserve Business Logic:**
-                   - Extract all SQL statements from BMP methods (ejbLoad, ejbStore, ejbFindXXX)
-                   - Convert JDBC code to Spring JdbcTemplate or JPA native queries
-                   - Maintain transaction boundaries
-                   - Preserve error handling logic
+                4. **Handle JDBC Code Migration:**
+                   - Replace Connection/PreparedStatement with JdbcTemplate
+                   - Convert ResultSet mapping to RowMapper<Entity>
+                   - Remove manual connection management (try-finally blocks)
+                   - Remove manual transaction management
+                   - Use JdbcTemplate.update() for INSERT/UPDATE/DELETE
+                   - Use JdbcTemplate.query() for SELECT
+                   - Use KeyHolder for auto-generated IDs if needed
                 
-                4. **Migration Guidelines:**
+                5. **Preserve Business Logic:**
+                   - Keep all validation logic from ejbCreate
+                   - Preserve error handling patterns
+                   - Maintain transaction boundaries with @Transactional
+                   - Keep any business rules enforced in BMP methods
+                
+                6. **Migration Guidelines:**
                    - Use Jakarta namespace (jakarta.persistence.*) not javax
-                   - For complex SQL, use @Query with nativeQuery=true
-                   - Consider using Spring Data JPA projections for optimized queries
-                   - Document any SQL that couldn't be automatically converted
+                   - For complex SQL, keep it in custom repository methods
+                   - Do NOT rely on JPA auto-generation - we use explicit SQL
+                   - Use Spring JdbcTemplate or NamedParameterJdbcTemplate
+                   - Document SQL queries clearly in repository methods
+                   - Test thoroughly as SQL is now explicit in repository
                 
                 **Expected Output:**
-                - JPA entity class with proper annotations
+                - JPA entity class with proper annotations (no SQL in entity)
                 - Spring Data repository interface
-                - Custom repository implementation class (if needed for complex SQL)
-                - Updated service classes that reference this entity
+                - Custom repository implementation class with ALL SQL preserved
+                - RowMapper implementations for result set mapping
+                - Updated service classes that use the repository
+                - NO JPA/Hibernate query generation used
                 
-                Please migrate this BMP entity bean following these guidelines, preserving all SQL logic.
-              working-directory: "${project_root}"
+                Please migrate this BMP entity bean following these guidelines, preserving ALL SQL logic in the custom repository.
+              working-directory: "${project_root}/${artifact_id}/src/main/java"
               progress-message: "Migrating BMP entity"
               timeout-seconds: 600
             
-            # Step 4: AI_ASSISTED - Compile and validate all changes
+            # Step 4: AI_ASSISTED - Compile and validate
             - type: "AI_ASSISTED"
               name: "compile-bmp-entities"
-              description: "Compile all migrated BMP entities and fix any compilation errors"
+              description: "Compile all migrated BMP entities"
               prompt: |
                 All BMP entities have been migrated to JPA entities with custom repositories.
                 
                 **Summary:**
-                - Total entities processed: ${node_count}
-                - Successful migrations: ${success_count}
-                - Failed migrations: ${failure_count}
+                - Total beans processed: ${node_count}
+                
+                **Class IDs:**
+                <#list bmp_entities as bean>
+                - ${bean}
+                </#list>
+                
+                **Classes:**
+                <#list bmp_entities_names as className>
+                - ${className}
+                </#list>
                 
                 **Tasks:**
-                1. Run Maven compile to check for compilation errors
+                1. Run Maven compile to check for errors
                 2. Verify all SQL logic has been preserved in repository methods
-                3. Check that JdbcTemplate is properly configured if used
+                3. Check that JdbcTemplate is properly injected in repositories
                 4. Ensure all custom repository implementations are wired correctly
-                5. Fix any missing @Repository annotations
-                6. Resolve any dependency injection issues
+                5. Verify @Repository annotations are present
+                6. Check @Transactional on write operations
+                7. Resolve any dependency injection issues
+                8. Ensure NO JPA/Hibernate auto-queries are being used
                 
-                Please compile the project and fix any errors related to the BMP-to-JPA migration.
+                Please compile ONLY the classes that were migrated and fix any errors.
               working-directory: "${project_root}"
               timeout-seconds: 300
             
-            # Step 5: INTERACTIVE_VALIDATION - Human checkpoint
+            # Step 5: INTERACTIVE_VALIDATION
             - type: "INTERACTIVE_VALIDATION"
               name: "verify-bmp-migration"
               validation-type: "MANUAL_CONFIRM"
@@ -116,25 +207,25 @@ migration-plan:
                 BMP Entity Bean migration completed.
                 
                 **Migration Summary:**
-                - BMP entities processed: ${node_count}
-                - Successful migrations: ${success_count}
-                - Failed migrations: ${failure_count}
+                - Beans processed: ${node_count}
                 
                 **Review Checklist:**
                 1. All BMP entities converted to JPA entities
-                2. Custom SQL preserved in repository methods
+                2. Custom SQL preserved in repository methods using JdbcTemplate
                 3. Repository interfaces and implementations created
                 4. All entity classes compile successfully
                 5. No javax.* imports remaining (all using jakarta.*)
-                6. JdbcTemplate configured if used for native SQL
-                7. Transaction management properly configured
+                6. JdbcTemplate properly configured and injected
+                7. Transaction management properly configured with @Transactional
+                8. RowMappers implemented for result set mapping
+                9. NO JPA/Hibernate query auto-generation used
                 
                 **Next Steps:**
-                - Review custom SQL implementations
+                - Review custom SQL implementations in repositories
                 - Test repository methods with actual database
                 - Verify transaction boundaries
-                - Compare query performance with original BMP implementation
+                - Compare query results with original BMP implementation
                 
-                Please verify the BMP entity migration and confirm to proceed.
+                Please verify and confirm to proceed.
               required: true
               timeout-seconds: 1800

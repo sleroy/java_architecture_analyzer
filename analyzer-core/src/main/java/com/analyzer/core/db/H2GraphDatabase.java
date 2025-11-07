@@ -84,6 +84,10 @@ public class H2GraphDatabase implements GraphDatabase {
      * This is useful for incremental analysis where you want to populate
      * an existing repository with previously analyzed data.
      *
+     * Uses SessionManagedRepository to ensure the SqlSession remains open during
+     * the entire operation. This prevents H2 CLOB lazy-loading issues where CLOB
+     * data is streamed on demand and requires an active connection.
+     *
      * @param targetRepo The GraphRepository to populate
      * @param options    Configuration options for loading (filters, project root,
      *                   etc.)
@@ -92,49 +96,60 @@ public class H2GraphDatabase implements GraphDatabase {
             final GraphRepository targetRepo,
             final LoadOptions options) {
 
-        // Load nodes with optional filtering
-        logger.info("Loading nodes from database...");
-        final List<GraphNodeEntity> nodeEntities = loadNodeEntities(options);
+        // Use SessionManagedRepository to keep session open for entire operation.
+        // This prevents H2 CLOB lazy-loading issues where connection is closed
+        // before CLOB data is fully read.
+        try (final SessionManagedRepository repo = createSessionManagedRepository()) {
+            // Load nodes with optional filtering
+            logger.info("Loading nodes from database...");
+            final List<GraphNodeEntity> nodeEntities = loadNodeEntities(repo, options);
 
-        // Convert entities to ProjectFile nodes and add to repository
-        final Map<String, GraphNode> nodeMap = convertAndAddNodes(
-                nodeEntities,
-                targetRepo,
-                options.getProjectRoot());
+            // Convert entities to ProjectFile nodes and add to repository
+            final Map<String, GraphNode> nodeMap = convertAndAddNodes(
+                    nodeEntities,
+                    targetRepo,
+                    options.getProjectRoot());
 
-        logger.info("Loaded {} nodes into repository", nodeMap.size());
+            logger.info("Loaded {} nodes into repository", nodeMap.size());
 
-        // Load edges with optional filtering
-        logger.info("Loading edges from database...");
-        final List<GraphEdgeEntity> edgeEntities = loadEdgeEntities();
+            // Load edges with optional filtering
+            logger.info("Loading edges from database...");
+            final List<GraphEdgeEntity> edgeEntities = loadEdgeEntities(repo);
 
-        // Convert edge entities and add to repository
-        final int edgesAdded = convertAndAddEdges(edgeEntities, nodeMap, targetRepo);
+            // Convert edge entities and add to repository
+            final int edgesAdded = convertAndAddEdges(edgeEntities, nodeMap, targetRepo);
 
-        logger.info("Loaded {} edges into repository", edgesAdded);
+            logger.info("Loaded {} edges into repository", edgesAdded);
+
+            // Repository (and its session) will be closed here, after all data
+            // has been converted
+        }
     }
 
     /**
      * Loads node entities from database based on options.
+     * Uses the provided SessionManagedRepository to keep the connection open for
+     * CLOB data access.
      */
     private List<GraphNodeEntity> loadNodeEntities(
+            final SessionManagedRepository repo,
             final LoadOptions options) {
 
         final List<GraphNodeEntity> nodeEntities;
 
         if (options.shouldLoadAllNodes()) {
             // Load all nodes from database
-            nodeEntities = h2Repository.findAll();
+            nodeEntities = repo.findAllNodes();
         } else if (options.getNodeTypeFilters() != null && !options.getNodeTypeFilters().isEmpty()) {
             // Load filtered node types
             nodeEntities = new ArrayList<>();
             for (final String nodeType : options.getNodeTypeFilters()) {
-                nodeEntities.addAll(h2Repository.findNodesByType(nodeType));
+                nodeEntities.addAll(repo.findNodesByType(nodeType));
             }
             logger.info("Filtered to {} node types", options.getNodeTypeFilters().size());
         } else {
             // No filter specified - load all
-            nodeEntities = h2Repository.findAll();
+            nodeEntities = repo.findAllNodes();
         }
 
         return nodeEntities;
@@ -142,30 +157,30 @@ public class H2GraphDatabase implements GraphDatabase {
 
     /**
      * Loads edge entities from database based on options.
+     * Uses the provided SessionManagedRepository to keep the connection open for
+     * CLOB data access.
      */
-    private List<GraphEdgeEntity> loadEdgeEntities() {
+    private List<GraphEdgeEntity> loadEdgeEntities(final SessionManagedRepository repo) {
 
         final List<GraphEdgeEntity> edgeEntities = new ArrayList<>();
 
         if (options.shouldLoadAllEdges()) {
-            // Note: Current H2GraphStorageRepository doesn't have a findAllEdges() method
-            // So we fall back to loading by type if edge filters are provided
             if (options.getEdgeTypeFilters() != null && !options.getEdgeTypeFilters().isEmpty()) {
                 for (final String edgeType : options.getEdgeTypeFilters()) {
                     try {
-                        edgeEntities.addAll(h2Repository.findEdgesByType(edgeType));
+                        edgeEntities.addAll(repo.findEdgesByType(edgeType));
                     } catch (final Exception e) {
                         logger.debug("No edges of type {} found: {}", edgeType, e.getMessage());
                     }
                 }
             } else {
-                edgeEntities.addAll(h2Repository.findAllEdges());
+                edgeEntities.addAll(repo.findAllEdges());
             }
         } else if (null != options.getEdgeTypeFilters() && !options.getEdgeTypeFilters().isEmpty()) {
             // Load filtered edge types
             for (final String edgeType : options.getEdgeTypeFilters()) {
                 try {
-                    edgeEntities.addAll(h2Repository.findEdgesByType(edgeType));
+                    edgeEntities.addAll(repo.findEdgesByType(edgeType));
                 } catch (final Exception e) {
                     logger.debug("No edges of type {} found: {}", edgeType, e.getMessage());
                 }
@@ -236,5 +251,36 @@ public class H2GraphDatabase implements GraphDatabase {
 
     public H2GraphStorageRepository getRepository() {
         return h2Repository;
+    }
+
+    /**
+     * Create a session-managed repository for operations that need to access CLOB
+     * fields.
+     * The caller is responsible for closing the repository to release the database
+     * session.
+     * 
+     * <p>
+     * This is the recommended way to access the repository when loading large
+     * datasets
+     * from the database, as it prevents H2 CLOB lazy-loading issues by keeping the
+     * SqlSession open until all data has been processed.
+     * 
+     * <p>
+     * <b>Usage:</b>
+     * 
+     * <pre>{@code
+     * try (SessionManagedRepository repo = database.createSessionManagedRepository()) {
+     *     List<GraphNodeEntity> nodes = repo.findAllNodes();
+     *     // Process nodes - CLOBs are accessible here
+     *     convertToGraphNodes(nodes);
+     * } // Session automatically closed
+     * }</pre>
+     *
+     * @return A new SessionManagedRepository wrapping a SqlSession
+     * @see SessionManagedRepository
+     */
+    public SessionManagedRepository createSessionManagedRepository() {
+        final org.apache.ibatis.session.SqlSession session = dbConfig.openSession();
+        return new SessionManagedRepository(h2Repository, session);
     }
 }

@@ -42,6 +42,9 @@ public abstract class BaseGraphNode implements GraphNode {
 
     @Override
     public Map<String, Object> getProperties() {
+        if (properties == null) {
+            return Collections.emptyMap();
+        }
         return properties;
     }
 
@@ -281,5 +284,12 @@ public abstract class BaseGraphNode implements GraphNode {
         public Map<String, Double> getAllMetrics() {
             return Collections.unmodifiableMap(metrics);
         }
+    }
+
+    public String getPropertyToString(String key) {
+        if (!properties.containsKey(key)) {
+            return "";
+        }
+        return properties.get(key).toString();
     }
 }
