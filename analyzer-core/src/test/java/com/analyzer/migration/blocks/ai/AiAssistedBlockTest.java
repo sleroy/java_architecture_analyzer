@@ -281,7 +281,7 @@ class AiAssistedBlockTest {
 
                 // Verify failure
                 assertFalse(result.isSuccess());
-                assertEquals("Failed to execute Amazon Q", result.getMessage());
+                assertEquals("Failed to execute AI backend", result.getMessage());
                 assertTrue(result.getErrorDetails().contains("Variable substitution failed"));
         }
 

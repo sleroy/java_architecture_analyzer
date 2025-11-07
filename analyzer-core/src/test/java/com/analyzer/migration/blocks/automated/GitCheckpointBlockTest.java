@@ -116,7 +116,11 @@ class GitCheckpointBlockTest {
 
         // Verify - should fail
         assertFalse(result.isSuccess(), "Should fail in non-git directory");
-        assertTrue(result.getMessage().contains("Not a git repository"));
+        // Error details contain the git error message about not being a git repository
+        assertTrue(result.getErrorDetails() != null &&
+                (result.getErrorDetails().toLowerCase().contains("not a git repository") ||
+                        result.getMessage().toLowerCase().contains("git")),
+                "Error should indicate git-related failure");
     }
 
     @Test

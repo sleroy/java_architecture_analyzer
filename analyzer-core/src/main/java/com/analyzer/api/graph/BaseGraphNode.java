@@ -49,6 +49,7 @@ public abstract class BaseGraphNode implements GraphNode {
     }
 
     @Override
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public String getNodeId() {
         return nodeId;
     }
@@ -257,7 +258,7 @@ public abstract class BaseGraphNode implements GraphNode {
     private class NodeMetrics implements Metrics {
         @Override
         public Number getMetric(final String metricName) {
-            return metrics.getOrDefault(metricName, 0.0d);
+            return metrics.get(metricName);
         }
 
         @Override
