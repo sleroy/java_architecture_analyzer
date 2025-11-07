@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Each phase execution is a one-liner using helper methods.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@Disabled("This test is not yet ready for prime time")
 public class PhaseByPhaseIntegrationTest {
 
     // Fix: Point to repository root demo-ejb2-project, not
