@@ -10,6 +10,11 @@ migration-plan:
     package_base: "com.example.ejbapp"
     migration_branch_prefix: "migration"
     
+    # Refactoring Project Path
+    # Default location where the refactored Spring Boot application will be created
+    # Override via: -Drefactoring_project_path=/custom/path
+    refactoring_project_path: "/tmp/example"
+    
     # Maven Environment Configuration
     maven_java_home: "/usr/lib/jvm/java-21-openjdk-amd64/"
     maven_home: "/home/sleroy/mvn"

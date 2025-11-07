@@ -13,13 +13,13 @@ migration-plan:
           description: "Establish a clear baseline of the current application state before migration begins"
           
           blocks:
-            - type: "GIT"
-              name: "create-baseline-branch"
-              description: "Create Git branch for baseline documentation"
-              args: "checkout -b ${migration_branch_prefix}/springboot-baseline"
-              working-directory: "${project_root}"
-              timeout-seconds: 30
-              idempotent: true
+            # - type: "GIT"
+            #   name: "create-baseline-branch"
+            #   description: "Create Git branch for baseline documentation"
+            #   args: "checkout -b ${migration_branch_prefix}/springboot-baseline"
+            #   working-directory: "${project_root}"
+            #   timeout-seconds: 30
+            #   idempotent: true
               
             - type: "GRAPH_QUERY"
               name: "query-all-ejb-components"
@@ -63,7 +63,7 @@ migration-plan:
                 mysqldump --no-data --skip-add-drop-table \
                   -h ${DB_HOST} -P ${DB_PORT} -u ${DB_USER} -p${DB_PASSWORD} \
                   ${DB_NAME} > baseline-schema.sql
-              working-directory: "${project_root}/docs/baseline"
+              working-directory: "${refactoring_project_path}/docs/baseline"
               timeout-seconds: 120
               capture-output: true
               
@@ -123,7 +123,7 @@ migration-plan:
               name: "create-baseline-document"
               description: "Create BASELINE.md with comprehensive documentation"
               operation: "CREATE"
-              path: "${project_root}/docs/BASELINE.md"
+              path: "${refactoring_project_path}/docs/BASELINE.md"
               content: |
                 # Application Baseline Documentation
                 
@@ -217,7 +217,7 @@ migration-plan:
                 Please verify the baseline documentation:
                 
                 - Git branch created: ${migration_branch_prefix}/springboot-baseline
-                - BASELINE.md created at: ${project_root}/docs/BASELINE.md
+                - BASELINE.md created at: ${refactoring_project_path}/docs/BASELINE.md
                 <#if database_enabled?string == "true">
                 - Database schema exported to: baseline-schema.sql
                 </#if>
@@ -242,13 +242,13 @@ migration-plan:
           description: "Set up parallel development structure to enable incremental migration"
           
           blocks:
-            - type: "GIT"
-              name: "create-migration-branch"
-              description: "Create main migration branch"
-              args: "checkout -b ${migration_branch_prefix}/springboot-initial"
-              working-directory: "${project_root}"
-              timeout-seconds: 30
-              idempotent: true
+            # - type: "GIT"
+            #   name: "create-migration-branch"
+            #   description: "Create main migration branch"
+            #   args: "checkout -b ${migration_branch_prefix}/springboot-initial"
+            #   working-directory: "${project_root}"
+            #   timeout-seconds: 30
+            #   idempotent: true
               
             - type: "COMMAND"
               name: "create-directory-structure"
@@ -265,7 +265,7 @@ migration-plan:
               name: "create-gitignore"
               description: "Create .gitignore file for Spring Boot project"
               operation: "CREATE"
-              path: "${project_root}/${artifact_id}/.gitignore"
+              path: "${refactoring_project_path}/.gitignore"
               content: |
                 # Compiled class files
                 *.class
@@ -292,7 +292,7 @@ migration-plan:
               name: "create-readme"
               description: "Create README.md for Spring Boot project"
               operation: "CREATE"
-              path: "${project_root}/${artifact_id}/README.md"
+              path: "${refactoring_project_path}/README.md"
               content: |
                 # Unicorn Spring Boot Application
                 
@@ -326,7 +326,7 @@ migration-plan:
               name: "create-migration-strategy"
               description: "Create MIGRATION_STRATEGY.md document"
               operation: "CREATE"
-              path: "${project_root}/docs/MIGRATION_STRATEGY.md"
+              path: "${refactoring_project_path}/docs/MIGRATION_STRATEGY.md"
               content: |
                 # Migration Strategy: JBoss EJB 2 to Spring Boot
                 
@@ -363,15 +363,15 @@ migration-plan:
                 - Zero data loss during cutover
                 - Application runs without JBoss dependencies
                 
-            - type: "GIT"
-              name: "commit-initial-structure"
-              description: "Commit initial migration structure"
-              args:
-                - "add ."
-                - "commit -m 'feat: create Spring Boot migration structure\n\n- Created ${artifact_id} directory structure\n- Added .gitignore for Spring Boot project\n- Created initial README.md\n- Documented migration strategy\n\nRelated to: TASK-001'"
-              working-directory: "${project_root}"
-              timeout-seconds: 60
-              idempotent: true
+            # - type: "GIT"
+            #   name: "commit-initial-structure"
+            #   description: "Commit initial migration structure"
+            #   args:
+            #     - "add ."
+            #     - "commit -m 'feat: create Spring Boot migration structure\n\n- Created ${artifact_id} directory structure\n- Added .gitignore for Spring Boot project\n- Created initial README.md\n- Documented migration strategy\n\nRelated to: TASK-001'"
+            #   working-directory: "${project_root}"
+            #   timeout-seconds: 60
+            #   idempotent: true
               
             # - type: "INTERACTIVE_VALIDATION"
             #   name: "verify-branch-structure"
@@ -404,7 +404,7 @@ migration-plan:
               maven-home: "${maven_home}"
               working-directory: "${project_root}"
               properties:
-                outputFile: "docs/original-dependencies.txt"
+                outputFile: "${refactoring_project_path}/docs/original-dependencies.txt"
               timeout-seconds: 120
               enable_if: "${read_dependencies}"
 
@@ -419,7 +419,7 @@ migration-plan:
                 find . -name "pom.xml" ! -path "*/target/*" ! -path "*/${artifact_id}/*" -exec echo "=== {} ===" \; -exec grep "<dependency>" {} -A 5 \; >> docs/original-dependencies.txt 2>/dev/null || true
                 echo "" >> docs/original-dependencies.txt
                 echo "Note: This is a grep-based extraction. Set read_dependencies=true to use Maven dependency:tree for complete dependency graph." >> docs/original-dependencies.txt
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}"
               timeout-seconds: 60
               enable_if: "!${read_dependencies}"
               
@@ -463,7 +463,7 @@ migration-plan:
               name: "create-dependency-mapping-doc"
               description: "Create DEPENDENCY_MAPPING.md document"
               operation: "CREATE"
-              path: "${project_root}/docs/DEPENDENCY_MAPPING.md"
+              path: "${refactoring_project_path}/docs/DEPENDENCY_MAPPING.md"
               content: |
                 # Dependency Mapping: JBoss EJB 2 to Spring Boot
                 

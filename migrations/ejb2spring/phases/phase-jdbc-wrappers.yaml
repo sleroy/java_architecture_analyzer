@@ -28,7 +28,7 @@ migration-plan:
               description: "Remove manual connection management"
               recipe: "com.analyzer.ejb2spring.MigrateJdbcWrapper"
               file-pattern: "**/*.java"
-              base-directory: "${project_root}/${artifact_id}/src/main/java"
+              base-directory: "${refactoring_project_path}/src/main/java"
             
             # Step 3: AI_ASSISTED_BATCH - Process each wrapper
             - type: "AI_ASSISTED_BATCH"
@@ -114,7 +114,7 @@ migration-plan:
                 6. Verify SQL queries still correct
                 
                 Please compile and fix errors.
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
             
             # Step 5: INTERACTIVE_VALIDATION

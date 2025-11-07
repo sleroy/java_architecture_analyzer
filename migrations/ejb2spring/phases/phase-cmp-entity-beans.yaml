@@ -28,7 +28,7 @@ migration-plan:
               description: "Remove EJB-specific annotations and add JPA annotations"
               recipe: "com.analyzer.ejb2spring.MigrateCMPEntity"
               file-pattern: "**/*.java"
-              base-directory: "${project_root}/${artifact_id}/src/main/java"
+              base-directory: "${refactoring_project_path}/src/main/java"
             
             # Step 3: AI_ASSISTED_BATCH - Process each CMP entity
             - type: "AI_ASSISTED_BATCH"
@@ -180,7 +180,7 @@ migration-plan:
                 - Updated service classes that use the repository
                 
                 Please migrate this CMP entity bean following these guidelines.
-              working-directory: "${project_root}/${artifact_id}/src/main/java"
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Migrating CMP entity"
               timeout-seconds: 600
             
@@ -215,7 +215,7 @@ migration-plan:
                 8. Test bidirectional relationships
                 
                 Please compile ONLY the classes that were migrated and fix any errors.
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
             
             # Step 5: INTERACTIVE_VALIDATION

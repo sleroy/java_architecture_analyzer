@@ -28,7 +28,7 @@ migration-plan:
               description: "Replace @MessageDriven with @Component"
               recipe: "com.analyzer.ejb2spring.MigrateMessageDriven"
               file-pattern: "**/*.java"
-              base-directory: "${project_root}/${artifact_id}/src/main/java"
+              base-directory: "${refactoring_project_path}/src/main/java"
             
             # Step 3: AI_ASSISTED_BATCH - Process each MDB
             - type: "AI_ASSISTED_BATCH"
@@ -154,7 +154,7 @@ migration-plan:
                 - JMS configuration updated in application.properties
                 
                 Please migrate this Message-Driven Bean to a Spring JMS listener.
-              working-directory: "${project_root}/${artifact_id}/src/main/java"
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Migrating message-driven bean"
               timeout-seconds: 600
             
@@ -191,7 +191,7 @@ migration-plan:
                 7. Test message processing
                 
                 Please compile ONLY the classes that were migrated, update JMS configuration, and fix any errors.
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
             
             # Step 5: INTERACTIVE_VALIDATION
