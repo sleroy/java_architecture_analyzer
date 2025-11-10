@@ -18,6 +18,7 @@
         <module>analyzer-inspectors</module>
         <module>analyzer-ejb2spring</module>
         <module>analyzer-app</module>
+        <module>analyzer-refactoring-mcp</module>
     </modules>
 
     <properties>

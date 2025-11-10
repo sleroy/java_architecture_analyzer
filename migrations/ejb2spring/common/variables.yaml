@@ -10,6 +10,12 @@ migration-plan:
     package_base: "com.example.ejbapp"
     migration_branch_prefix: "migration"
     
+    # Dependency versions
+    springdoc:
+      version: "2.7.0"
+    jasperreports:
+      version: "7.0.1"
+    
     # Refactoring Project Path
     # Default location where the refactored Spring Boot application will be created
     # Override via: -Drefactoring_project_path=/custom/path

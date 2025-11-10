@@ -38,6 +38,10 @@ migration-plan:
               prompt: |
                 You are migrating a Message-Driven Bean to a Spring JMS listener.
                 
+                **CRITICAL - TARGET DIRECTORY:**
+                **YOU MUST WRITE ALL FILES TO: ${refactoring_project_path}/src/main/java**
+                **DO NOT write to the source project paths listed below - those are READ-ONLY references!**
+                
                 **Current Node Information:**
                 - Node ID: ${current_node_id}
                 - Class Name: ${current_node.simpleName}
@@ -55,10 +59,15 @@ migration-plan:
                 - ${key}: ${current_node.getPropertyToString(key)}
                 </#list>
                 
-                **Source Locations:**
-                <#list current_node.sourceAliasPaths?filter(path -> path?ends_with(".java")) as sourcePath>
-                - ${sourcePath}
-                </#list>
+                **READ-ONLY Source Reference (for reading original code only):**
+                <#assign primarySource = current_node.sourceAliasPaths?filter(path -> path?ends_with(".java") && !path?contains("/.analysis/"))?first!"">
+                <#if primarySource?has_content>
+                - Source to read: ${primarySource}
+                </#if>
+                
+                **WRITE Target (where you MUST write the migrated file):**
+                - Target directory: ${refactoring_project_path}/src/main/java
+                - Target file path: ${refactoring_project_path}/src/main/java/${current_node.fullyQualifiedName?replace(".", "/")}.java
                 
                 ---
                 
@@ -165,6 +174,11 @@ migration-plan:
               prompt: |
                 All MDBs have been migrated to Spring JMS listeners.
                 
+                **CRITICAL - WORKING DIRECTORY:**
+                **You are working in the REFACTORING PROJECT at: ${refactoring_project_path}**
+                **Run all Maven commands in: ${refactoring_project_path}**
+                **DO NOT run commands in the source project!**
+                
                 **Summary:**
                 - Total beans processed: ${node_count}
                 
@@ -180,17 +194,18 @@ migration-plan:
                 
                 **Tasks:**
                 1. Add spring-boot-starter-artemis (or activemq) to pom.xml if not present
-                2. Configure JMS properties in application.properties:
+                2. Configure JMS properties in ${refactoring_project_path}/src/main/resources/application.properties:
                    - Connection factory settings
                    - Default destination settings
                    - Listener container configuration
-                3. Run Maven compile to check for errors
+                3. Run Maven compile in ${refactoring_project_path} to check for errors
                 4. Verify all @JmsListener annotations are correctly configured
                 5. Check message conversion is working
                 6. Ensure transaction configuration is correct
                 7. Test message processing
+                8. All files should be in ${refactoring_project_path}/src/main/java
                 
-                Please compile ONLY the classes that were migrated, update JMS configuration, and fix any errors.
+                Please compile the classes in ${refactoring_project_path}, update JMS configuration, and fix any errors.
               working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
             

@@ -36,10 +36,23 @@ migration-plan:
               prompt: |
                 You are modernizing a manual Singleton pattern to use Spring dependency injection.
                 
+                **CRITICAL - TARGET DIRECTORY:**
+                **YOU MUST WRITE ALL FILES TO: ${refactoring_project_path}/src/main/java**
+                **DO NOT write to the source project!**
+                
                 **Current Singleton Class:**
                 - Node ID: ${current_node_id}
                 - Class Name: ${current_node.className}
                 - Package: ${current_node.packageName}
+                
+                **READ-ONLY Source Reference:**
+                <#assign primarySource = current_node.sourceAliasPaths?filter(path -> path?ends_with(".java") && !path?contains("/.analysis/"))?first!"">
+                <#if primarySource?has_content>
+                - Source to read: ${primarySource}
+                </#if>
+                
+                **WRITE Target:**
+                - Target file: ${refactoring_project_path}/src/main/java/${current_node.fullyQualifiedName?replace(".", "/")}.java
                 
                 **Migration Tasks:**
                 
@@ -72,7 +85,7 @@ migration-plan:
                 - @PostConstruct for initialization
                 
                 Please modernize this Singleton.
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Modernizing Singleton"
               timeout-seconds: 600
         
@@ -97,9 +110,22 @@ migration-plan:
               prompt: |
                 You are refactoring a static utility class.
                 
+                **CRITICAL - TARGET DIRECTORY:**
+                **YOU MUST WRITE ALL FILES TO: ${refactoring_project_path}/src/main/java**
+                **DO NOT write to the source project!**
+                
                 **Current Utility Class:**
                 - Node ID: ${current_node_id}
                 - Class Name: ${current_node.className}
+                
+                **READ-ONLY Source Reference:**
+                <#assign primarySource = current_node.sourceAliasPaths?filter(path -> path?ends_with(".java") && !path?contains("/.analysis/"))?first!"">
+                <#if primarySource?has_content>
+                - Source to read: ${primarySource}
+                </#if>
+                
+                **WRITE Target:**
+                - Target file: ${refactoring_project_path}/src/main/java/${current_node.fullyQualifiedName?replace(".", "/")}.java
                 
                 **Tasks:**
                 
@@ -125,7 +151,7 @@ migration-plan:
                 - Better testability with components
                 
                 Please refactor this utility class appropriately.
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Refactoring utility class"
               timeout-seconds: 300
         
@@ -150,9 +176,22 @@ migration-plan:
               prompt: |
                 You are modernizing exception handling in this class.
                 
+                **CRITICAL - TARGET DIRECTORY:**
+                **YOU MUST WRITE ALL FILES TO: ${refactoring_project_path}/src/main/java**
+                **DO NOT write to the source project!**
+                
                 **Current Class:**
                 - Node ID: ${current_node_id}
                 - Class Name: ${current_node.className}
+                
+                **READ-ONLY Source Reference:**
+                <#assign primarySource = current_node.sourceAliasPaths?filter(path -> path?ends_with(".java") && !path?contains("/.analysis/"))?first!"">
+                <#if primarySource?has_content>
+                - Source to read: ${primarySource}
+                </#if>
+                
+                **WRITE Target:**
+                - Target file: ${refactoring_project_path}/src/main/java/${current_node.fullyQualifiedName?replace(".", "/")}.java
                 
                 **Tasks:**
                 
@@ -188,7 +227,7 @@ migration-plan:
                 - Global exception handler
                 
                 Please modernize exception handling.
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Modernizing exception handling"
               timeout-seconds: 300
         
@@ -204,19 +243,24 @@ migration-plan:
               prompt: |
                 All antipattern refactorings completed.
                 
+                **CRITICAL - WORKING DIRECTORY:**
+                **You are working in: ${refactoring_project_path}**
+                **Run all Maven commands in: ${refactoring_project_path}**
+                
                 **Summary:**
                 - Singletons modernized
                 - Utilities refactored
                 - Exception handling improved
                 
                 **Tasks:**
-                1. Full Maven compile
+                1. Full Maven compile in ${refactoring_project_path}
                 2. Run all tests
                 3. Check code quality metrics
                 4. Verify no static abuse remains
                 5. Check exception handling consistency
+                6. All files should be in ${refactoring_project_path}/src/main/java
                 
-                Please compile and validate.
+                Please compile in ${refactoring_project_path} and validate.
               working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
             

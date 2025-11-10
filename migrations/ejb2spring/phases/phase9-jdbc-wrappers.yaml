@@ -38,10 +38,24 @@ migration-plan:
               prompt: |
                 You are migrating a custom JDBC wrapper class to use Spring JdbcTemplate.
                 
+                **CRITICAL - TARGET DIRECTORY:**
+                **YOU MUST WRITE ALL FILES TO: ${refactoring_project_path}/src/main/java**
+                **DO NOT write to the source project!**
+                
                 **Current JDBC Wrapper:**
                 - Node ID: ${current_node_id}
                 - Class Name: ${current_node.className}
                 - Package: ${current_node.packageName}
+                
+                **READ-ONLY Source Reference:**
+                <#assign primarySource = current_node.sourceAliasPaths?filter(path -> path?ends_with(".java") && !path?contains("/.analysis/"))?first!"">
+                <#if primarySource?has_content>
+                - Source to read: ${primarySource}
+                </#if>
+                
+                **WRITE Target:**
+                - Target directory: ${refactoring_project_path}/src/main/java
+                - Target file: ${refactoring_project_path}/src/main/java/${current_node.fullyQualifiedName?replace(".", "/")}.java
                 
                 **Migration Tasks:**
                 
@@ -82,14 +96,14 @@ migration-plan:
                    - Convert SQLException to DataAccessException (Spring does this automatically)
                 
                 **Expected Output:**
-                - @Repository class with JdbcTemplate
+                - @Repository class with JdbcTemplate in ${refactoring_project_path}
                 - All SQL preserved
                 - No manual connection management
                 - Proper transaction boundaries
                 - Updated calling classes
                 
                 Please migrate this JDBC wrapper class.
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Migrating JDBC wrapper"
               timeout-seconds: 600
             
@@ -100,20 +114,25 @@ migration-plan:
               prompt: |
                 All JDBC wrappers migrated to Spring JdbcTemplate.
                 
+                **CRITICAL - WORKING DIRECTORY:**
+                **You are working in: ${refactoring_project_path}**
+                **Run all Maven commands in: ${refactoring_project_path}**
+                
                 **Summary:**
                 - Wrappers processed: ${node_count}
                 - Successful: ${success_count}
                 - Failed: ${failure_count}
                 
                 **Tasks:**
-                1. Run Maven compile
+                1. Run Maven compile in ${refactoring_project_path}
                 2. Verify JdbcTemplate properly injected
                 3. Check @Transactional annotations
                 4. Ensure no manual connection management remains
                 5. Fix any DataAccessException handling
                 6. Verify SQL queries still correct
+                7. All files should be in ${refactoring_project_path}/src/main/java
                 
-                Please compile and fix errors.
+                Please compile in ${refactoring_project_path} and fix errors.
               working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
             

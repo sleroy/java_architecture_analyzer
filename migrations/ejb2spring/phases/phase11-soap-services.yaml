@@ -38,10 +38,25 @@ migration-plan:
               prompt: |
                 You are migrating a JAX-WS SOAP endpoint to Spring Web Services.
                 
+                **CRITICAL - TARGET DIRECTORY:**
+                **YOU MUST WRITE ALL FILES TO: ${refactoring_project_path}/src/main/java**
+                **DO NOT write to the source project!**
+                
                 **Current JAX-WS Endpoint:**
                 - Node ID: ${current_node_id}
                 - Class Name: ${current_node.className}
                 - Package: ${current_node.packageName}
+                
+                **READ-ONLY Source Reference:**
+                <#assign primarySource = current_node.sourceAliasPaths?filter(path -> path?ends_with(".java") && !path?contains("/.analysis/"))?first!"">
+                <#if primarySource?has_content>
+                - Source to read: ${primarySource}
+                </#if>
+                
+                **WRITE Target:**
+                - Target directory: ${refactoring_project_path}/src/main/java
+                - Endpoint file: ${refactoring_project_path}/src/main/java/${current_node.fullyQualifiedName?replace(".", "/")}.java
+                - XSD schema: ${refactoring_project_path}/src/main/resources/xsd/
                 
                 **Migration Tasks:**
                 
@@ -102,7 +117,7 @@ migration-plan:
                 - WSDL accessible
                 
                 Please migrate this SOAP endpoint.
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Migrating SOAP endpoint"
               timeout-seconds: 600
             
@@ -113,19 +128,24 @@ migration-plan:
               prompt: |
                 All JAX-WS endpoints migrated to Spring WS.
                 
+                **CRITICAL - WORKING DIRECTORY:**
+                **You are working in: ${refactoring_project_path}**
+                **Run all Maven commands in: ${refactoring_project_path}**
+                
                 **Summary:**
                 - Endpoints processed: ${node_count}
                 - Successful: ${success_count}
                 - Failed: ${failure_count}
                 
                 **Tasks:**
-                1. Compile project
+                1. Compile project in ${refactoring_project_path}
                 2. Generate JAXB classes from XSD
                 3. Verify WSDL accessible
                 4. Test SOAP requests
                 5. Check namespace mappings
+                6. All files should be in ${refactoring_project_path}
                 
-                Please compile and test.
+                Please compile in ${refactoring_project_path} and test.
               working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
             

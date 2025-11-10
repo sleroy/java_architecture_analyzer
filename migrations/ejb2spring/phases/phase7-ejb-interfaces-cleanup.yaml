@@ -29,28 +29,53 @@ migration-plan:
             
             - type: "AI_ASSISTED_BATCH"
               name: "ai-remove-home-interfaces"
-              input-nodes: "${home_interfaces}"
+              input-nodes: home_interfaces
               prompt: |
                 Remove EJB Home interface and update references.
                 
+                **CRITICAL - TARGET DIRECTORY:**
+                **YOU MUST WORK IN: ${refactoring_project_path}/src/main/java**
+                **DO NOT modify files in the source project!**
+                
                 **Interface:** ${current_node_id}
+                **Interface Name:** ${current_node.simpleName}
+                **Package:** ${current_node.packageName}
+                
+                **READ-ONLY Source Reference:**
+                <#assign primarySource = current_node.sourceAliasPaths?filter(path -> path?ends_with(".java") && !path?contains("/.analysis/"))?first!"">
+                <#if primarySource?has_content>
+                - Source to read: ${primarySource}
+                </#if>
+                
+                **Target for deletions/updates:**
+                - Working in: ${refactoring_project_path}/src/main/java
                 
                 **Tasks:**
-                1. Identify all classes that use this Home interface
+                1. In ${refactoring_project_path}/src/main/java, identify all classes that use this Home interface
                 2. Remove JNDI lookups (InitialContext.lookup())
                 3. Replace with direct Spring dependency injection
-                4. Delete the Home interface file
+                4. Delete the Home interface file from ${refactoring_project_path}/src/main/java
                 5. Update any factory methods that returned Home interfaces
                 
-                Remove this Home interface completely.
-              working-directory: "${project_root}"
+                Remove this Home interface completely from the refactoring project.
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Removing Home interface"
               timeout-seconds: 300
             
             - type: "AI_ASSISTED"
               name: "verify-home-removal"
-              prompt: "Verify all Home interfaces removed and compile project."
-              working-directory: "${project_root}"
+              prompt: |
+                Verify all Home interfaces removed and compile project.
+                
+                **CRITICAL - WORKING DIRECTORY:**
+                **You are working in: ${refactoring_project_path}**
+                **Run all Maven commands in: ${refactoring_project_path}**
+                
+                **Tasks:**
+                1. Compile project in ${refactoring_project_path}
+                2. Verify no Home interface references remain
+                3. Fix any broken dependencies
+              working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
         
         # Task 2: Remove Remote Interfaces
@@ -68,20 +93,31 @@ migration-plan:
             
             - type: "AI_ASSISTED_BATCH"
               name: "ai-remove-remote-interfaces"
-              input-nodes: "${remote_interfaces}"
+              input-nodes: remote_interfaces
               prompt: |
                 Handle EJB Remote interface.
                 
+                **CRITICAL - TARGET DIRECTORY:**
+                **YOU MUST WORK IN: ${refactoring_project_path}/src/main/java**
+                **DO NOT modify files in the source project!**
+                
                 **Interface:** ${current_node_id}
+                **Interface Name:** ${current_node.simpleName}
+                
+                **READ-ONLY Source Reference:**
+                <#assign primarySource = current_node.sourceAliasPaths?filter(path -> path?ends_with(".java") && !path?contains("/.analysis/"))?first!"">
+                <#if primarySource?has_content>
+                - Source to read: ${primarySource}
+                </#if>
                 
                 **Decision:**
                 1. If used for remote access: Convert to REST API or consider removal
                 2. If used locally: Remove and use concrete class with DI
-                3. Delete interface if no longer needed
+                3. Delete interface file from ${refactoring_project_path}/src/main/java
                 4. Update all @EJB references to use Spring injection
                 
-                Process this Remote interface.
-              working-directory: "${project_root}"
+                Process this Remote interface in the refactoring project.
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Processing Remote interface"
               timeout-seconds: 300
         
@@ -100,20 +136,31 @@ migration-plan:
             
             - type: "AI_ASSISTED_BATCH"
               name: "ai-remove-local-interfaces"
-              input-nodes: "${local_interfaces}"
+              input-nodes: local_interfaces
               prompt: |
                 Remove EJB Local interface.
                 
+                **CRITICAL - TARGET DIRECTORY:**
+                **YOU MUST WORK IN: ${refactoring_project_path}/src/main/java**
+                **DO NOT modify files in the source project!**
+                
                 **Interface:** ${current_node_id}
+                **Interface Name:** ${current_node.simpleName}
+                
+                **READ-ONLY Source Reference:**
+                <#assign primarySource = current_node.sourceAliasPaths?filter(path -> path?ends_with(".java") && !path?contains("/.analysis/"))?first!"">
+                <#if primarySource?has_content>
+                - Source to read: ${primarySource}
+                </#if>
                 
                 **Tasks:**
-                1. Replace interface references with concrete class
+                1. Replace interface references with concrete class in ${refactoring_project_path}
                 2. Use Spring DI instead of Local interface
-                3. Delete Local interface file
+                3. Delete Local interface file from ${refactoring_project_path}/src/main/java
                 4. Update injection points
                 
-                Remove this Local interface.
-              working-directory: "${project_root}"
+                Remove this Local interface from the refactoring project.
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Removing Local interface"
               timeout-seconds: 300
         
@@ -132,14 +179,25 @@ migration-plan:
             
             - type: "AI_ASSISTED_BATCH"
               name: "ai-remove-localhome-interfaces"
-              input-nodes: "${localhome_interfaces}"
+              input-nodes: localhome_interfaces
               prompt: |
                 Remove EJB LocalHome interface.
                 
-                **Interface:** ${current_node_id}
+                **CRITICAL - TARGET DIRECTORY:**
+                **YOU MUST WORK IN: ${refactoring_project_path}/src/main/java**
+                **DO NOT modify files in the source project!**
                 
-                Remove this LocalHome interface and update references.
-              working-directory: "${project_root}"
+                **Interface:** ${current_node_id}
+                **Interface Name:** ${current_node.simpleName}
+                
+                **READ-ONLY Source Reference:**
+                <#assign primarySource = current_node.sourceAliasPaths?filter(path -> path?ends_with(".java") && !path?contains("/.analysis/"))?first!"">
+                <#if primarySource?has_content>
+                - Source to read: ${primarySource}
+                </#if>
+                
+                Remove this LocalHome interface from ${refactoring_project_path}/src/main/java and update references.
+              working-directory: "${refactoring_project_path}/src/main/java"
               progress-message: "Removing LocalHome interface"
               timeout-seconds: 300
         

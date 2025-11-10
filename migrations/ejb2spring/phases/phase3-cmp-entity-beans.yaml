@@ -38,6 +38,10 @@ migration-plan:
               prompt: |
                 You are migrating a Container Managed Persistence (CMP) EJB entity bean to a modern JPA entity with Spring Data repository.
                 
+                **CRITICAL - TARGET DIRECTORY:**
+                **YOU MUST WRITE ALL FILES TO: ${refactoring_project_path}/src/main/java**
+                **DO NOT write to the source project paths listed below - those are READ-ONLY references!**
+                
                 **Current Node Information:**
                 - Node ID: ${current_node_id}
                 - Class Name: ${current_node.simpleName}
@@ -55,10 +59,16 @@ migration-plan:
                 - ${key}: ${current_node.getPropertyToString(key)}
                 </#list>
                 
-                **Source Locations:**
-                <#list current_node.sourceAliasPaths?filter(path -> path?ends_with(".java")) as sourcePath>
-                - ${sourcePath}
-                </#list>
+                **READ-ONLY Source Reference (for reading original code only):**
+                <#assign primarySource = current_node.sourceAliasPaths?filter(path -> path?ends_with(".java") && !path?contains("/.analysis/"))?first!"">
+                <#if primarySource?has_content>
+                - Source to read: ${primarySource}
+                </#if>
+                
+                **WRITE Target (where you MUST write the migrated files):**
+                - Target directory: ${refactoring_project_path}/src/main/java
+                - Entity file: ${refactoring_project_path}/src/main/java/${current_node.fullyQualifiedName?replace(".", "/")}.java
+                - Repository interface: ${refactoring_project_path}/src/main/java/${current_node.packageName?replace(".", "/")}/repository/${current_node.simpleName}Repository.java
                 
                 ---
                 
@@ -191,6 +201,11 @@ migration-plan:
               prompt: |
                 All CMP entities have been migrated to JPA entities with Spring Data repositories.
                 
+                **CRITICAL - WORKING DIRECTORY:**
+                **You are working in the REFACTORING PROJECT at: ${refactoring_project_path}**
+                **Run all Maven commands in: ${refactoring_project_path}**
+                **DO NOT run commands in the source project!**
+                
                 **Summary:**
                 - Total beans processed: ${node_count}
                 
@@ -205,7 +220,7 @@ migration-plan:
                 </#list>
                 
                 **Tasks:**
-                1. Run Maven compile to check for errors
+                1. Run Maven compile in ${refactoring_project_path} to check for errors
                 2. Fix any import issues (ensure using jakarta.persistence.* not javax.persistence.*)
                 3. Resolve any missing dependencies in pom.xml
                 4. Fix any JPA relationship configuration issues
@@ -213,8 +228,9 @@ migration-plan:
                 6. Check @Column, @JoinColumn, and @JoinTable annotations
                 7. Ensure proper cascade and fetch type configurations
                 8. Test bidirectional relationships
+                9. All files should be in ${refactoring_project_path}/src/main/java
                 
-                Please compile ONLY the classes that were migrated and fix any errors.
+                Please compile the classes in ${refactoring_project_path} and fix any errors.
               working-directory: "${refactoring_project_path}"
               timeout-seconds: 300
             
