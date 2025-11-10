@@ -169,14 +169,12 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
                 final GraphNode targetNode = edge.getTarget();
 
                 // Only process JavaClassNode targets
-                if (targetNode instanceof final JavaClassNode target) {
-
-                    if (!visited.contains(target)) {
-                        visited.add(target);
-                        reachableNodes.add(target);
-                        queue.add(target);
-                    }
+                if (targetNode instanceof final JavaClassNode target && !visited.contains(target)) {
+                    visited.add(target);
+                    reachableNodes.add(target);
+                    queue.add(target);
                 }
+
             }
         }
 
@@ -208,14 +206,12 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
                 final GraphNode sourceNode = edge.getSource();
 
                 // Only process JavaClassNode sources
-                if (sourceNode instanceof final JavaClassNode source) {
-
-                    if (!visited.contains(source)) {
-                        visited.add(source);
-                        reachableNodes.add(source);
-                        queue.add(source);
-                    }
+                if (sourceNode instanceof final JavaClassNode source && !visited.contains(source)) {
+                    visited.add(source);
+                    reachableNodes.add(source);
+                    queue.add(source);
                 }
+
             }
         }
 

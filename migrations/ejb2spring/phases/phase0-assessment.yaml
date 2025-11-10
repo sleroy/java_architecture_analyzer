@@ -258,7 +258,7 @@ migration-plan:
                 mkdir -p ${artifact_id}/src/main/resources
                 mkdir -p ${artifact_id}/src/test/java
                 mkdir -p ${artifact_id}/src/test/resources
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}"
               timeout-seconds: 30
               
             - type: "FILE_OPERATION"
@@ -418,8 +418,9 @@ migration-plan:
                 echo "" >> docs/original-dependencies.txt
                 find . -name "pom.xml" ! -path "*/target/*" ! -path "*/${artifact_id}/*" -exec echo "=== {} ===" \; -exec grep "<dependency>" {} -A 5 \; >> docs/original-dependencies.txt 2>/dev/null || true
                 echo "" >> docs/original-dependencies.txt
+                cp  docs/original-dependencies.txt ${refactoring_project_path}/docs/original-dependencies.txt
                 echo "Note: This is a grep-based extraction. Set read_dependencies=true to use Maven dependency:tree for complete dependency graph." >> docs/original-dependencies.txt
-              working-directory: "${refactoring_project_path}"
+              working-directory: "${project_root}"
               timeout-seconds: 60
               enable_if: "!${read_dependencies}"
               
