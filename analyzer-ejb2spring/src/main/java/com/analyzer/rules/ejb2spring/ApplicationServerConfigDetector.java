@@ -5,6 +5,7 @@ import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.inspector.Inspector;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.inspector.InspectorTargetType;
 import com.analyzer.core.model.ProjectFile;
 
 import java.util.*;
@@ -296,6 +297,12 @@ public class ApplicationServerConfigDetector implements Inspector<ProjectFile> {
             return false;
         ApplicationServerConfigDetector that = (ApplicationServerConfigDetector) o;
         return Objects.equals(name, that.name) && Objects.equals(serverConfigFiles, that.serverConfigFiles);
+    }
+
+
+    @Override
+    public InspectorTargetType getTargetType() {
+        return InspectorTargetType.PROJECT_FILE;
     }
 
     @Override

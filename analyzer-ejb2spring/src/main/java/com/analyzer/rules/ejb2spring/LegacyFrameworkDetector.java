@@ -6,6 +6,7 @@ import com.analyzer.api.inspector.Inspector;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.cache.LocalCache;
+import com.analyzer.core.inspector.InspectorTargetType;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.cache.LocalCache;
 
@@ -50,6 +51,11 @@ public class LegacyFrameworkDetector implements Inspector<ProjectFile> {
             this.detectedPatterns = detectedPatterns;
             this.configType = configType;
         }
+    }
+
+    @Override
+    public InspectorTargetType getTargetType() {
+        return InspectorTargetType.PROJECT_FILE;
     }
 
     /**

@@ -1,14 +1,14 @@
 package com.analyzer.rules.graph;
 
 import com.analyzer.api.graph.ClassNodeRepository;
-import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
-import com.analyzer.dev.inspectors.binary.AbstractASMClassInspector;
 import com.analyzer.api.resource.ResourceResolver;
+import com.analyzer.core.cache.LocalCache;
+import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.dev.inspectors.binary.AbstractASMClassInspector;
 import com.analyzer.rules.std.ApplicationPackageTagInspector;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -49,6 +48,9 @@ import java.util.Set;
 })
 public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector {
 
+    public static final String EDGE_USES = "uses";
+    public static final String EDGE_EXTENDS = "extends";
+    public static final String EDGE_IMPLEMENTS = "implements";
     private static final Logger logger = LoggerFactory.getLogger(BinaryClassCouplingGraphInspector.class);
     private final GraphRepository graphRepository;
     private final ClassNodeRepository classNodeRepository;
@@ -86,6 +88,7 @@ public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector
      * ASM visitor that analyzes class dependencies and creates graph edges.
      */
     private static class ClassCouplingVisitor extends AbstractASMClassInspector.ASMClassNodeVisitor {
+
         private final GraphRepository graphRepository;
         private final JavaClassNode sourceNode;
         private final ClassNodeRepository classNodeRepository1;
@@ -110,14 +113,14 @@ public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector
             // Create edge for superclass (extends relationship)
             if (superName != null && !"java/lang/Object".equals(superName)) {
                 final String superClassName = Type.getObjectType(superName).getClassName();
-                createCouplingEdge(superClassName, "extends");
+                createCouplingEdge(superClassName, EDGE_EXTENDS);
             }
 
             // Create edges for implemented interfaces
             if (interfaces != null) {
                 for (final String interfaceName : interfaces) {
                     final String interfaceClassName = Type.getObjectType(interfaceName).getClassName();
-                    createCouplingEdge(interfaceClassName, "implements");
+                    createCouplingEdge(interfaceClassName, EDGE_IMPLEMENTS);
                 }
             }
 
@@ -181,7 +184,7 @@ public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector
             }
 
             final String className = type.getClassName();
-            createCouplingEdge(className, "uses");
+            createCouplingEdge(className, EDGE_USES);
         }
 
         /**

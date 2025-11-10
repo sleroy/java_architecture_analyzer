@@ -6,6 +6,7 @@ import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.inspector.InspectorTargetType;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractJavaParserInspector;
 import com.analyzer.api.resource.ResourceResolver;
@@ -70,6 +71,7 @@ public class SourceJavaClassNodeInspector extends AbstractJavaParserInspector {
         // All filtering is handled by @InspectorDependencies
         return true;
     }
+
 
     @Override
     protected void analyzeCompilationUnit(CompilationUnit cu, ProjectFile projectFile,

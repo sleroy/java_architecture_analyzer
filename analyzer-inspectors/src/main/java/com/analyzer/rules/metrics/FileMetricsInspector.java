@@ -4,6 +4,7 @@ import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.inspector.Inspector;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.inspector.InspectorTargetType;
 import com.analyzer.core.model.ProjectFile;
 
 import java.io.IOException;
@@ -13,6 +14,11 @@ import java.util.List;
 
 @InspectorDependencies(requires = { InspectorTags.TAG_SOURCE_FILE }, produces = {})
 public class FileMetricsInspector implements Inspector<ProjectFile> {
+
+    @Override
+    public InspectorTargetType getTargetType() {
+        return InspectorTargetType.PROJECT_FILE;
+    }
 
     @Override
     public void inspect(ProjectFile objectToAnalyze, NodeDecorator<ProjectFile> decorator) {

@@ -161,7 +161,7 @@ public class InMemoryGraphRepository implements GraphRepository {
             }
         }
 
-        logger.debug("Built graph with {} nodes and {} edges", graph.vertexSet().size(), addedEdges);
+        logger.info("Built call graph with {} nodes and {} edges", graph.vertexSet().size(), addedEdges);
         return graph;
     }
 

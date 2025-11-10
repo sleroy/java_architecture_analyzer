@@ -2,28 +2,28 @@ package com.analyzer.cli;
 
 import com.analyzer.api.analysis.Analysis;
 import com.analyzer.core.AnalysisConstants;
-import com.analyzer.dev.collectors.CollectorBeanFactory;
 import com.analyzer.core.db.H2GraphDatabase;
 import com.analyzer.core.db.loader.LoadOptions;
-import com.analyzer.core.serialization.JsonSerializationService;
 import com.analyzer.core.engine.AnalysisEngine;
 import com.analyzer.core.inspector.InspectorRegistry;
 import com.analyzer.core.model.Project;
-import com.analyzer.dev.detection.FileDetectionBeanFactory;
 import com.analyzer.core.resource.CompositeResourceResolver;
+import com.analyzer.core.serialization.JsonSerializationService;
+import com.analyzer.dev.collectors.CollectorBeanFactory;
+import com.analyzer.dev.detection.FileDetectionBeanFactory;
 import com.analyzer.rules.ai.AIInspectorBeanFactory;
-import com.analyzer.rules.std.StdInspectorBeanFactory;
 import com.analyzer.rules.ejb2spring.Ejb2SpringInspectorBeanFactory;
 import com.analyzer.rules.graph.GraphInspectorBeanFactory;
 import com.analyzer.rules.metrics.MetricsInspectorBeanFactory;
+import com.analyzer.rules.std.StdInspectorBeanFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
+import picocli.CommandLine;
 
 import java.io.File;
 import java.nio.charset.Charset;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 /**
@@ -31,30 +31,27 @@ import java.util.concurrent.Callable;
  * Creates an inventory of Java classes and packages with inspector analysis
  * results using the URI-based ResourceResolver system.
  */
-@Command(name = "inventory", description = "Create an inventory of Java classes and packages")
+@CommandLine.Command(name = "inventory", description = "Create an inventory of Java classes and packages")
 public class InventoryCommand implements Callable<Integer> {
 
     private static final Logger logger = LoggerFactory.getLogger(InventoryCommand.class);
 
-    @Option(names = { "--project" }, description = "Path to the project directory to analyze", required = true)
+    @CommandLine.Option(names = "--project", description = "Path to the project directory to analyze", required = true)
     private String projectPath;
 
-    @Option(names = { "--encoding" }, description = "Default encoding to use for reading files")
+    @CommandLine.Option(names = "--encoding", description = "Default encoding to use for reading files")
     private String encoding = Charset.defaultCharset().name();
 
-    @Option(names = {
-            "--java_version" }, description = "Java version of the source files (required if --source is used)")
+    @CommandLine.Option(names = "--java_version", description = "Java version of the source files (required if --source is used)")
     private String javaVersion;
 
-    @Option(names = { "--inspector" }, description = "List of inspectors to use (comma-separated)", split = ",")
+    @CommandLine.Option(names = "--inspector", description = "List of inspectors to use (comma-separated)", split = ",")
     private List<String> inspectors;
 
-    @Option(names = {
-            "--packages" }, description = "Comma-separated list of package prefixes to include (e.g., com.example,com.company). Includes subpackages.", split = ",")
+    @CommandLine.Option(names = "--packages", description = "Comma-separated list of package prefixes to include (e.g., com.example,com.company). Includes subpackages.", split = ",")
     private List<String> packageFilters;
 
-    @Option(names = {
-            "--max-passes" }, description = "Maximum number of analysis passes for convergence detection", defaultValue = "5")
+    @CommandLine.Option(names = "--max-passes", description = "Maximum number of analysis passes for convergence detection", defaultValue = "5")
     private int maxPasses;
 
     @Override
@@ -76,10 +73,10 @@ public class InventoryCommand implements Callable<Integer> {
 
         try {
             // Initialize ResourceResolver system
-            CompositeResourceResolver resolver = CompositeResourceResolver.createDefault();
+            final CompositeResourceResolver resolver = CompositeResourceResolver.createDefault();
 
             // 1. Initialize Inspector Registry
-            InspectorRegistry inspectorRegistry = InspectorRegistry.newInspectorRegistry(resolver);
+            final InspectorRegistry inspectorRegistry = InspectorRegistry.newInspectorRegistry(resolver);
             inspectorRegistry.registerComponents(FileDetectionBeanFactory.class);
             inspectorRegistry.registerComponents(CollectorBeanFactory.class);
             inspectorRegistry.registerComponents(StdInspectorBeanFactory.class);
@@ -91,13 +88,13 @@ public class InventoryCommand implements Callable<Integer> {
             logger.info("{}", inspectorRegistry.getStatistics());
 
             // 3. Create empty analysis list (will be enhanced later)
-            List<Analysis> analyses = new ArrayList<>();
+            final List<Analysis> analyses = new ArrayList<>();
 
             // 4. Create fresh analysis container for this analysis run
 
             // 5. Get Analysis Engine from analysis container (all dependencies
             // auto-injected)
-            AnalysisEngine analysisEngine = inspectorRegistry.getAnalysisEngine();
+            final AnalysisEngine analysisEngine = inspectorRegistry.getAnalysisEngine();
             if (analysisEngine == null) {
                 logger.error("Failed to get AnalysisEngine from analysis container");
                 return 1;
@@ -109,40 +106,40 @@ public class InventoryCommand implements Callable<Integer> {
             logger.info("{}", analysisEngine.getStatistics());
 
             // Initialize project directory
-            java.nio.file.Path projectDir = java.nio.file.Paths.get(projectPath);
+            final java.nio.file.Path projectDir = java.nio.file.Paths.get(projectPath);
 
             // Initialize and load H2 database at the beginning
-            java.nio.file.Path dbPath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
-                    .resolve(AnalysisConstants.GRAPH_DB_NAME);
+            final java.nio.file.Path dbPath = projectDir.resolve(AnalysisConstants.ANALYSIS_DIR)
+                                                        .resolve(AnalysisConstants.GRAPH_DB_NAME);
             logger.info("Initializing H2 database at: {}", dbPath);
 
-            LoadOptions loadOptions = LoadOptions.builder()
-                    .withProjectRoot(projectDir)
-                    .withDatabasePath(dbPath)
-                    .loadAllNodes()
-                    .withCommonEdgeTypes()
-                    .build();
+            final LoadOptions loadOptions = LoadOptions.builder()
+                                                       .withProjectRoot(projectDir)
+                                                       .withDatabasePath(dbPath)
+                                                       .loadAllNodes()
+                                                       .withCommonEdgeTypes()
+                                                       .build();
 
-            H2GraphDatabase h2Database = new H2GraphDatabase(loadOptions, new JsonSerializationService());
+            final H2GraphDatabase h2Database = new H2GraphDatabase(loadOptions, new JsonSerializationService());
             h2Database.load();
 
             // Load existing data from database into analysis engine (if database exists)
             logger.info("Loading existing data from database...");
-            var existingRepo = h2Database.snapshot();
+            final var existingRepo = h2Database.snapshot();
             logger.info("Loaded {} existing nodes from database", existingRepo.getNodes().size());
 
             // Pre-populate the analysis engine's graph repository with existing data
-            for (var node : existingRepo.getNodes()) {
+            for (final var node : existingRepo.getNodes()) {
                 analysisEngine.getGraphRepository().addNode(node);
             }
-            for (var edge : existingRepo.getAllEdges()) {
+            for (final var edge : existingRepo.getAllEdges()) {
                 analysisEngine.getGraphRepository().getOrCreateEdge(
                         edge.getSource(), edge.getTarget(), edge.getEdgeType());
             }
 
             // 5. Analyze the project using new architecture with multi-pass algorithm
             // This will add to or update the existing data
-            Project project = analysisEngine.analyzeProject(projectDir, inspectors, maxPasses, packageFilters);
+            final Project project = analysisEngine.analyzeProject(projectDir, inspectors, maxPasses, packageFilters);
 
             logger.info("Project analysis completed. Found {} files", project.getProjectFiles().size());
 
@@ -151,7 +148,7 @@ public class InventoryCommand implements Callable<Integer> {
             h2Database.persist(analysisEngine.getGraphRepository());
 
             // Show database statistics
-            var stats = h2Database.getRepository().getStatistics();
+            final var stats = h2Database.getRepository().getStatistics();
             logger.info("Database statistics: {}", stats);
 
             logger.info("Analysis completed successfully!");
@@ -162,7 +159,7 @@ public class InventoryCommand implements Callable<Integer> {
             logger.info("  - CSV: Use csv_export --project {} --output <file.csv>", projectPath);
 
             return 0;
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.error("Error during analysis: {}", e.getMessage(), e);
             return 1;
         }
@@ -172,7 +169,7 @@ public class InventoryCommand implements Callable<Integer> {
      * Converts a file path to a URI string.
      * Handles both relative and absolute paths, and JAR/WAR files.
      */
-    private String convertPathToUri(String path) {
+    private String convertPathToUri(final String path) {
         if (path == null) {
             return null;
         }
@@ -187,12 +184,12 @@ public class InventoryCommand implements Callable<Integer> {
 
             // For JAR and WAR files, use jar: protocol
             if (path.toLowerCase().endsWith(".jar") || path.toLowerCase().endsWith(".war")) {
-                return "jar:" + file.toURI().toString() + "!/";
+                return "jar:" + file.toURI() + "!/";
             } else {
                 // For directories and regular files, use file: protocol
                 return file.toURI().toString();
             }
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.error("Error converting path to URI: {} - {}", path, e.getMessage());
             return null;
         }
@@ -206,7 +203,7 @@ public class InventoryCommand implements Callable<Integer> {
         }
 
         // Validate project path exists and is a directory
-        File projectDir = new File(projectPath);
+        final File projectDir = new File(projectPath);
         if (!projectDir.exists()) {
             logger.error("Error: Project directory does not exist: {}", projectPath);
             return false;

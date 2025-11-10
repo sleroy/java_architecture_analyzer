@@ -93,9 +93,5 @@ public interface Inspector<T extends GraphNode> {
      * @return the target type this inspector processes
      * @since Phase 7 - Type-Safe Inspector Filtering
      */
-    default InspectorTargetType getTargetType() {
-        // Default implementation: try to determine from class hierarchy
-        // Base classes should override for better performance
-        return InspectorTargetType.ANY;
-    }
+    InspectorTargetType getTargetType();
 }

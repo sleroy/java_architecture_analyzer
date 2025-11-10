@@ -1,29 +1,22 @@
 package com.analyzer.rules.metrics;
 
-import com.analyzer.api.graph.GraphEdge;
-import com.analyzer.api.graph.GraphNode;
-import com.analyzer.api.graph.GraphRepository;
-import com.analyzer.api.graph.JavaClassNode;
-import com.analyzer.api.graph.PackageNode;
-import com.analyzer.api.graph.PackageNodeRepository;
+import com.analyzer.api.graph.*;
 import com.analyzer.api.inspector.Inspector;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.graph.NodeTypeRegistry;
+import com.analyzer.core.inspector.InspectorTargetType;
 import org.jgrapht.Graph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Inspector that calculates package-level coupling metrics by aggregating
  * class-level dependencies.
- * 
+ *
  * <p>
  * This inspector creates PackageNode instances for each unique package and
  * calculates:
@@ -40,41 +33,31 @@ import java.util.Set;
  * Classes</li>
  * <li><b>Distance from Main Sequence (D)</b> - |A + I - 1|</li>
  * </ul>
- * 
+ *
  * @author Java Architecture Analyzer
  * @since Coupling Metrics Enhancement - Package Level
  */
-@InspectorDependencies(need = { CouplingMetricsInspector.class }, produces = {
-        "java.package.coupling_metrics.calculated" })
+@InspectorDependencies(need = CouplingMetricsInspector.class, produces = "java.package.coupling_metrics.calculated")
 public class PackageCouplingMetricsInspector implements Inspector<PackageNode> {
 
+    public static final String EDGE_DEPENDS = "depends";
     private static final Logger logger = LoggerFactory.getLogger(PackageCouplingMetricsInspector.class);
-
     private final GraphRepository graphRepository;
     private final PackageNodeRepository packageNodeRepository;
 
     // Cache for package graph
     private Graph<GraphNode, GraphEdge> packageGraphCache;
 
-    public static class TAGS {
-        public static final String PACKAGE_METRICS_CALCULATED = "java.package.coupling_metrics.calculated";
-    }
-
     @Inject
     public PackageCouplingMetricsInspector(
-            GraphRepository graphRepository,
-            PackageNodeRepository packageNodeRepository) {
+            final GraphRepository graphRepository,
+            final PackageNodeRepository packageNodeRepository) {
         this.graphRepository = graphRepository;
         this.packageNodeRepository = packageNodeRepository;
     }
 
     @Override
-    public String getName() {
-        return "Package Coupling Metrics Inspector";
-    }
-
-    @Override
-    public void inspect(PackageNode node, NodeDecorator<PackageNode> decorator) {
+    public void inspect(final PackageNode node, final NodeDecorator<PackageNode> decorator) {
         // Lazy-initialize the package dependency graph
         if (packageGraphCache == null) {
             logger.info("Building package-level dependency graph for metrics calculation...");
@@ -85,6 +68,16 @@ public class PackageCouplingMetricsInspector implements Inspector<PackageNode> {
         calculatePackageMetrics(node, decorator);
     }
 
+    @Override
+    public String getName() {
+        return "Package Coupling Metrics Inspector";
+    }
+
+    @Override
+    public InspectorTargetType getTargetType() {
+        return InspectorTargetType.PACKAGE;
+    }
+
     /**
      * Builds the package-level dependency graph by aggregating class-level
      * dependencies.
@@ -93,21 +86,19 @@ public class PackageCouplingMetricsInspector implements Inspector<PackageNode> {
      */
     private void buildPackageDependencyGraph() {
         // Get class-level coupling graph
-        Graph<GraphNode, GraphEdge> classGraph = graphRepository.buildGraph(
+        final Graph<GraphNode, GraphEdge> classGraph = graphRepository.buildGraph(
                 Set.of("JavaClass"),
                 Set.of("extends", "implements", "uses"));
 
         // Track package-to-package dependencies
-        Set<PackageDependency> packageDependencies = new HashSet<>();
+        final Set<PackageDependency> packageDependencies = new HashSet<>();
 
         // Aggregate class dependencies to package dependencies
-        for (GraphEdge edge : classGraph.edgeSet()) {
-            GraphNode source = classGraph.getEdgeSource(edge);
-            GraphNode target = classGraph.getEdgeTarget(edge);
+        for (final GraphEdge edge : classGraph.edgeSet()) {
+            final GraphNode source = classGraph.getEdgeSource(edge);
+            final GraphNode target = classGraph.getEdgeTarget(edge);
 
-            if (source instanceof JavaClassNode && target instanceof JavaClassNode) {
-                JavaClassNode sourceClass = (JavaClassNode) source;
-                JavaClassNode targetClass = (JavaClassNode) target;
+            if (source instanceof final JavaClassNode sourceClass && target instanceof final JavaClassNode targetClass) {
 
                 String sourcePackage = sourceClass.getPackageName();
                 String targetPackage = targetClass.getPackageName();
@@ -128,19 +119,19 @@ public class PackageCouplingMetricsInspector implements Inspector<PackageNode> {
 
         // Create package-level edges in graph repository
         // PackageNodes should already exist from Phase 2 collectors
-        for (PackageDependency dep : packageDependencies) {
-            Optional<PackageNode> sourcePackage = packageNodeRepository.getByPackageName(dep.sourcePackage);
-            Optional<PackageNode> targetPackage = packageNodeRepository.getByPackageName(dep.targetPackage);
+        for (final PackageDependency dep : packageDependencies) {
+            final Optional<PackageNode> sourcePackage = packageNodeRepository.getByPackageName(dep.sourcePackage);
+            final Optional<PackageNode> targetPackage = packageNodeRepository.getByPackageName(dep.targetPackage);
 
             if (sourcePackage.isPresent() && targetPackage.isPresent()) {
-                graphRepository.getOrCreateEdge(sourcePackage.get(), targetPackage.get(), "depends");
+                graphRepository.getOrCreateEdge(sourcePackage.get(), targetPackage.get(), EDGE_DEPENDS);
             }
         }
 
         // Build the package graph
         packageGraphCache = graphRepository.buildGraph(
-                Set.of("Package"),
-                Set.of("depends"));
+                Set.of(NodeTypeRegistry.getAllTypes().get(PackageNode.class)),
+                Set.of(EDGE_DEPENDS));
 
         logger.info("Package dependency graph built with {} edges", packageDependencies.size());
     }
@@ -148,25 +139,25 @@ public class PackageCouplingMetricsInspector implements Inspector<PackageNode> {
     /**
      * Calculates all metrics for a specific package.
      */
-    private void calculatePackageMetrics(PackageNode packageNode, NodeDecorator<PackageNode> decorator) {
+    private void calculatePackageMetrics(final PackageNode packageNode, final NodeDecorator<PackageNode> decorator) {
         // 1. Abstractness metric
-        int totalClasses = packageNode.getClassCount();
-        int abstractComponents = packageNode.getInterfaceCount() + packageNode.getAbstractClassCount();
-        double abstractness = totalClasses > 0 ? (double) abstractComponents / totalClasses : 0.0;
+        final int totalClasses = packageNode.getClassCount();
+        final int abstractComponents = packageNode.getInterfaceCount() + packageNode.getAbstractClassCount();
+        final double abstractness = totalClasses > 0 ? (double) abstractComponents / totalClasses : 0.0;
 
         // 2. Direct coupling (already counted by graph edges)
-        int directAfferent = packageGraphCache.incomingEdgesOf(packageNode).size();
-        int directEfferent = packageGraphCache.outgoingEdgesOf(packageNode).size();
+        final int directAfferent = packageGraphCache.incomingEdgesOf(packageNode).size();
+        final int directEfferent = packageGraphCache.outgoingEdgesOf(packageNode).size();
 
         // 3. Transitive coupling
-        int transitiveEfferent = calculateTransitiveEfferent(packageGraphCache, packageNode);
-        int transitiveAfferent = calculateTransitiveAfferent(packageGraphCache, packageNode);
+        final int transitiveEfferent = calculateTransitiveEfferent(packageGraphCache, packageNode);
+        final int transitiveAfferent = calculateTransitiveAfferent(packageGraphCache, packageNode);
 
         // 4. Instability metric: I = Ce / (Ca + Ce)
-        double instability = calculateInstability(directEfferent, directAfferent);
+        final double instability = calculateInstability(directEfferent, directAfferent);
 
         // 5. Distance from main sequence: D = |A + I - 1|
-        double distance = Math.abs(abstractness + instability - 1.0);
+        final double distance = Math.abs(abstractness + instability - 1.0);
 
         // Store all metrics
         decorator.setMetric(PackageNode.METRIC_ABSTRACTNESS, abstractness);
@@ -190,22 +181,21 @@ public class PackageCouplingMetricsInspector implements Inspector<PackageNode> {
     /**
      * Calculates transitive efferent coupling at package level.
      */
-    private int calculateTransitiveEfferent(Graph<GraphNode, GraphEdge> graph, PackageNode startNode) {
-        Set<PackageNode> reachableNodes = new HashSet<>();
-        Queue<PackageNode> queue = new LinkedList<>();
-        Set<PackageNode> visited = new HashSet<>();
+    private int calculateTransitiveEfferent(final Graph<GraphNode, GraphEdge> graph, final PackageNode startNode) {
+        final Set<PackageNode> reachableNodes = new HashSet<>();
+        final Queue<PackageNode> queue = new LinkedList<>();
+        final Set<PackageNode> visited = new HashSet<>();
 
         queue.add(startNode);
         visited.add(startNode);
 
         while (!queue.isEmpty()) {
-            PackageNode current = queue.poll();
+            final PackageNode current = queue.poll();
 
-            for (GraphEdge edge : graph.outgoingEdgesOf(current)) {
-                GraphNode targetNode = edge.getTarget();
+            for (final GraphEdge edge : graph.outgoingEdgesOf(current)) {
+                final GraphNode targetNode = edge.getTarget();
 
-                if (targetNode instanceof PackageNode) {
-                    PackageNode target = (PackageNode) targetNode;
+                if (targetNode instanceof final PackageNode target) {
 
                     if (!visited.contains(target)) {
                         visited.add(target);
@@ -222,22 +212,21 @@ public class PackageCouplingMetricsInspector implements Inspector<PackageNode> {
     /**
      * Calculates transitive afferent coupling at package level.
      */
-    private int calculateTransitiveAfferent(Graph<GraphNode, GraphEdge> graph, PackageNode startNode) {
-        Set<PackageNode> reachableNodes = new HashSet<>();
-        Queue<PackageNode> queue = new LinkedList<>();
-        Set<PackageNode> visited = new HashSet<>();
+    private int calculateTransitiveAfferent(final Graph<GraphNode, GraphEdge> graph, final PackageNode startNode) {
+        final Set<PackageNode> reachableNodes = new HashSet<>();
+        final Queue<PackageNode> queue = new LinkedList<>();
+        final Set<PackageNode> visited = new HashSet<>();
 
         queue.add(startNode);
         visited.add(startNode);
 
         while (!queue.isEmpty()) {
-            PackageNode current = queue.poll();
+            final PackageNode current = queue.poll();
 
-            for (GraphEdge edge : graph.incomingEdgesOf(current)) {
-                GraphNode sourceNode = edge.getSource();
+            for (final GraphEdge edge : graph.incomingEdgesOf(current)) {
+                final GraphNode sourceNode = edge.getSource();
 
-                if (sourceNode instanceof PackageNode) {
-                    PackageNode source = (PackageNode) sourceNode;
+                if (sourceNode instanceof final PackageNode source) {
 
                     if (!visited.contains(source)) {
                         visited.add(source);
@@ -254,14 +243,19 @@ public class PackageCouplingMetricsInspector implements Inspector<PackageNode> {
     /**
      * Calculates instability: I = Ce / (Ca + Ce).
      */
-    private double calculateInstability(int ce, int ca) {
-        int totalCoupling = ca + ce;
+    private double calculateInstability(final int ce, final int ca) {
+        final int totalCoupling = ca + ce;
 
         if (totalCoupling == 0) {
             return 0.0;
         }
 
         return (double) ce / totalCoupling;
+    }
+
+    public enum TAGS {
+        ;
+        public static final String PACKAGE_METRICS_CALCULATED = "java.package.coupling_metrics.calculated";
     }
 
     /**
@@ -271,24 +265,24 @@ public class PackageCouplingMetricsInspector implements Inspector<PackageNode> {
         final String sourcePackage;
         final String targetPackage;
 
-        PackageDependency(String sourcePackage, String targetPackage) {
+        PackageDependency(final String sourcePackage, final String targetPackage) {
             this.sourcePackage = sourcePackage;
             this.targetPackage = targetPackage;
         }
 
         @Override
-        public boolean equals(Object o) {
+        public int hashCode() {
+            return sourcePackage.hashCode() * 31 + targetPackage.hashCode();
+        }
+
+        @Override
+        public boolean equals(final Object o) {
             if (this == o)
                 return true;
             if (o == null || getClass() != o.getClass())
                 return false;
-            PackageDependency that = (PackageDependency) o;
+            final PackageDependency that = (PackageDependency) o;
             return sourcePackage.equals(that.sourcePackage) && targetPackage.equals(that.targetPackage);
-        }
-
-        @Override
-        public int hashCode() {
-            return sourcePackage.hashCode() * 31 + targetPackage.hashCode();
         }
     }
 }

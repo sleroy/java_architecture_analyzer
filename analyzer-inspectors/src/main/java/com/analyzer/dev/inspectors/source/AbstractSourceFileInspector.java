@@ -3,6 +3,7 @@ package com.analyzer.dev.inspectors.source;
 import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.inspector.Inspector;
+import com.analyzer.core.inspector.InspectorTargetType;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.core.resource.ResourceLocation;
 import com.analyzer.api.resource.ResourceResolver;
@@ -118,5 +119,11 @@ public abstract class AbstractSourceFileInspector implements Inspector<ProjectFi
      */
     protected ResourceResolver getResourceResolver() {
         return resourceResolver;
+    }
+
+
+    @Override
+    public InspectorTargetType getTargetType() {
+        return InspectorTargetType.PROJECT_FILE;
     }
 }

@@ -7,6 +7,8 @@ import com.analyzer.api.graph.JavaClassNode;
 import com.analyzer.api.inspector.Inspector;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.graph.NodeTypeRegistry;
+import com.analyzer.core.inspector.InspectorTargetType;
 import com.analyzer.rules.graph.BinaryClassCouplingGraphInspector;
 import org.jgrapht.Graph;
 import org.slf4j.Logger;
@@ -18,9 +20,12 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
 
+import static com.analyzer.rules.graph.BinaryClassCouplingGraphInspector.*;
+
+
 /**
  * Inspector that calculates comprehensive coupling metrics for Java classes.
- * 
+ *
  * <p>
  * Metrics Calculated:
  * </p>
@@ -36,16 +41,15 @@ import java.util.Set;
  * <li><b>Instability (I)</b> - Ce / (Ca + Ce), measures resistance to change,
  * range [0.0, 1.0]</li>
  * </ul>
- * 
+ *
  * <p>
  * All edge types (extends, implements, uses) are included in calculations.
  * </p>
- * 
+ *
  * @author Java Architecture Analyzer
  * @since Coupling Metrics Enhancement
  */
-@InspectorDependencies(need = { BinaryClassCouplingGraphInspector.class }, produces = {
-        "java.class.coupling_metrics.calculated" })
+@InspectorDependencies(need = BinaryClassCouplingGraphInspector.class, produces = "java.class.coupling_metrics.calculated")
 public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
 
     private static final Logger logger = LoggerFactory.getLogger(CouplingMetricsInspector.class);
@@ -55,13 +59,24 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
     // Lazy-initialized graph cache
     private Graph<GraphNode, GraphEdge> cachedGraph;
 
-    public static class TAGS {
-        public static final String COUPLING_METRICS_CALCULATED = "java.class.coupling_metrics.calculated";
+    @Inject
+    public CouplingMetricsInspector(final GraphRepository graphRepository) {
+        this.graphRepository = graphRepository;
     }
 
-    @Inject
-    public CouplingMetricsInspector(GraphRepository graphRepository) {
-        this.graphRepository = graphRepository;
+    @Override
+    public void inspect(final JavaClassNode node, final NodeDecorator<JavaClassNode> decorator) {
+        // Lazy-initialize the graph on first call
+        if (cachedGraph == null) {
+            logger.info("Building coupling graph for metrics calculation...");
+            cachedGraph = graphRepository.buildGraph(
+                    Set.of(NodeTypeRegistry.getAllTypes().get(JavaClassNode.class)),
+                    Set.of(EDGE_EXTENDS, EDGE_IMPLEMENTS, EDGE_USES));
+            logger.info("Coupling graph built with {} nodes", cachedGraph.vertexSet().size());
+        }
+
+        // Calculate metrics for this specific node
+        calculateMetricsForClass(cachedGraph, node, decorator);
     }
 
     @Override
@@ -70,35 +85,30 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
     }
 
     @Override
-    public void inspect(JavaClassNode node, NodeDecorator<JavaClassNode> decorator) {
-        // Lazy-initialize the graph on first call
-        if (cachedGraph == null) {
-            logger.info("Building coupling graph for metrics calculation...");
-            cachedGraph = graphRepository.buildGraph(
-                    Set.of("JavaClass"),
-                    Set.of("extends", "implements", "uses"));
-            logger.info("Coupling graph built with {} nodes", cachedGraph.vertexSet().size());
-        }
+    public boolean canProcess(final JavaClassNode objectToAnalyze) {
+        return Inspector.super.canProcess(objectToAnalyze);
+    }
 
-        // Calculate metrics for this specific node
-        calculateMetricsForClass(cachedGraph, node, decorator);
+    @Override
+    public InspectorTargetType getTargetType() {
+        return InspectorTargetType.JAVA_CLASS_NODE;
     }
 
     /**
      * Calculates all coupling metrics for a single class.
      */
-    private void calculateMetricsForClass(Graph<GraphNode, GraphEdge> graph, JavaClassNode classNode,
-            NodeDecorator<JavaClassNode> decorator) {
+    private void calculateMetricsForClass(final Graph<GraphNode, GraphEdge> graph, final JavaClassNode classNode,
+                                          final NodeDecorator<JavaClassNode> decorator) {
         // 1. Direct coupling metrics (1-hop)
-        int directAfferent = calculateDirectAfferent(graph, classNode);
-        int directEfferent = calculateDirectEfferent(graph, classNode);
+        final int directAfferent = calculateDirectAfferent(graph, classNode);
+        final int directEfferent = calculateDirectEfferent(graph, classNode);
 
         // 2. Transitive coupling metrics (all reachable, cycle-aware)
-        int transitiveEfferent = calculateTransitiveEfferent(graph, classNode);
-        int transitiveAfferent = calculateTransitiveAfferent(graph, classNode);
+        final int transitiveEfferent = calculateTransitiveEfferent(graph, classNode);
+        final int transitiveAfferent = calculateTransitiveAfferent(graph, classNode);
 
         // 3. Instability metric: Ce / (Ca + Ce)
-        double instability = calculateInstability(directEfferent, directAfferent);
+        final double instability = calculateInstability(directEfferent, directAfferent);
 
         // Store all metrics using the decorator
         decorator.setMetric(JavaClassNode.METRIC_DIRECT_AFFERENT_COUPLING, directAfferent);
@@ -122,7 +132,7 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
      * class.
      * Counts incoming edges to this node.
      */
-    private int calculateDirectAfferent(Graph<GraphNode, GraphEdge> graph, JavaClassNode classNode) {
+    private int calculateDirectAfferent(final Graph<GraphNode, GraphEdge> graph, final JavaClassNode classNode) {
         return graph.incomingEdgesOf(classNode).size();
     }
 
@@ -130,7 +140,7 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
      * Calculates direct efferent coupling - classes this class directly depends on.
      * Counts outgoing edges from this node.
      */
-    private int calculateDirectEfferent(Graph<GraphNode, GraphEdge> graph, JavaClassNode classNode) {
+    private int calculateDirectEfferent(final Graph<GraphNode, GraphEdge> graph, final JavaClassNode classNode) {
         return graph.outgoingEdgesOf(classNode).size();
     }
 
@@ -138,29 +148,28 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
      * Calculates transitive efferent coupling - all classes reachable from this
      * class.
      * Uses BFS to traverse forward through outgoing edges, avoiding cycles.
-     * 
+     *
      * @param graph     The coupling graph
      * @param startNode The class to analyze
      * @return Count of unique classes reachable from this class
      */
-    private int calculateTransitiveEfferent(Graph<GraphNode, GraphEdge> graph, JavaClassNode startNode) {
-        Set<JavaClassNode> reachableNodes = new HashSet<>();
-        Queue<JavaClassNode> queue = new LinkedList<>();
-        Set<JavaClassNode> visited = new HashSet<>();
+    private int calculateTransitiveEfferent(final Graph<GraphNode, GraphEdge> graph, final JavaClassNode startNode) {
+        final Set<JavaClassNode> reachableNodes = new HashSet<>();
+        final Queue<JavaClassNode> queue = new LinkedList<>();
+        final Set<JavaClassNode> visited = new HashSet<>();
 
         queue.add(startNode);
         visited.add(startNode);
 
         while (!queue.isEmpty()) {
-            JavaClassNode current = queue.poll();
+            final JavaClassNode current = queue.poll();
 
             // Follow all outgoing edges
-            for (GraphEdge edge : graph.outgoingEdgesOf(current)) {
-                GraphNode targetNode = edge.getTarget();
+            for (final GraphEdge edge : graph.outgoingEdgesOf(current)) {
+                final GraphNode targetNode = edge.getTarget();
 
                 // Only process JavaClassNode targets
-                if (targetNode instanceof JavaClassNode) {
-                    JavaClassNode target = (JavaClassNode) targetNode;
+                if (targetNode instanceof final JavaClassNode target) {
 
                     if (!visited.contains(target)) {
                         visited.add(target);
@@ -178,29 +187,28 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
      * Calculates transitive afferent coupling - all classes that can reach this
      * class.
      * Uses BFS to traverse backward through incoming edges, avoiding cycles.
-     * 
+     *
      * @param graph     The coupling graph
      * @param startNode The class to analyze
      * @return Count of unique classes that can reach this class
      */
-    private int calculateTransitiveAfferent(Graph<GraphNode, GraphEdge> graph, JavaClassNode startNode) {
-        Set<JavaClassNode> reachableNodes = new HashSet<>();
-        Queue<JavaClassNode> queue = new LinkedList<>();
-        Set<JavaClassNode> visited = new HashSet<>();
+    private int calculateTransitiveAfferent(final Graph<GraphNode, GraphEdge> graph, final JavaClassNode startNode) {
+        final Set<JavaClassNode> reachableNodes = new HashSet<>();
+        final Queue<JavaClassNode> queue = new LinkedList<>();
+        final Set<JavaClassNode> visited = new HashSet<>();
 
         queue.add(startNode);
         visited.add(startNode);
 
         while (!queue.isEmpty()) {
-            JavaClassNode current = queue.poll();
+            final JavaClassNode current = queue.poll();
 
             // Follow all incoming edges
-            for (GraphEdge edge : graph.incomingEdgesOf(current)) {
-                GraphNode sourceNode = edge.getSource();
+            for (final GraphEdge edge : graph.incomingEdgesOf(current)) {
+                final GraphNode sourceNode = edge.getSource();
 
                 // Only process JavaClassNode sources
-                if (sourceNode instanceof JavaClassNode) {
-                    JavaClassNode source = (JavaClassNode) sourceNode;
+                if (sourceNode instanceof final JavaClassNode source) {
 
                     if (!visited.contains(source)) {
                         visited.add(source);
@@ -216,7 +224,7 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
 
     /**
      * Calculates the instability metric: I = Ce / (Ca + Ce).
-     * 
+     *
      * <p>
      * Instability Interpretation:
      * </p>
@@ -225,13 +233,13 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
      * <li>I = 1.0: Maximally unstable (only outgoing dependencies)</li>
      * <li>I = 0.5: Balanced coupling</li>
      * </ul>
-     * 
+     *
      * @param ce Efferent coupling (outgoing dependencies)
      * @param ca Afferent coupling (incoming dependencies)
      * @return Instability value in range [0.0, 1.0], or 0.0 if no coupling exists
      */
-    private double calculateInstability(int ce, int ca) {
-        int totalCoupling = ca + ce;
+    private double calculateInstability(final int ce, final int ca) {
+        final int totalCoupling = ca + ce;
 
         if (totalCoupling == 0) {
             // No coupling at all - consider this stable
@@ -239,5 +247,10 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
         }
 
         return (double) ce / totalCoupling;
+    }
+
+    public enum TAGS {
+        ;
+        public static final String COUPLING_METRICS_CALCULATED = "java.class.coupling_metrics.calculated";
     }
 }

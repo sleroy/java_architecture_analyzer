@@ -5,6 +5,8 @@ import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.api.inspector.Inspector;
 import com.analyzer.api.inspector.InspectorDependencies;
 import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.inspector.InspectorTargetType;
+import com.analyzer.core.model.Project;
 import com.analyzer.core.model.ProjectFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,6 +75,12 @@ public class JavaSourceVersionInspector implements Inspector<ProjectFile> {
     // Default constructor for backward compatibility
     public JavaSourceVersionInspector() {
         this.graphRepository = null;
+    }
+
+
+    @Override
+    public InspectorTargetType getTargetType() {
+        return InspectorTargetType.PROJECT_FILE;
     }
 
     @Override
