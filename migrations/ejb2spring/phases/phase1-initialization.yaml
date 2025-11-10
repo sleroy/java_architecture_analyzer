@@ -39,28 +39,28 @@ migration-plan:
                 
                 # Download Spring Boot project
                 curl 'https://start.spring.io/starter.zip?type=maven-project&language=java&bootVersion=${spring_boot_version}&baseDir=${artifact_id}&groupId=${group_id}&artifactId=${artifact_id}&name=Unicorn+Spring+Boot+Application&description=Unicorn+application+migrated+from+JBoss+EJB+2+to+Spring+Boot&packageName=${group_id}.springboot&packaging=jar&javaVersion=21&dependencies=web,data-jpa,validation,actuator,devtools,configuration-processor,h2,mail,security,data-jdbc,jdbc,web-services' -o springboot-baseline.zip
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}"
               timeout-seconds: 60
 
             - type: "COMMAND"
               name: "extract-springboot-project"
               description: "Extract generated Spring Boot project to refactoring path"
               command: |
-                # Extract to temp location
-                unzip -o springboot-baseline.zip
-                
                 # Move to final destination
                 # If refactoring_project_path already exists, remove it first
                 if [ -d "${refactoring_project_path}" ]; then
                   rm -rf "${refactoring_project_path}"
                 fi
-                mv "${artifact_id}" "${refactoring_project_path}"
+                mkdir -p "${refactoring_project_path}"
+                
+                # Extract to temp location
+                unzip -o springboot-baseline.zip -d ${refactoring_project_path}
                 
                 # Cleanup
                 rm springboot-baseline.zip
                 
                 echo "Spring Boot project extracted to: ${refactoring_project_path}"
-              working-directory: "${project_root}"
+              working-directory: "${refactoring_project_path}"
               timeout-seconds: 30
 
             - type: "AI_ASSISTED"
