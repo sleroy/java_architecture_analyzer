@@ -220,6 +220,8 @@ public class CsvExportCommand implements Callable<Integer> {
                 Number metricValue = node.getMetrics().getMetric(metric);
                 if (metricValue != null) {
                     value = metricValue.toString();
+                } else {
+                    value = "";
                 }
             }
             values.add(value);

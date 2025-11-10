@@ -2,8 +2,10 @@ package com.analyzer.core.inspector;
 
 import com.analyzer.api.graph.GraphRepository;
 import com.analyzer.api.graph.ClassNodeRepository;
+import com.analyzer.api.graph.PackageNodeRepository;
 import com.analyzer.core.cache.LocalCache;
 import com.analyzer.core.graph.DelegatingClassNodeRepository;
+import com.analyzer.core.graph.DelegatingPackageNodeRepository;
 import com.analyzer.core.graph.InMemoryProjectFileRepository;
 import com.analyzer.api.graph.ProjectFileRepository;
 import com.analyzer.core.engine.AnalysisEngine;
@@ -125,6 +127,7 @@ public class PicoContainerConfig {
         container.addComponent(GraphRepository.class,
                 InMemoryGraphRepository.class);
         container.addComponent(ClassNodeRepository.class, DelegatingClassNodeRepository.class);
+        container.addComponent(PackageNodeRepository.class, DelegatingPackageNodeRepository.class);
         container.addComponent(ProjectFileRepository.class, InMemoryProjectFileRepository.class);
 
         // Register per-analysis services

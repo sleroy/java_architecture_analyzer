@@ -58,18 +58,24 @@ public class JavaClassNodeSourceCollector implements ClassNodeCollector {
     private static final Logger logger = LoggerFactory.getLogger(JavaClassNodeSourceCollector.class);
 
     protected final ResourceResolver resourceResolver;
+    protected final PackageNodeCache packageNodeCache;
     protected final JavaParser javaParser;
 
     /**
      * Constructs a new SourceJavaClassNodeCollector.
      * <p>
      * Requires ResourceResolver for accessing source file content.
+     * The PackageNodeCache ensures PackageNode instances are created as classes are
+     * collected.
      *
      * @param resourceResolver resolver for accessing file content
+     * @param packageNodeCache cache for creating/updating PackageNode instances
      */
     @Inject
-    public JavaClassNodeSourceCollector(final ResourceResolver resourceResolver) {
+    public JavaClassNodeSourceCollector(final ResourceResolver resourceResolver,
+            final PackageNodeCache packageNodeCache) {
         this.resourceResolver = resourceResolver;
+        this.packageNodeCache = packageNodeCache;
         javaParser = new JavaParser();
     }
 
@@ -132,6 +138,9 @@ public class JavaClassNodeSourceCollector implements ClassNodeCollector {
             context.addClassNode(classNode);
             context.linkClassNodeToFile(classNode, source);
 
+            // Update PackageNode via cache
+            packageNodeCache.addClassToPackage(classNode);
+
             logger.debug("Created JavaClassNode for {} from {} using JavaParser",
                     fqn, source.getRelativePath());
 
@@ -184,8 +193,8 @@ public class JavaClassNodeSourceCollector implements ClassNodeCollector {
 
                 // Extract package name
                 final String packageName = cu.getPackageDeclaration()
-                                             .map(pd -> pd.getNameAsString())
-                                             .orElse("");
+                        .map(pd -> pd.getNameAsString())
+                        .orElse("");
 
                 // Find primary type declaration
                 final TypeDeclaration<?> primaryType = cu.getType(0);

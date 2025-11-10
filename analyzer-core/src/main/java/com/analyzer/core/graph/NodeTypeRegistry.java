@@ -3,6 +3,7 @@ package com.analyzer.core.graph;
 import com.analyzer.api.graph.GraphNode;
 import com.analyzer.api.graph.ImportedClassGraphNode;
 import com.analyzer.api.graph.JavaClassNode;
+import com.analyzer.api.graph.PackageNode;
 import com.analyzer.core.db.entity.GraphNodeEntity;
 import com.analyzer.core.db.loader.*;
 import com.analyzer.core.model.ProjectFile;
@@ -34,8 +35,8 @@ public class NodeTypeRegistry {
         register(ProjectFile.class, "file", new ProjectFileFactory());
         register(JavaClassNode.class, "java_class", new JavaClassNodeFactory());
         register(ImportedClassGraphNode.class, "imported_class", new ImportedNodeNodeFactory());
+        register(PackageNode.class, "package", new PackageNodeFactory());
         // Future node types can be registered here:
-        // register(PackageNode.class, "package", new PackageNodeFactory());
         // register(MethodNode.class, "method", new MethodNodeFactory());
     }
 

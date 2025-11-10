@@ -85,18 +85,24 @@ public class JavaClassNodeBinaryCollector implements ClassNodeCollector {
     private static final Logger logger = LoggerFactory.getLogger(JavaClassNodeBinaryCollector.class);
 
     protected final ResourceResolver resourceResolver;
+    protected final PackageNodeCache packageNodeCache;
 
     /**
      * Constructs a new BinaryJavaClassNodeCollector.
      * <p>
      * The ResourceResolver is required for reading .class file contents from
      * the filesystem or JAR archives.
+     * The PackageNodeCache ensures PackageNode instances are created as classes are
+     * collected.
      *
      * @param resourceResolver resolver for accessing file content
+     * @param packageNodeCache cache for creating/updating PackageNode instances
      */
     @Inject
-    public JavaClassNodeBinaryCollector(final ResourceResolver resourceResolver) {
+    public JavaClassNodeBinaryCollector(final ResourceResolver resourceResolver,
+            final PackageNodeCache packageNodeCache) {
         this.resourceResolver = resourceResolver;
+        this.packageNodeCache = packageNodeCache;
     }
 
     /**
@@ -174,6 +180,9 @@ public class JavaClassNodeBinaryCollector implements ClassNodeCollector {
             // Store via context
             context.addClassNode(classNode);
             context.linkClassNodeToFile(classNode, source);
+
+            // Update PackageNode via cache
+            packageNodeCache.addClassToPackage(classNode);
 
             logger.debug("Created JavaClassNode for {} from {}", fqn, source.getRelativePath());
 

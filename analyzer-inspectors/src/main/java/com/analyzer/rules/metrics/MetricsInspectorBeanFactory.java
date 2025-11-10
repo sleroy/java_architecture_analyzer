@@ -17,5 +17,8 @@ public class MetricsInspectorBeanFactory implements BeanFactory {
         container.addComponent(MethodCountInspectorV2.class);
         container.addComponent(ThreadLocalUsageInspector.class);
         container.addComponent(TypeUsageInspector.class);
+
+        container.addComponent(CouplingMetricsInspector.class);
+        container.addComponent(PackageCouplingMetricsInspector.class);
     }
 }

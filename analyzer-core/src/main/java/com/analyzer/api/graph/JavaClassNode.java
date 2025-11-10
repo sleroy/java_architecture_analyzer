@@ -47,11 +47,21 @@ public class JavaClassNode extends BaseGraphNode {
     public static final String METRIC_AFFERENT_COUPLING = "afferentCoupling";
     public static final String METRIC_EFFERENT_COUPLING = "efferentCoupling";
 
+    // Direct coupling metrics (1-hop dependencies)
+    public static final String METRIC_DIRECT_AFFERENT_COUPLING = "directAfferentCoupling";
+    public static final String METRIC_DIRECT_EFFERENT_COUPLING = "directEfferentCoupling";
+
+    // Transitive coupling metrics (all reachable classes, cycle-aware)
+    public static final String METRIC_TRANSITIVE_AFFERENT_COUPLING = "transitiveAfferentCoupling";
+    public static final String METRIC_TRANSITIVE_EFFERENT_COUPLING = "transitiveEfferentCoupling";
+
+    // Instability metric: Ce / (Ca + Ce), range [0.0, 1.0]
+    public static final String METRIC_INSTABILITY = "instability";
+
     // Source type constants
     public static final String SOURCE_TYPE_SOURCE = "source";
     public static final String SOURCE_TYPE_BINARY = "binary";
     private static final String TAG_SOURCE_FILE_PRESENT = "java.source_file_present";
-
 
     // Inspector execution tracking for convergence detection
     @JsonIgnore
@@ -91,7 +101,7 @@ public class JavaClassNode extends BaseGraphNode {
      * @return Configured JavaClassNode instance
      */
     public static JavaClassNode create(final String fullyQualifiedName, final String classType,
-                                       final String sourceType, final String projectFileId, final String sourceFilePath) {
+            final String sourceType, final String projectFileId, final String sourceFilePath) {
         final JavaClassNode node = new JavaClassNode(fullyQualifiedName);
         node.setClassType(classType);
         node.setSourceType(sourceType);
@@ -412,7 +422,7 @@ public class JavaClassNode extends BaseGraphNode {
     @Override
     public String toString() {
         return String.format("JavaClassNode{fqn='%s', type='%s', sourceType='%s', projectFileId='%s', " +
-                        "methodCount=%d, fieldCount=%d, properties=%d, tags=%d}",
+                "methodCount=%d, fieldCount=%d, properties=%d, tags=%d}",
                 getFullyQualifiedName(),
                 getClassType(),
                 getSourceType(),

@@ -45,25 +45,21 @@ import java.util.Set;
  * @author Java Architecture Analyzer
  * @since Class-Centric Architecture - Graph Phase
  */
-@InspectorDependencies(need = {ApplicationPackageTagInspector.class}, produces = {
-        BinaryClassCouplingGraphInspector.TAGS.METRIC_CLASS_COUPLING_EDGES_CREATED})
+@InspectorDependencies(need = ApplicationPackageTagInspector.class, produces = {
+})
 public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector {
 
     private static final Logger logger = LoggerFactory.getLogger(BinaryClassCouplingGraphInspector.class);
     private final GraphRepository graphRepository;
     private final ClassNodeRepository classNodeRepository;
 
-    public static class TAGS {
-        public static final String METRIC_CLASS_COUPLING_EDGES_CREATED = "java.class.coupling.edges.created";
-    }
-
     @Inject
     public BinaryClassCouplingGraphInspector(
-            ProjectFileRepository projectFileRepository,
-            ResourceResolver resourceResolver,
-            GraphRepository graphRepository,
-            ClassNodeRepository classNodeRepository,
-            LocalCache localCache) {
+            final ProjectFileRepository projectFileRepository,
+            final ResourceResolver resourceResolver,
+            final GraphRepository graphRepository,
+            final ClassNodeRepository classNodeRepository,
+            final LocalCache localCache) {
         super(projectFileRepository, resourceResolver, localCache);
         this.graphRepository = graphRepository;
         this.classNodeRepository = classNodeRepository;
@@ -75,47 +71,52 @@ public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector
     }
 
     @Override
-    protected ASMClassNodeVisitor createClassVisitor(
-            JavaClassNode classNode,
-            NodeDecorator<JavaClassNode> decorator) {
+    protected AbstractASMClassInspector.ASMClassNodeVisitor createClassVisitor(
+            final JavaClassNode classNode,
+            final NodeDecorator<JavaClassNode> decorator) {
         return new ClassCouplingVisitor(classNode, decorator, graphRepository, classNodeRepository);
+    }
+
+    public enum TAGS {
+        ;
+        public static final String METRIC_CLASS_COUPLING_EDGES_CREATED = "java.class.coupling.edges.created";
     }
 
     /**
      * ASM visitor that analyzes class dependencies and creates graph edges.
      */
-    private static class ClassCouplingVisitor extends ASMClassNodeVisitor {
+    private static class ClassCouplingVisitor extends AbstractASMClassInspector.ASMClassNodeVisitor {
         private final GraphRepository graphRepository;
         private final JavaClassNode sourceNode;
         private final ClassNodeRepository classNodeRepository1;
         private final Set<String> processedDependencies = new HashSet<>();
-        private int edgeCount = 0;
+        private int edgeCount;
 
         protected ClassCouplingVisitor(
-                JavaClassNode classNode,
-                NodeDecorator<JavaClassNode> decorator,
-                GraphRepository graphRepository,
-                ClassNodeRepository classNodeRepository) {
+                final JavaClassNode classNode,
+                final NodeDecorator<JavaClassNode> decorator,
+                final GraphRepository graphRepository,
+                final ClassNodeRepository classNodeRepository) {
             super(classNode, decorator);
             this.graphRepository = graphRepository;
-            this.sourceNode = classNode;
+            sourceNode = classNode;
             classNodeRepository1 = classNodeRepository;
         }
 
         @Override
-        public void visit(int version, int access, String name, String signature,
-                          String superName, String[] interfaces) {
+        public void visit(final int version, final int access, final String name, final String signature,
+                          final String superName, final String[] interfaces) {
 
             // Create edge for superclass (extends relationship)
-            if (superName != null && !superName.equals("java/lang/Object")) {
-                String superClassName = Type.getObjectType(superName).getClassName();
+            if (superName != null && !"java/lang/Object".equals(superName)) {
+                final String superClassName = Type.getObjectType(superName).getClassName();
                 createCouplingEdge(superClassName, "extends");
             }
 
             // Create edges for implemented interfaces
             if (interfaces != null) {
-                for (String interfaceName : interfaces) {
-                    String interfaceClassName = Type.getObjectType(interfaceName).getClassName();
+                for (final String interfaceName : interfaces) {
+                    final String interfaceClassName = Type.getObjectType(interfaceName).getClassName();
                     createCouplingEdge(interfaceClassName, "implements");
                 }
             }
@@ -125,11 +126,11 @@ public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector
 
         @Override
         public org.objectweb.asm.FieldVisitor visitField(
-                int access, String name, String descriptor,
-                String signature, Object value) {
+                final int access, final String name, final String descriptor,
+                final String signature, final Object value) {
 
             // Create edge for field type dependency
-            Type fieldType = Type.getType(descriptor);
+            final Type fieldType = Type.getType(descriptor);
             addUsageDependency(fieldType);
 
             return super.visitField(access, name, descriptor, signature, value);
@@ -137,17 +138,17 @@ public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector
 
         @Override
         public MethodVisitor visitMethod(
-                int access, String name, String descriptor,
-                String signature, String[] exceptions) {
+                final int access, final String name, final String descriptor,
+                final String signature, final String[] exceptions) {
 
             // Create edges for method signature dependencies
-            Type methodType = Type.getMethodType(descriptor);
+            final Type methodType = Type.getMethodType(descriptor);
 
             // Return type dependency
             addUsageDependency(methodType.getReturnType());
 
             // Parameter type dependencies
-            for (Type paramType : methodType.getArgumentTypes()) {
+            for (final Type paramType : methodType.getArgumentTypes()) {
                 addUsageDependency(paramType);
             }
 
@@ -179,7 +180,7 @@ public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector
                 return;
             }
 
-            String className = type.getClassName();
+            final String className = type.getClassName();
             createCouplingEdge(className, "uses");
         }
 
@@ -188,14 +189,14 @@ public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector
          * Filters out self-references and java.* package dependencies.
          * Ensures each dependency is only processed once.
          */
-        private void createCouplingEdge(String targetClassName, String edgeType) {
+        private void createCouplingEdge(final String targetClassName, final String edgeType) {
             // Skip self-references
             if (targetClassName.equals(sourceNode.getFullyQualifiedName())) {
                 return;
             }
 
             // Create unique key for this dependency
-            String dependencyKey = edgeType + ":" + targetClassName;
+            final String dependencyKey = edgeType + ":" + targetClassName;
             if (processedDependencies.contains(dependencyKey)) {
                 return; // Already processed
             }
@@ -203,7 +204,7 @@ public class BinaryClassCouplingGraphInspector extends AbstractASMClassInspector
 
             // Find or create the target class node
 
-            JavaClassNode targetNode = classNodeRepository1.getOrCreateByFqn(targetClassName);
+            final JavaClassNode targetNode = classNodeRepository1.getOrCreateByFqn(targetClassName);
 
 
             // Create the edge in the graph repository
