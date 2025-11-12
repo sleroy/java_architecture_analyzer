@@ -1,145 +1,150 @@
-# EJB 2.0 to Spring Boot 3.5.7 Dependency Migration Mapping
+# EJB 2.0 to Spring Boot 3.5.7 Migration Mapping
 
 ## Executive Summary
 
-This document provides a comprehensive mapping from the current EJB 2.0 application dependencies to Spring Boot 3.5.7 equivalents, targeting Java 21 compatibility.
+This document provides a comprehensive mapping from the EJB 2.0 application dependencies to Spring Boot 3.5.7 equivalents, targeting Java 21 compatibility.
 
 ## Migration Overview
 
-| Category | EJB 2.0 Dependencies | Spring Boot 3.5.7 Equivalent | Status |
-|----------|----------------------|------------------------------|---------|
-| **Core Framework** | Java EE 7 APIs | Spring Boot 3.5.7 | ✅ Replace |
-| **Dependency Injection** | CDI/EJB | Spring Context | ✅ Replace |
-| **Persistence** | JPA 2.0/Hibernate | Spring Data JPA | ✅ Upgrade |
-| **REST APIs** | JAX-RS 1.1 | Spring Web MVC | ✅ Replace |
-| **SOAP Services** | JAX-WS | Spring Web Services | ✅ Replace |
-| **Messaging** | JMS/MDB | Spring JMS/ActiveMQ | ✅ Replace |
-| **Validation** | Bean Validation | Spring Validation | ✅ Upgrade |
-| **Testing** | Arquillian | Spring Boot Test | ✅ Replace |
+| Category | EJB 2.0 Components | Spring Boot 3.5.7 Replacement | Status |
+|----------|-------------------|--------------------------------|---------|
+| **Container** | JBoss AS 7/WildFly | Embedded Tomcat/Jetty | ✅ Direct |
+| **Business Logic** | EJB 3.1 + EJB 2.0 | Spring Services + @Transactional | ✅ Direct |
+| **Persistence** | JPA 2.0 + Hibernate | Spring Data JPA 3.x | ✅ Direct |
+| **REST APIs** | JAX-RS 1.1 | Spring Web MVC | ✅ Direct |
+| **SOAP Services** | JAX-WS | Spring Web Services | ⚠️ Manual |
+| **Dependency Injection** | CDI 1.1 | Spring Context | ✅ Direct |
+| **Messaging** | JMS 2.0 + MDB | Spring JMS + @JmsListener | ✅ Direct |
+| **Validation** | Bean Validation | Spring Validation | ✅ Direct |
+| **Web UI** | JSF 2.1 | Spring MVC + Thymeleaf | ⚠️ Manual |
 
-## Detailed Dependency Mappings
+## Detailed Dependency Mapping
 
-### 1. Core EJB and Java EE APIs
+### 1. Core Spring Boot Dependencies
 
-| Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
-|-------------------|--------------------------------|---------|-----------------|
-| `org.jboss.spec.javax.ejb:jboss-ejb-api_3.1_spec:1.0.2.Final` | `org.springframework.boot:spring-boot-starter:3.5.7` | 3.5.7 | **REMOVE** - Replace with Spring components |
-| `javax:javaee-web-api:7.0` | `org.springframework.boot:spring-boot-starter-web:3.5.7` | 3.5.7 | **REMOVE** - Use Spring Web starter |
-| `org.wildfly.bom:wildfly-javaee7:10.1.0.Final` | N/A | - | **REMOVE** - No longer needed |
+| Original Dependency | Spring Boot 3.5.7 Replacement | Version | Notes |
+|---------------------|--------------------------------|---------|-------|
+| `org.wildfly.bom:wildfly-javaee7` | `org.springframework.boot:spring-boot-starter-parent` | 3.5.7 | Parent POM for dependency management |
 
-**Breaking Changes:**
-- `@Stateless`, `@Stateful` → `@Service`, `@Component`
-- `@EJB` → `@Autowired` or `@Inject`
-- EJB lifecycle methods → Spring lifecycle annotations
-
-### 2. Dependency Injection (CDI)
+### 2. EJB and Business Logic
 
 | Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
-|-------------------|--------------------------------|---------|-----------------|
-| `javax.enterprise:cdi-api` | `org.springframework.boot:spring-boot-starter:3.5.7` | 3.5.7 | **INCLUDED** - Built into Spring Boot |
-| `javax.inject:javax.inject:1` | `jakarta.inject:jakarta.inject-api:2.0.1` | 2.0.1 | **OPTIONAL** - Spring supports JSR-330 |
+|---------------------|--------------------------------|---------|-----------------|
+| `org.jboss.spec.javax.ejb:jboss-ejb-api_3.1_spec` | `org.springframework:spring-context` | 6.2.1 | Replace @Stateless with @Service |
+| `javax.enterprise:cdi-api` | `org.springframework:spring-context` | 6.2.1 | Replace @Inject with @Autowired |
+| `javax:javaee-web-api` | `org.springframework.boot:spring-boot-starter-web` | 3.5.7 | Full web stack replacement |
 
 **Breaking Changes:**
-- `@Named` → `@Component` (or keep `@Named` with JSR-330)
-- `@ApplicationScoped` → `@Component` (singleton by default)
-- `@RequestScoped` → `@RequestScope`
+- `@Stateless` → `@Service`
+- `@Inject` → `@Autowired` or constructor injection
+- `@EJB` → `@Autowired`
+- Remove `@Local`/`@Remote` interfaces
 
 ### 3. Persistence Layer
 
 | Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
-|-------------------|--------------------------------|---------|-----------------|
-| `org.hibernate.javax.persistence:hibernate-jpa-2.0-api:1.0.1.Final` | `org.springframework.boot:spring-boot-starter-data-jpa:3.5.7` | 3.5.7 | **UPGRADE** - JPA 3.1 with Hibernate 6.x |
-| `org.hibernate:hibernate-validator` | `org.springframework.boot:spring-boot-starter-validation:3.5.7` | 3.5.7 | **INCLUDED** - Hibernate Validator 8.x |
+|---------------------|--------------------------------|---------|-----------------|
+| `org.hibernate.javax.persistence:hibernate-jpa-2.0-api` | `org.springframework.boot:spring-boot-starter-data-jpa` | 3.5.7 | Includes JPA 3.1 + Hibernate 6.x |
+| `com.h2database:h2` | `com.h2database:h2` | 2.3.232 | Keep H2, update version |
+| `commons-dbcp:commons-dbcp` | **REMOVE** | - | Spring Boot uses HikariCP by default |
+| `commons-pool:commons-pool` | **REMOVE** | - | Not needed with HikariCP |
 
 **Breaking Changes:**
-- `javax.persistence.*` → `jakarta.persistence.*`
-- Update `persistence.xml` to Jakarta namespace
-- Hibernate 6.x API changes
+- `persistence.xml` → `application.yml` configuration
+- `@PersistenceContext` → `@Autowired JpaRepository`
+- Manual EntityManager → Spring Data repositories
 
-### 4. REST Services (JAX-RS → Spring Web MVC)
+### 4. REST Services
 
 | Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
-|-------------------|--------------------------------|---------|-----------------|
-| `org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_1.1_spec:1.0.1.Final` | `org.springframework.boot:spring-boot-starter-web:3.5.7` | 3.5.7 | **REPLACE** - Use Spring MVC |
-| `javax.ws.rs:jsr311-api:1.1.1` | N/A | - | **REMOVE** - Not needed |
+|---------------------|--------------------------------|---------|-----------------|
+| `org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_1.1_spec` | `org.springframework.boot:spring-boot-starter-web` | 3.5.7 | Included in web starter |
 
 **Breaking Changes:**
-- `@Path` → `@RequestMapping` or `@GetMapping`/`@PostMapping`
-- `@GET`, `@POST` → `@GetMapping`, `@PostMapping`
+- `@Path` → `@RequestMapping`
+- `@GET/@POST` → `@GetMapping/@PostMapping`
 - `@PathParam` → `@PathVariable`
 - `@QueryParam` → `@RequestParam`
-- `@Consumes`/`@Produces` → `consumes`/`produces` in mapping annotations
 
 ### 5. SOAP Web Services
 
 | Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
-|-------------------|--------------------------------|---------|-----------------|
-| `javax.xml.ws:jaxws-api:2.3.1` | `org.springframework.boot:spring-boot-starter-web-services:3.5.7` | 3.5.7 | **REPLACE** - Spring WS |
-| `javax.jws:javax.jws-api:1.1` | N/A | - | **REMOVE** - Use Spring WS annotations |
-| `javax.xml.bind:jaxb-api:2.3.1` | `jakarta.xml.bind:jakarta.xml.bind-api:4.0.2` | 4.0.2 | **UPGRADE** - Jakarta JAXB |
-| `org.glassfish.jaxb:jaxb-runtime:2.3.1` | `org.glassfish.jaxb:jaxb-runtime:4.0.5` | 4.0.5 | **UPGRADE** - Jakarta JAXB runtime |
+|---------------------|--------------------------------|---------|-----------------|
+| `javax.xml.ws:jaxws-api` | `org.springframework.boot:spring-boot-starter-web-services` | 3.5.7 | Spring WS approach |
+| `javax.jws:javax.jws-api` | `org.springframework.ws:spring-ws-core` | 4.0.11 | Contract-first approach |
+| `javax.xml.bind:jaxb-api` | `jakarta.xml.bind:jakarta.xml.bind-api` | 4.0.2 | Jakarta namespace |
+| `org.glassfish.jaxb:jaxb-runtime` | `org.glassfish.jaxb:jaxb-runtime` | 4.0.5 | Update version |
 
 **Breaking Changes:**
-- `@WebService` → `@Endpoint` (Spring WS)
-- `javax.xml.bind.*` → `jakarta.xml.bind.*`
-- WSDL-first approach recommended with Spring WS
+- `@WebService` → Spring WS contract-first approach
+- Manual WSDL generation required
+- Namespace changes: `javax.*` → `jakarta.*`
 
-### 6. JMS and Message-Driven Beans
+### 6. Messaging (JMS)
 
 | Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
-|-------------------|--------------------------------|---------|-----------------|
-| `org.jboss.spec.javax.jms:jboss-jms-api_2.0_spec` | `org.springframework.boot:spring-boot-starter-activemq:3.5.7` | 3.5.7 | **REPLACE** - Spring JMS |
+|---------------------|--------------------------------|---------|-----------------|
+| `org.jboss.spec.javax.jms:jboss-jms-api_2.0_spec` | `org.springframework.boot:spring-boot-starter-activemq` | 3.5.7 | Embedded ActiveMQ |
 
 **Breaking Changes:**
 - `@MessageDriven` → `@JmsListener`
-- `MessageListener.onMessage()` → `@JmsListener` method
-- EJB container-managed transactions → Spring `@Transactional`
+- `ejb-jar.xml` MDB config → Java configuration
+- Manual message acknowledgment → Spring abstractions
 
-### 7. API Documentation (Swagger)
+### 7. Validation
 
 | Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
-|-------------------|--------------------------------|---------|-----------------|
-| `com.wordnik:swagger-jaxrs_2.10:1.3.1` | `org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0` | 2.7.0 | **REPLACE** - Modern OpenAPI 3 |
+|---------------------|--------------------------------|---------|-----------------|
+| `org.hibernate:hibernate-validator` | `org.springframework.boot:spring-boot-starter-validation` | 3.5.7 | Includes Hibernate Validator 8.x |
+
+**Breaking Changes:**
+- `javax.validation.*` → `jakarta.validation.*`
+
+### 8. API Documentation
+
+| Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
+|---------------------|--------------------------------|---------|-----------------|
+| `com.wordnik:swagger-jaxrs_2.10` | `org.springdoc:springdoc-openapi-starter-webmvc-ui` | 2.7.0 | OpenAPI 3 support |
 
 **Breaking Changes:**
 - Swagger 1.x annotations → OpenAPI 3 annotations
 - `@Api` → `@Tag`
 - `@ApiOperation` → `@Operation`
 
-### 8. Database and Connection Pooling
+### 9. Web UI (JSF Replacement)
 
 | Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
-|-------------------|--------------------------------|---------|-----------------|
-| `com.h2database:h2:2.2.220` | `com.h2database:h2:2.3.232` | 2.3.232 | **UPGRADE** - Latest H2 |
-| `commons-dbcp:commons-dbcp:1.4` | `com.zaxxer:HikariCP:6.2.1` | 6.2.1 | **REPLACE** - HikariCP (default in Spring Boot) |
-| `commons-pool:commons-pool:1.6` | N/A | - | **REMOVE** - Not needed with HikariCP |
+|---------------------|--------------------------------|---------|-----------------|
+| `org.jboss.spec.javax.faces:jboss-jsf-api_2.1_spec` | `org.springframework.boot:spring-boot-starter-thymeleaf` | 3.5.7 | Modern template engine |
 
-### 9. Testing Framework
+**Breaking Changes:**
+- JSF pages → Thymeleaf templates
+- Managed beans → Spring MVC controllers
+- Complete UI rewrite required
+
+### 10. Reporting
 
 | Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
-|-------------------|--------------------------------|---------|-----------------|
-| `junit:junit:4.13.1` | `org.springframework.boot:spring-boot-starter-test:3.5.7` | 3.5.7 | **UPGRADE** - JUnit 5 included |
-| `org.jboss.arquillian.junit:arquillian-junit-container` | N/A | - | **REMOVE** - Use Spring Boot Test |
-| `org.jboss.as:jboss-as-arquillian-container-*` | N/A | - | **REMOVE** - Use `@SpringBootTest` |
+|---------------------|--------------------------------|---------|-----------------|
+| `jasperreports:jasperreports:3.5.3` | `net.sf.jasperreports:jasperreports` | 7.0.1 | Major version update |
+
+**Breaking Changes:**
+- API changes in JasperReports 7.x
+- Dependency updates required
+
+### 11. Testing
+
+| Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
+|---------------------|--------------------------------|---------|-----------------|
+| `junit:junit:4.13.1` | `org.springframework.boot:spring-boot-starter-test` | 3.5.7 | Includes JUnit 5 + Mockito |
+| `org.jboss.arquillian.*` | `org.springframework.boot:spring-boot-starter-test` | 3.5.7 | Spring Boot Test slices |
 
 **Breaking Changes:**
 - JUnit 4 → JUnit 5
-- Arquillian tests → Spring Boot integration tests
-- `@Test` imports change to `org.junit.jupiter.api.Test`
+- Arquillian → Spring Boot Test
+- `@Test` annotations differ
 
-### 10. Logging
-
-| Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
-|-------------------|--------------------------------|---------|-----------------|
-| `org.slf4j:slf4j-api:1.7.36` | `org.springframework.boot:spring-boot-starter-logging:3.5.7` | 3.5.7 | **INCLUDED** - Logback by default |
-
-### 11. Report Generation (Optional)
-
-| Original Dependency | Spring Boot 3.5.7 Replacement | Version | Migration Notes |
-|-------------------|--------------------------------|---------|-----------------|
-| `jasperreports:jasperreports:3.5.3` | `net.sf.jasperreports:jasperreports:7.0.1` | 7.0.1 | **UPGRADE** - Modern JasperReports |
-
-## Complete Spring Boot 3.5.7 POM Dependencies
+## Complete Spring Boot 3.5.7 POM
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -186,41 +191,40 @@ This document provides a comprehensive mapping from the current EJB 2.0 applicat
         
         <dependency>
             <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-activemq</artifactId>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web-services</artifactId>
         </dependency>
         
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-activemq</artifactId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
         </dependency>
-        
+
         <!-- Database -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
             <scope>runtime</scope>
         </dependency>
-        
+
         <!-- API Documentation -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc.version}</version>
         </dependency>
-        
-        <!-- Optional: JSR-330 Support -->
-        <dependency>
-            <groupId>jakarta.inject</groupId>
-            <artifactId>jakarta.inject-api</artifactId>
-        </dependency>
-        
-        <!-- Optional: Report Generation -->
+
+        <!-- Reporting -->
         <dependency>
             <groupId>net.sf.jasperreports</groupId>
             <artifactId>jasperreports</artifactId>
             <version>${jasperreports.version}</version>
         </dependency>
-        
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -240,65 +244,81 @@ This document provides a comprehensive mapping from the current EJB 2.0 applicat
 </project>
 ```
 
-## Migration Strategy
+## Dependencies to Remove
 
-### Phase 1: Infrastructure Migration
-1. **Update Java version** to 21
-2. **Replace Maven parent** with Spring Boot parent
-3. **Update dependencies** according to mapping table
-4. **Configure application properties** (replace XML configuration)
+| Dependency | Reason |
+|------------|--------|
+| `org.wildfly.bom:wildfly-javaee7` | Replaced by Spring Boot parent |
+| `javax.enterprise:cdi-api` | Spring Context provides DI |
+| `org.jboss.spec.javax.ejb:jboss-ejb-api_3.1_spec` | No EJBs in Spring Boot |
+| `org.jboss.spec.javax.jms:jboss-jms-api_2.0_spec` | Spring JMS abstractions |
+| `org.jboss.spec.javax.ws.rs:jboss-jaxrs-api_1.1_spec` | Spring Web MVC |
+| `org.jboss.spec.javax.faces:jboss-jsf-api_2.1_spec` | Thymeleaf replacement |
+| `commons-dbcp:commons-dbcp` | HikariCP is default |
+| `commons-pool:commons-pool` | Not needed |
+| `org.jboss.arquillian.*` | Spring Boot Test |
 
-### Phase 2: Code Migration
-1. **EJB to Spring Components**
-   - Replace `@Stateless` with `@Service`
-   - Replace `@EJB` with `@Autowired`
-   - Convert EJB interfaces to Spring service interfaces
+## Migration Effort Estimation
 
-2. **JAX-RS to Spring MVC**
-   - Replace JAX-RS annotations with Spring MVC
-   - Update REST endpoint mappings
-   - Migrate exception handling
+| Component | Effort Level | Estimated Time |
+|-----------|--------------|----------------|
+| **EJB → Spring Services** | Medium | 2-3 weeks |
+| **JAX-RS → Spring MVC** | Low | 1 week |
+| **JPA Migration** | Low | 3-5 days |
+| **JMS/MDB → Spring JMS** | Medium | 1-2 weeks |
+| **SOAP Services** | High | 3-4 weeks |
+| **JSF → Thymeleaf** | High | 4-6 weeks |
+| **Testing Migration** | Medium | 2 weeks |
+| **Configuration** | Low | 2-3 days |
 
-3. **JMS/MDB to Spring JMS**
-   - Replace `@MessageDriven` with `@JmsListener`
-   - Configure JMS with Spring Boot auto-configuration
+**Total Estimated Effort: 14-20 weeks**
 
-4. **SOAP Services**
-   - Migrate to Spring Web Services
-   - Update WSDL contracts if needed
+## Key Migration Considerations
 
-### Phase 3: Testing Migration
-1. **Replace Arquillian** with Spring Boot Test
-2. **Update JUnit 4** to JUnit 5
-3. **Create integration tests** with `@SpringBootTest`
+### 1. Namespace Changes
+- All `javax.*` packages → `jakarta.*` in Spring Boot 3.x
+- Update imports across the codebase
 
-## Key Breaking Changes Summary
+### 2. Configuration Migration
+- `persistence.xml` → `application.yml`
+- `ejb-jar.xml` → Java configuration
+- `web.xml` → Spring Boot auto-configuration
 
-| Area | Breaking Change | Solution |
-|------|----------------|----------|
-| **Namespace** | `javax.*` → `jakarta.*` | Update all imports |
-| **EJB Annotations** | `@Stateless`, `@EJB` | Use Spring annotations |
-| **JAX-RS** | JAX-RS annotations | Spring MVC annotations |
-| **JMS** | `@MessageDriven` | `@JmsListener` |
-| **Testing** | Arquillian | Spring Boot Test |
-| **Packaging** | WAR deployment | Executable JAR |
-| **Server** | JBoss/WildFly | Embedded Tomcat |
+### 3. Transaction Management
+- Container-managed transactions → `@Transactional`
+- Manual transaction demarcation → Spring's declarative approach
 
-## Estimated Migration Effort
+### 4. Security
+- Java EE security → Spring Security
+- Role-based access control migration required
 
-- **Low Complexity**: Database, logging, basic services (1-2 weeks)
-- **Medium Complexity**: REST endpoints, validation (2-3 weeks)  
-- **High Complexity**: SOAP services, JMS, complex EJB patterns (3-4 weeks)
-- **Testing Migration**: 1-2 weeks
+### 5. Deployment
+- WAR deployment → Executable JAR
+- Application server → Embedded container
 
-**Total Estimated Effort**: 7-11 weeks for complete migration
+## Recommended Migration Strategy
 
-## Benefits of Migration
+1. **Phase 1**: Core Services (EJB → Spring Services)
+2. **Phase 2**: REST APIs (JAX-RS → Spring MVC)
+3. **Phase 3**: Persistence Layer (JPA configuration)
+4. **Phase 4**: Messaging (MDB → Spring JMS)
+5. **Phase 5**: Web Services (SOAP migration)
+6. **Phase 6**: UI Layer (JSF → Thymeleaf)
+7. **Phase 7**: Testing and Integration
 
-1. **Modern Framework**: Latest Spring Boot with Java 21 support
-2. **Simplified Deployment**: Executable JAR vs WAR deployment
-3. **Better Testing**: Comprehensive Spring Boot Test support
-4. **Auto-configuration**: Reduced XML configuration
-5. **Cloud Ready**: Better containerization and cloud deployment
-6. **Performance**: Modern JVM optimizations and reactive support
-7. **Security**: Latest security patches and features
+## Compatibility Matrix
+
+| Technology | EJB 2.0 Version | Spring Boot 3.5.7 Version | Java 21 Compatible |
+|------------|-----------------|----------------------------|-------------------|
+| JPA | 2.0 | 3.1 | ✅ |
+| Bean Validation | 1.1 | 3.0 | ✅ |
+| JMS | 2.0 | 3.1 | ✅ |
+| Servlet API | 3.1 | 6.0 | ✅ |
+| JAX-RS | 1.1 | N/A (Spring MVC) | ✅ |
+| JAX-WS | 2.0 | 4.0 (Jakarta) | ✅ |
+
+---
+
+**Generated**: $(date)  
+**Target**: Spring Boot 3.5.7 + Java 21  
+**Source**: EJB 2.0 Demo Project Analysis
