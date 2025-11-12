@@ -26,26 +26,25 @@ import java.util.List;
  * analysis.
  * Identifies both classic and enum-based singleton patterns.
  */
-@InspectorDependencies(requires = { InspectorTags.TAG_JAVA_IS_SOURCE }, produces = {
-        EjbMigrationTags.TAG_ANTIPATTERN_SINGLETON })
+@InspectorDependencies(requires = InspectorTags.TAG_JAVA_IS_SOURCE, produces = EjbMigrationTags.TAG_ANTIPATTERN_SINGLETON)
 public class SingletonPatternInspector extends AbstractJavaClassInspector {
 
     @Inject
-    public SingletonPatternInspector(ResourceResolver resourceResolver,
-            ClassNodeRepository classNodeRepository,
-            LocalCache localCache) {
+    public SingletonPatternInspector(final ResourceResolver resourceResolver,
+                                     final ClassNodeRepository classNodeRepository,
+                                     final LocalCache localCache) {
         super(resourceResolver, classNodeRepository, localCache);
     }
 
     @Override
-    protected void analyzeClass(ProjectFile projectFile, JavaClassNode classNode, TypeDeclaration<?> type,
-            NodeDecorator<ProjectFile> projectFileDecorator) {
-        if (type instanceof ClassOrInterfaceDeclaration classDecl && !classDecl.isInterface()) {
-            SingletonDetector detector = new SingletonDetector();
+    protected void analyzeClass(final ProjectFile projectFile, final JavaClassNode classNode, final TypeDeclaration<?> type,
+                                final NodeDecorator<ProjectFile> projectFileDecorator) {
+        if (type instanceof final ClassOrInterfaceDeclaration classDecl && !classDecl.isInterface()) {
+            final SingletonDetector detector = new SingletonDetector();
             classDecl.accept(detector, null);
 
             if (detector.isSingleton()) {
-                SingletonInfo info = detector.getSingletonInfo();
+                final SingletonInfo info = detector.getSingletonInfo();
 
                 // Tag ProjectFile and JavaClassNode
                 projectFileDecorator.enableTag(EjbMigrationTags.TAG_ANTIPATTERN_SINGLETON);
@@ -55,13 +54,13 @@ public class SingletonPatternInspector extends AbstractJavaClassInspector {
                 classNode.setProperty("antipattern.singleton.info", info);
 
                 // Calculate refactoring complexity
-                double complexity = calculateComplexity(info);
+                final double complexity = calculateComplexity(info);
                 classNode.setProperty(EjbMigrationTags.TAG_METRIC_MIGRATION_COMPLEXITY, complexity);
             }
         }
     }
 
-    private double calculateComplexity(SingletonInfo info) {
+    private double calculateComplexity(final SingletonInfo info) {
         // Base complexity for singleton refactoring
         double complexity = EjbMigrationTags.COMPLEXITY_LOW;
 
@@ -87,11 +86,10 @@ public class SingletonPatternInspector extends AbstractJavaClassInspector {
      * Visitor that detects Singleton pattern characteristics.
      */
     private static class SingletonDetector extends VoidVisitorAdapter<Void> {
-        private final SingletonInfo singletonInfo = new SingletonInfo();
-        private boolean isSingleton = false;
-
         private static final java.util.Set<String> GETINSTANCE_NAMES = java.util.Set.of(
                 "getInstance", "instance", "get", "create");
+        private final SingletonInfo singletonInfo = new SingletonInfo();
+        private boolean isSingleton;
 
         public boolean isSingleton() {
             return isSingleton;
@@ -102,7 +100,7 @@ public class SingletonPatternInspector extends AbstractJavaClassInspector {
         }
 
         @Override
-        public void visit(ClassOrInterfaceDeclaration classDecl, Void arg) {
+        public void visit(final ClassOrInterfaceDeclaration classDecl, final Void arg) {
             singletonInfo.className = classDecl.getNameAsString();
 
             boolean hasPrivateConstructor = false;
@@ -110,7 +108,7 @@ public class SingletonPatternInspector extends AbstractJavaClassInspector {
             boolean hasGetInstanceMethod = false;
 
             // Check for private constructor
-            for (ConstructorDeclaration constructor : classDecl.getConstructors()) {
+            for (final ConstructorDeclaration constructor : classDecl.getConstructors()) {
                 if (constructor.isPrivate()) {
                     hasPrivateConstructor = true;
                     break;
@@ -118,10 +116,10 @@ public class SingletonPatternInspector extends AbstractJavaClassInspector {
             }
 
             // Check for static instance field
-            for (FieldDeclaration field : classDecl.getFields()) {
+            for (final FieldDeclaration field : classDecl.getFields()) {
                 if (field.isStatic() && field.isFinal()) {
                     // Check if field type matches class name (classic singleton)
-                    String fieldType = field.getVariables().get(0).getTypeAsString();
+                    final String fieldType = field.getVariables().get(0).getTypeAsString();
                     if (fieldType.equals(classDecl.getNameAsString())) {
                         hasStaticInstance = true;
                         singletonInfo.instanceFieldName = field.getVariables().get(0).getNameAsString();
@@ -130,7 +128,7 @@ public class SingletonPatternInspector extends AbstractJavaClassInspector {
 
                 // Check for non-final instance (lazy initialization)
                 if (field.isStatic() && !field.isFinal()) {
-                    String fieldType = field.getVariables().get(0).getTypeAsString();
+                    final String fieldType = field.getVariables().get(0).getTypeAsString();
                     if (fieldType.equals(classDecl.getNameAsString())) {
                         hasStaticInstance = true;
                         singletonInfo.instanceFieldName = field.getVariables().get(0).getNameAsString();
@@ -140,18 +138,18 @@ public class SingletonPatternInspector extends AbstractJavaClassInspector {
             }
 
             // Check for getInstance() method
-            for (MethodDeclaration method : classDecl.getMethods()) {
+            for (final MethodDeclaration method : classDecl.getMethods()) {
                 if (method.isStatic() && method.isPublic()) {
-                    String methodName = method.getNameAsString();
+                    final String methodName = method.getNameAsString();
                     if (GETINSTANCE_NAMES.contains(methodName)) {
-                        String returnType = method.getTypeAsString();
+                        final String returnType = method.getTypeAsString();
                         if (returnType.equals(classDecl.getNameAsString())) {
                             hasGetInstanceMethod = true;
                             singletonInfo.getInstanceMethodName = methodName;
 
                             // Check if method body contains synchronized (thread-safe)
                             if (method.getBody().isPresent()) {
-                                String bodyStr = method.getBody().get().toString();
+                                final String bodyStr = method.getBody().get().toString();
                                 if (bodyStr.contains("synchronized")) {
                                     singletonInfo.isThreadSafe = true;
                                 }
@@ -167,7 +165,7 @@ public class SingletonPatternInspector extends AbstractJavaClassInspector {
 
             if (isSingleton) {
                 // Check if singleton has state (non-static fields)
-                for (FieldDeclaration field : classDecl.getFields()) {
+                for (final FieldDeclaration field : classDecl.getFields()) {
                     if (!field.isStatic()) {
                         singletonInfo.hasState = true;
                         break;
@@ -180,7 +178,7 @@ public class SingletonPatternInspector extends AbstractJavaClassInspector {
             super.visit(classDecl, arg);
         }
 
-        private String determineType(boolean hasStaticInstance, boolean isLazy) {
+        private String determineType(final boolean hasStaticInstance, final boolean isLazy) {
             if (hasStaticInstance && !isLazy) {
                 return "EAGER";
             } else if (isLazy) {

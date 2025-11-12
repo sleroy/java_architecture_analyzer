@@ -1,8 +1,41 @@
 # Common Variables for EJB 2 to Spring Boot Migration
-# These variables are shared across all migration phases
+# These variables are shared across all phases
 
 migration-plan:
   variables:
+    # Global AI Instructions - Reference in all AI_ASSISTED prompts
+    ai_global_instructions: |
+      **AVAILABLE MCP TOOLS FOR TOKEN OPTIMIZATION:**
+      
+      You have access to specialized MCP tools that dramatically reduce token consumption:
+      
+      1. **extract_class_metadata_compact** - Extract compact 200-token JSON metadata instead of reading full 2000-token source
+         - Use when you need to understand class structure
+         - Returns: annotations, fields, methods, imports in JSON
+         - Token savings: 90% per class
+      
+      2. **migrate_stateless_ejb_to_service** - Automated EJB to Spring migration
+         - Use for standard stateless bean migrations
+         - Handles: @Stateless→@Service, constructor injection, @Transactional
+         - Token savings: 94% per class
+      
+      **IMPORTANT - OpenRewrite has already handled standard transformations:**
+      - ✅ Replaced @Stateless with @Service
+      - ✅ Removed @Local and @Remote annotations
+      - ✅ Converted @EJB fields to constructor injection
+      - ✅ Added @Transactional to transactional methods
+      - ✅ Migrated security annotations to Spring Security
+      
+      **Your role:** Handle edge cases not covered by OpenRewrite recipes.
+      
+      **Working Directory:** ${refactoring_project_path}
+      **Target:** ${refactoring_project_path}/src/main/java
+    
+    # Token-optimized prompt prefix
+    ai_compact_prefix: |
+      **OpenRewrite automated transformations complete.**
+      **Handle only edge cases and validation.**
+      Working directory: ${refactoring_project_path}
     spring_boot_version: "3.5.7"
     java_version: "21"
     group_id: "com.example.ejbapp"
