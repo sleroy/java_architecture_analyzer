@@ -1,16 +1,9 @@
 package com.analyzer.refactoring.mcp;
 
-import com.analyzer.refactoring.mcp.service.JdtRefactoringService;
-import com.analyzer.refactoring.mcp.tool.RenameCompilationUnitTool;
-import org.springframework.ai.support.ToolCallbacks;
-import org.springframework.ai.tool.ToolCallback;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-
-import java.util.List;
 
 /**
  * Spring Boot MCP Server application for Java refactoring operations.

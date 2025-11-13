@@ -1,19 +1,18 @@
 package com.analyzer.rules.ejb2spring;
 
-import com.analyzer.core.cache.LocalCache;
-import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.api.graph.ClassNodeRepository;
 import com.analyzer.api.inspector.InspectorDependencies;
+import com.analyzer.api.resource.ResourceResolver;
+import com.analyzer.core.cache.LocalCache;
+import com.analyzer.core.export.NodeDecorator;
 import com.analyzer.core.inspector.InspectorTags;
 import com.analyzer.core.model.ProjectFile;
 import com.analyzer.dev.inspectors.source.AbstractJavaParserInspector;
-import com.analyzer.api.resource.ResourceResolver;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
-import org.apache.tomcat.jni.Local;
 
 import java.util.ArrayList;
 import java.util.List;

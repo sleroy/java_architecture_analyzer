@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "java-refactoring-mcp-stdio": {
+      "command": "java",
+      "args": [
+        "-Dspring.profiles.active=stdio",
+        "-jar",
+        "/home/sleroy/git/java_architecture_analyzer/analyzer-refactoring-mcp/target/analyzer-refactoring-mcp-1.0.0-SNAPSHOT.jar"
+      ]
+    }
+  }
+}

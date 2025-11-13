@@ -1,18 +1,12 @@
 package com.analyzer.rules.metrics;
 
-import com.analyzer.api.inspector.Inspector;
-import com.analyzer.core.export.NodeDecorator;
-import com.analyzer.core.cache.LocalCache;
 import com.analyzer.api.inspector.InspectorDependencies;
-
-import com.analyzer.core.inspector.InspectorTags;
-import com.analyzer.core.cache.LocalCache;
-import com.analyzer.core.model.ProjectFile;
-import com.analyzer.core.cache.LocalCache;
-import com.analyzer.dev.inspectors.bedrock.AbstractBedrockInspectorAbstract;
 import com.analyzer.api.resource.ResourceResolver;
-import javassist.bytecode.CodeAttribute;
-import org.apache.tomcat.jni.Local;
+import com.analyzer.core.cache.LocalCache;
+import com.analyzer.core.export.NodeDecorator;
+import com.analyzer.core.inspector.InspectorTags;
+import com.analyzer.core.model.ProjectFile;
+import com.analyzer.dev.inspectors.bedrock.AbstractBedrockInspectorAbstract;
 
 import javax.inject.Inject;
 

@@ -48,7 +48,7 @@
         <commons-configuration.version>2.10.1</commons-configuration.version>
 
         <!-- OpenRewrite & Migration Tools -->
-        <openrewrite.version>8.21.0</openrewrite.version>
+        <openrewrite.version>8.66.1</openrewrite.version>
         <rewrite-spring.version>5.13.0</rewrite-spring.version>
         <jqassistant.version>2.3.0</jqassistant.version>
         <jakarta-xml-bind.version>4.0.2</jakarta-xml-bind.version>
@@ -62,6 +62,12 @@
         <!-- Database -->
         <h2.version>2.2.224</h2.version>
         <mybatis.version>3.5.19</mybatis.version>
+        
+        <!-- Groovy -->
+        <groovy.version>4.0.18</groovy.version>
+        
+        <!-- Cache -->
+        <caffeine.version>3.1.8</caffeine.version>
     </properties>
 
     <dependencyManagement>
@@ -273,6 +279,30 @@
                 <groupId>org.mybatis</groupId>
                 <artifactId>mybatis</artifactId>
                 <version>${mybatis.version}</version>
+            </dependency>
+
+            <!-- Groovy Dependencies -->
+            <dependency>
+                <groupId>org.apache.groovy</groupId>
+                <artifactId>groovy</artifactId>
+                <version>${groovy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.groovy</groupId>
+                <artifactId>groovy-jsr223</artifactId>
+                <version>${groovy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.groovy</groupId>
+                <artifactId>groovy-json</artifactId>
+                <version>${groovy.version}</version>
+            </dependency>
+
+            <!-- Caffeine Cache -->
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
             </dependency>
 
             <!-- Test Dependencies -->

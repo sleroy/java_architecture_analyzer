@@ -43,10 +43,7 @@
             <groupId>org.jboss.forge.roaster</groupId>
             <artifactId>roaster-jdt</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.sonarsource.java</groupId>
-            <artifactId>sonar-java-plugin</artifactId>
-        </dependency>
+
 
         <!-- Test Dependencies -->
         <dependency>

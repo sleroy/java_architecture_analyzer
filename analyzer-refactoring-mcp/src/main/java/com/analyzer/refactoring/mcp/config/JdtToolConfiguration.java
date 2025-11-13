@@ -1,63 +1,17 @@
 package com.analyzer.refactoring.mcp.config;
 
-import com.analyzer.refactoring.mcp.service.EjbMigrationService;
 import com.analyzer.refactoring.mcp.service.JdtRefactoringService;
-import com.analyzer.refactoring.mcp.tool.ejb.ExtractClassMetadataTool;
-import com.analyzer.refactoring.mcp.tool.ejb.MigrateStatelessEjbTool;
 import com.analyzer.refactoring.mcp.tool.jdt.*;
-import com.analyzer.refactoring.mcp.tool.openrewrite.SearchJavaPatternTool;
-import org.springframework.ai.support.ToolCallbacks;
-import org.springframework.ai.tool.ToolCallback;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.Arrays;
-import java.util.List;
-
+/**
+ * Configuration for JDT (Eclipse Java Development Tools) based refactoring
+ * tools.
+ * These tools provide Eclipse-powered Java refactoring capabilities.
+ */
 @Configuration
-public class ToolConfiguration {
-
-    @Bean
-    public List<ToolCallback> danTools(
-            RenameTypeTool renameTypeTool,
-            RenameMethodTool renameMethodTool,
-            RenameFieldTool renameFieldTool,
-            RenamePackageTool renamePackageTool,
-            RenameCompilationUnitTool renameCompilationUnitTool,
-            RenameJavaProjectTool renameJavaProjectTool,
-            RenameEnumConstantTool renameEnumConstantTool,
-            RenameModuleTool renameModuleTool,
-            RenameResourceTool renameResourceTool,
-            RenameSourceFolderTool renameSourceFolderTool,
-            DeleteElementsTool deleteElementsTool,
-            CopyElementsTool copyElementsTool,
-            MoveElementsTool moveElementsTool,
-            MoveStaticMembersTool moveStaticMembersTool,
-            ExtractClassMetadataTool extractClassMetadataTool,
-            MigrateStatelessEjbTool migrateStatelessEjbTool,
-            SearchJavaPatternTool searchJavaPatternTool) {
-        return Arrays.stream(ToolCallbacks.from(
-                extractClassMetadataTool,
-                migrateStatelessEjbTool,
-                searchJavaPatternTool
-        /*
-         * renameTypeTool,
-         * renameMethodTool,
-         * renameFieldTool,
-         * renamePackageTool,
-         * renameCompilationUnitTool,
-         * renameJavaProjectTool,
-         * renameEnumConstantTool,
-         * renameModuleTool,
-         * renameResourceTool,
-         * renameSourceFolderTool,
-         * deleteElementsTool,
-         * copyElementsTool,
-         * moveElementsTool,
-         * moveStaticMembersTool
-         */
-        )).toList();
-    }
+public class JdtToolConfiguration {
 
     @Bean
     public RenameTypeTool renameTypeTool(final JdtRefactoringService refactoringService) {
@@ -127,25 +81,5 @@ public class ToolConfiguration {
     @Bean
     public MoveStaticMembersTool moveStaticMembersTool(final JdtRefactoringService refactoringService) {
         return new MoveStaticMembersTool(refactoringService);
-    }
-
-    // EJB Migration Tools
-    @Bean
-    public ExtractClassMetadataTool extractClassMetadataTool(final EjbMigrationService migrationService) {
-        return new ExtractClassMetadataTool(migrationService);
-    }
-
-    @Bean
-    public MigrateStatelessEjbTool migrateStatelessEjbTool(final EjbMigrationService migrationService) {
-        return new MigrateStatelessEjbTool(migrationService);
-    }
-
-    // Note: SearchJavaPatternTool bean is defined in
-    // OpenRewriteToolConfiguration.java
-    // with proper dependency injection for Groovy services
-
-    @Bean
-    public EjbMigrationService ejbMigrationService() {
-        return new EjbMigrationService();
     }
 }

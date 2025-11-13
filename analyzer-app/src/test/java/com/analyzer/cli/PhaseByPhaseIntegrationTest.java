@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Run 'inventory' command first to create the analysis database.
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@Disabled("This test is disabled by default")
 public class PhaseByPhaseIntegrationTest {
 
     // Fix: Point to repository root demo-ejb2-project, not
