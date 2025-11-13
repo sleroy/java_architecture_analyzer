@@ -20,11 +20,14 @@ class VisitorScriptCacheTest {
 
     private VisitorScriptCache cache;
     private CompiledScript mockScript;
+    private GroovyScriptRepository groovyScriptRepository;
+
 
     @BeforeEach
     void setUp() {
         // Create cache with small size for testing
-        cache = new VisitorScriptCache(true, 10, 1, true);
+        groovyScriptRepository = mock(GroovyScriptRepository.class);
+        cache = new VisitorScriptCache(true, 10, 1, true, groovyScriptRepository);
         mockScript = mock(CompiledScript.class);
     }
 
@@ -203,7 +206,7 @@ class VisitorScriptCacheTest {
 
     @Test
     void testDisabledCache() {
-        VisitorScriptCache disabledCache = new VisitorScriptCache(false, 10, 1, true);
+        VisitorScriptCache disabledCache = new VisitorScriptCache(false, 10, 1, true, groovyScriptRepository);
 
         assertFalse(disabledCache.isEnabled());
         assertEquals(0, disabledCache.size());

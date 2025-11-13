@@ -53,6 +53,10 @@ groovy.bedrock.aws.secret-key=${spring.ai.bedrock.aws.secret-key}
 groovy.script.timeout.seconds=30      # Execution timeout
 groovy.script.max-memory-mb=512       # Reserved for future use
 
+# Static Compilation
+groovy.script.static-compilation.enabled=true   # Generate scripts with @CompileStatic
+groovy.script.static-compilation.required=false # Allow fallback to dynamic if needed
+
 # Cache Settings
 groovy.cache.enabled=true
 groovy.cache.max-size=100             # Maximum cached scripts
@@ -88,6 +92,88 @@ groovy.cache.record-stats=true        # Enable metrics
 }
 ```
 
+## Static Compilation
+
+### Overview
+
+Generated scripts use `@CompileStatic` by default for enhanced type safety and performance.
+
+### Benefits
+
+1. **Type Safety**: Compile-time type checking catches errors before runtime
+2. **Performance**: Eliminates dynamic method dispatch overhead
+3. **Predictable Behavior**: More deterministic code execution
+4. **Better Error Messages**: Clearer, more specific compilation errors
+5. **Code Quality**: Forces explicit type declarations
+
+### Configuration
+
+```properties
+# Enable @CompileStatic in generated scripts (default: true)
+groovy.script.static-compilation.enabled=true
+
+# Require static compilation (default: false)
+# When false, allows fallback to dynamic compilation if needed
+groovy.script.static-compilation.required=false
+```
+
+### Automatic Retry Logic
+
+When a script fails due to static compilation errors:
+
+1. **Detection**: System identifies static compilation-related errors
+   - "Static type checking"
+   - "Cannot find matching method"
+   - "Cannot assign value of type"
+   - "Incompatible types"
+
+2. **AI Guidance**: Retry prompt includes specific suggestions
+   - Fix type declarations (preferred approach)
+   - Add type casts: `... as List<String>`
+   - Import required types
+   - Remove @CompileStatic (fallback option)
+
+3. **Flexible Approach**: AI can choose to fix types or remove annotation
+
+### Example Generated Script
+
+```groovy
+import groovy.transform.CompileStatic
+import org.openrewrite.java.JavaIsoVisitor
+import org.openrewrite.ExecutionContext
+import org.openrewrite.java.tree.J
+
+@CompileStatic
+class PatternVisitor extends JavaIsoVisitor<ExecutionContext> {
+    List<Map<String, Object>> matches = []
+    
+    @Override
+    J.MethodDeclaration visitMethodDeclaration(J.MethodDeclaration method, ExecutionContext ctx) {
+        // Explicit typing for static compilation
+        List<String> modifiers = method.modifiers.collect { it.type.toString() } as List<String>
+        
+        if (modifiers.contains('Public')) {
+            J.ClassDeclaration classDecl = getCursor().firstEnclosing(J.ClassDeclaration.class)
+            Map<String, Object> match = [
+                nodeId: method.id.toString(),
+                // ...
+            ]
+            matches.add(match)
+        }
+        return super.visitMethodDeclaration(method, ctx)
+    }
+}
+```
+
+### When Dynamic Compilation May Be Needed
+
+Some advanced patterns may require dynamic features:
+- Complex metaprogramming
+- Runtime method resolution
+- Dynamic property access
+
+In these cases, the AI will remove `@CompileStatic` after retry attempts.
+
 ## Script Generation Process
 
 ### 1. Prompt Construction
@@ -96,7 +182,8 @@ The system builds a detailed prompt including:
 - Pattern description
 - Target node type
 - Project context (path, file list)
-- Previous errors (on retry)
+- Static compilation requirements
+- Previous errors (on retry) with smart suggestions
 - Expected output format
 
 Example prompt structure:

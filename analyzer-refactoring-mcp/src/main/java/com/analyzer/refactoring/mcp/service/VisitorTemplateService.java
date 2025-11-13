@@ -55,8 +55,8 @@ public class VisitorTemplateService {
                         VisitorTemplate template = parseTemplate(filename, content);
                         templates.put(template.getName(), template);
 
-                        logger.info("Loaded template: {} with {} keywords",
-                                template.getName(), template.getKeywords().size());
+                        logger.info("Loaded template: {} with {} matching phrases",
+                                template.getName(), template.getMatchingPhrases().size());
                     }
                 } catch (IOException e) {
                     logger.error("Failed to load template: {}", resource.getFilename(), e);
@@ -78,14 +78,14 @@ public class VisitorTemplateService {
      * @return Optional containing matching template, or empty if no match
      */
     public Optional<VisitorTemplate> findTemplate(String patternDescription, String nodeType) {
-        String normalizedPattern = patternDescription.toLowerCase();
+        String normalizedPattern = patternDescription.toLowerCase().trim();
 
-        // Try exact keyword match first
+        // Try exact phrase match (case insensitive)
         for (VisitorTemplate template : templates.values()) {
-            for (String keyword : template.getKeywords()) {
-                if (normalizedPattern.contains(keyword.toLowerCase())) {
-                    logger.info("Found template match: {} for pattern: {}",
-                            template.getName(), patternDescription);
+            for (String phrase : template.getMatchingPhrases()) {
+                if (normalizedPattern.contains(phrase.toLowerCase())) {
+                    logger.info("Found template match: {} for pattern: {} (matched phrase: '{}')",
+                            template.getName(), patternDescription, phrase);
                     return Optional.of(template);
                 }
             }
@@ -115,52 +115,66 @@ public class VisitorTemplateService {
     private VisitorTemplate parseTemplate(String filename, String content) {
         String name = filename.replace(".groovy", "");
 
-        // Extract keywords from filename (e.g., "singleton-pattern" -> ["singleton",
-        // "pattern"])
-        List<String> keywords = Arrays.stream(name.split("-"))
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
+        List<String> matchingPhrases = new ArrayList<>();
 
-        // Extract additional keywords from documentation comments
-        List<String> docKeywords = extractDocKeywords(content);
-        keywords.addAll(docKeywords);
+        // Extract phrase from filename (e.g., "god-class-antipattern" -> "god class
+        // antipattern")
+        String filenamePhrase = name.replace("-", " ");
+        matchingPhrases.add(filenamePhrase.trim());
 
-        return new VisitorTemplate(name, content, keywords);
+        // Extract meaningful phrases from documentation comments
+        List<String> docPhrases = extractDocPhrases(content);
+        matchingPhrases.addAll(docPhrases);
+
+        return new VisitorTemplate(name, content, matchingPhrases);
     }
 
     /**
-     * Extract keywords from Javadoc/comments in template.
+     * Extract meaningful phrases from Javadoc/comments in template.
+     * Looks for patterns like "Detects X" or "Identifies Y" to extract the subject.
      */
-    private List<String> extractDocKeywords(String content) {
-        List<String> keywords = new ArrayList<>();
+    private List<String> extractDocPhrases(String content) {
+        List<String> phrases = new ArrayList<>();
 
-        // Look for keywords in documentation
         String[] lines = content.split("\n");
         for (String line : lines) {
             line = line.trim();
-            if (line.startsWith("*") || line.startsWith("//")) {
-                // Extract words that might be keywords
-                String[] words = line.replaceAll("[^a-zA-Z ]", "").toLowerCase().split("\\s+");
-                for (String word : words) {
-                    if (word.length() > 3 && !isCommonWord(word)) {
-                        keywords.add(word);
-                    }
+
+            // Remove comment markers
+            if (line.startsWith("*")) {
+                line = line.substring(1).trim();
+            } else if (line.startsWith("//")) {
+                line = line.substring(2).trim();
+            }
+
+            // Look for "Detects X" or "Identifies Y" patterns
+            if (line.toLowerCase().startsWith("detects ")) {
+                String phrase = line.substring(8).trim();
+                // Remove trailing punctuation
+                phrase = phrase.replaceAll("[.:]$", "").trim();
+                if (!phrase.isEmpty() && phrase.length() > 3) {
+                    phrases.add(phrase.toLowerCase());
+                }
+            } else if (line.toLowerCase().startsWith("identifies ")) {
+                String phrase = line.substring(11).trim();
+                phrase = phrase.replaceAll("[.:]$", "").trim();
+                if (!phrase.isEmpty() && phrase.length() > 3) {
+                    phrases.add(phrase.toLowerCase());
+                }
+            }
+
+            // Also capture full description lines that might be useful
+            // (e.g., "God Class anti-pattern")
+            if (line.length() > 10 && line.length() < 100 &&
+                    !line.contains("@") && !line.contains("(") && !line.contains("{")) {
+                String cleaned = line.replaceAll("[^a-zA-Z ]", "").trim().toLowerCase();
+                if (cleaned.split("\\s+").length >= 2 && cleaned.split("\\s+").length <= 6) {
+                    phrases.add(cleaned);
                 }
             }
         }
 
-        return keywords.stream().distinct().collect(Collectors.toList());
-    }
-
-    /**
-     * Check if word is too common to be useful as keyword.
-     */
-    private boolean isCommonWord(String word) {
-        Set<String> common = Set.of(
-                "this", "that", "with", "from", "have", "been", "were",
-                "they", "what", "when", "where", "which", "class", "method",
-                "field", "code", "java", "detects", "identified", "considered");
-        return common.contains(word);
+        return phrases.stream().distinct().collect(Collectors.toList());
     }
 
     /**
@@ -169,12 +183,12 @@ public class VisitorTemplateService {
     public static class VisitorTemplate {
         private final String name;
         private final String scriptSource;
-        private final List<String> keywords;
+        private final List<String> matchingPhrases;
 
-        public VisitorTemplate(String name, String scriptSource, List<String> keywords) {
+        public VisitorTemplate(String name, String scriptSource, List<String> matchingPhrases) {
             this.name = name;
             this.scriptSource = scriptSource;
-            this.keywords = keywords;
+            this.matchingPhrases = matchingPhrases;
         }
 
         public String getName() {
@@ -185,13 +199,13 @@ public class VisitorTemplateService {
             return scriptSource;
         }
 
-        public List<String> getKeywords() {
-            return Collections.unmodifiableList(keywords);
+        public List<String> getMatchingPhrases() {
+            return Collections.unmodifiableList(matchingPhrases);
         }
 
         @Override
         public String toString() {
-            return "VisitorTemplate{name='" + name + "', keywords=" + keywords + "}";
+            return "VisitorTemplate{name='" + name + "', matchingPhrases=" + matchingPhrases + "}";
         }
     }
 }

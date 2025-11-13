@@ -131,8 +131,34 @@ public class GroovyScriptGenerationService {
             String nodeType,
             List<String> filePaths) throws ScriptGenerationException {
 
-        String previousScript = null;
-        String previousError = null;
+        return generateVisitorScriptWithErrorFeedback(
+                projectPath, patternDescription, nodeType, filePaths, null, null);
+    }
+
+    /**
+     * Generate a Groovy visitor script with error feedback from a previous failed
+     * attempt.
+     * This method is used when a generated script failed execution and needs to be
+     * regenerated
+     * with context about what went wrong.
+     *
+     * @param projectPath        the project path
+     * @param patternDescription the pattern to search for
+     * @param nodeType           the OpenRewrite node type
+     * @param filePaths          optional list of file paths
+     * @param previousScript     the script that failed execution (for AI learning)
+     * @param previousError      the error message from the failed execution
+     * @return the generated Groovy script source code
+     * @throws ScriptGenerationException if generation fails after all retries
+     */
+    public GenerationResult generateVisitorScriptWithErrorFeedback(
+            String projectPath,
+            String patternDescription,
+            String nodeType,
+            List<String> filePaths,
+            String previousScript,
+            String previousError) throws ScriptGenerationException {
+
         int attempts = 0;
 
         while (attempts < maxRetries) {
@@ -213,7 +239,10 @@ public class GroovyScriptGenerationService {
         prompt.append("4. For each match found, collect it in a list\n");
         prompt.append("5. Store location information (file path, line number, column number)\n");
         prompt.append("6. Return ONLY the Groovy code, no explanations\n");
-        prompt.append("7. Use proper OpenRewrite APIs and patterns\n\n");
+        prompt.append("7. Use proper OpenRewrite APIs and patterns\n");
+        prompt.append("8. Use @CompileStatic annotation for type safety and performance\n");
+        prompt.append("9. Declare all variable types explicitly (List<String>, Map<String, Object>, etc.)\n");
+        prompt.append("10. Avoid dynamic Groovy features; prefer static typing\n\n");
 
         prompt.append("## WORKING EXAMPLE TO ADAPT\n");
         prompt.append("Here is a complete, tested Groovy visitor that demonstrates correct OpenRewrite API usage.\n");
@@ -225,6 +254,8 @@ public class GroovyScriptGenerationService {
         }
 
         prompt.append("## Expected Output Format\n");
+        prompt.append("IMPORTANT: Use @CompileStatic for type safety. Import it first:\n");
+        prompt.append("import groovy.transform.CompileStatic\n\n");
         prompt.append("The script MUST return a List<Map<String, Object>> where each Map contains:\n");
         prompt.append("- nodeId: Unique identifier (use node.id.toString())\n");
         prompt.append("- nodeType: Type of the node (e.g., 'ClassDeclaration', 'MethodInvocation')\n");
@@ -239,18 +270,20 @@ public class GroovyScriptGenerationService {
         prompt.append("- Column: node.getPrefix().getCoordinates().getColumn()\n\n");
 
         prompt.append("```groovy\n");
+        prompt.append("import groovy.transform.CompileStatic\n");
         prompt.append("import org.openrewrite.java.JavaIsoVisitor\n");
         prompt.append("import org.openrewrite.ExecutionContext\n");
         prompt.append("import org.openrewrite.java.tree.J\n");
         prompt.append("import org.openrewrite.SourceFile\n\n");
+        prompt.append("@CompileStatic\n");
         prompt.append("class PatternVisitor extends JavaIsoVisitor<ExecutionContext> {\n");
         prompt.append("    List<Map<String, Object>> matches = []\n\n");
         prompt.append("    @Override\n");
         prompt.append("    J.").append(nodeType).append(" visit").append(nodeType)
                 .append("(J.").append(nodeType).append(" node, ExecutionContext ctx) {\n");
-        prompt.append("        // Example: Check if pattern matches\n");
+        prompt.append("        // Example: Check if pattern matches (use explicit typing)\n");
         prompt.append("        if (/* your matching logic */) {\n");
-        prompt.append("            def match = [\n");
+        prompt.append("            Map<String, Object> match = [\n");
         prompt.append("                nodeId: node.id.toString(),\n");
         prompt.append("                nodeType: '").append(nodeType).append("',\n");
         prompt.append("                className: extractClassName(node),  // implement as needed\n");
@@ -267,12 +300,12 @@ public class GroovyScriptGenerationService {
         prompt.append("    }\n\n");
         prompt.append("    // Helper method to extract class name from context\n");
         prompt.append("    private String extractClassName(J node) {\n");
-        prompt.append("        def classDecl = getCursor().firstEnclosing(J.ClassDeclaration.class)\n");
+        prompt.append("        J.ClassDeclaration classDecl = getCursor().firstEnclosing(J.ClassDeclaration.class)\n");
         prompt.append("        return classDecl?.simpleName ?: 'Unknown'\n");
         prompt.append("    }\n");
         prompt.append("}\n\n");
         prompt.append("// After creating the visitor, execute it and return matches\n");
-        prompt.append("def visitor = new PatternVisitor()\n");
+        prompt.append("PatternVisitor visitor = new PatternVisitor()\n");
         prompt.append("visitor.visit(compilationUnit, new InMemoryExecutionContext())\n");
         prompt.append("return visitor.matches  // MUST return the matches list\n");
         prompt.append("```\n\n");
@@ -282,6 +315,18 @@ public class GroovyScriptGenerationService {
             prompt.append("## Previous Attempt Failed\n");
             prompt.append("The previous script had this error:\n");
             prompt.append("```\n").append(previousError).append("\n```\n\n");
+
+            // Check if error is related to static compilation
+            if (isStaticCompilationError(previousError)) {
+                prompt.append("SUGGESTION: The error appears to be related to @CompileStatic constraints. ");
+                prompt.append("You can either:\n");
+                prompt.append("1. Fix the type declarations to satisfy static compilation (PREFERRED)\n");
+                prompt.append("   - Use explicit types: List<String>, Map<String, Object>\n");
+                prompt.append("   - Add type casts where needed: ... as List<String>\n");
+                prompt.append("   - Import all required types\n");
+                prompt.append("2. Remove @CompileStatic if the pattern truly requires dynamic features (FALLBACK)\n\n");
+            }
+
             prompt.append("Previous script that failed:\n");
             prompt.append("```groovy\n").append(previousScript).append("\n```\n\n");
             prompt.append("Please fix the error and generate a corrected script.\n\n");
@@ -333,6 +378,24 @@ public class GroovyScriptGenerationService {
         // If no code blocks, return the whole response (assume it's the script)
         logger.warn("No code blocks found in response, using entire response as script");
         return response.trim();
+    }
+
+    /**
+     * Check if error is related to static compilation.
+     */
+    private boolean isStaticCompilationError(String errorMessage) {
+        if (errorMessage == null) {
+            return false;
+        }
+
+        String lowerError = errorMessage.toLowerCase();
+        return lowerError.contains("static type checking") ||
+                lowerError.contains("cannot find matching method") ||
+                lowerError.contains("cannot assign value of type") ||
+                lowerError.contains("incompatible types") ||
+                lowerError.contains("cannot convert from") ||
+                lowerError.contains("groovy.lang.missingmethodexception") ||
+                lowerError.contains("groovy.lang.missingpropertyexception");
     }
 
     /**

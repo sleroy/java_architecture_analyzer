@@ -1,6 +1,7 @@
 package com.analyzer.refactoring.mcp.config;
 
 import com.analyzer.refactoring.mcp.service.EjbMigrationService;
+import com.analyzer.refactoring.mcp.service.GroovyScriptAnalytics;
 import com.analyzer.refactoring.mcp.service.GroovyScriptExecutionService;
 import com.analyzer.refactoring.mcp.service.GroovyScriptGenerationService;
 import com.analyzer.refactoring.mcp.service.OpenRewriteExecutionService;
@@ -58,8 +59,9 @@ public class OpenRewriteToolConfiguration {
             final GroovyScriptExecutionService scriptExecutor,
             final OpenRewriteExecutionService openRewriteExecutor,
             final VisitorTemplateService templateService,
-            final PatternMatcherAgent patternMatcher) {
+            final PatternMatcherAgent patternMatcher,
+            final GroovyScriptAnalytics analytics) {
         return new SearchJavaPatternTool(scriptCache, scriptGenerator, scriptExecutor, openRewriteExecutor,
-                templateService, patternMatcher);
+                templateService, patternMatcher, analytics);
     }
 }

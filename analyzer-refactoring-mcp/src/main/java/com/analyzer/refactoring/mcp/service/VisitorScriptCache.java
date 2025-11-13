@@ -1,6 +1,7 @@
 package com.analyzer.refactoring.mcp.service;
 
 import com.analyzer.refactoring.mcp.model.OpenRewriteVisitorScript;
+import com.analyzer.refactoring.mcp.model.ScriptMetadata;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
@@ -9,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -27,17 +29,20 @@ public class VisitorScriptCache {
 
     private final Cache<String, OpenRewriteVisitorScript> cache;
     private final boolean enabled;
+    private final GroovyScriptRepository repository;
 
     public VisitorScriptCache(
-            @Value("${groovy.cache.enabled:true}") boolean enabled,
-            @Value("${groovy.cache.max-size:100}") int maxSize,
-            @Value("${groovy.cache.expire-after-write-minutes:60}") int expireMinutes,
-            @Value("${groovy.cache.record-stats:true}") boolean recordStats) {
+            @Value("${groovy.cache.enabled:true}") final boolean enabled,
+            @Value("${groovy.cache.max-size:100}") final int maxSize,
+            @Value("${groovy.cache.expire-after-write-minutes:60}") final int expireMinutes,
+            @Value("${groovy.cache.record-stats:true}") final boolean recordStats,
+            final GroovyScriptRepository repository) {
 
         this.enabled = enabled;
+        this.repository = repository;
 
         if (enabled) {
-            Caffeine<Object, Object> builder = Caffeine.newBuilder()
+            final Caffeine<Object, Object> builder = Caffeine.newBuilder()
                     .maximumSize(maxSize)
                     .expireAfterWrite(Duration.ofMinutes(expireMinutes));
 
@@ -45,18 +50,52 @@ public class VisitorScriptCache {
                 builder.recordStats();
             }
 
-            this.cache = builder.build();
+            cache = builder.build();
 
             logger.info("Visitor script cache initialized: maxSize={}, expireAfterWrite={}min, recordStats={}",
                     maxSize, expireMinutes, recordStats);
         } else {
-            this.cache = null;
+            cache = null;
             logger.info("Visitor script cache disabled");
         }
     }
 
     /**
+     * Warm cache from disk on startup.
+     */
+    @PostConstruct
+    public void warmCache() {
+        if (!enabled || !repository.isEnabled()) {
+            return;
+        }
+
+        try {
+            final List<String> scriptHashes = repository.listScriptHashes();
+            int loaded = 0;
+
+            for (final String scriptHash : scriptHashes) {
+                final Optional<OpenRewriteVisitorScript> scriptOpt = repository.loadScript(scriptHash);
+                final Optional<ScriptMetadata> metadataOpt = repository.loadMetadata(scriptHash);
+
+                if (scriptOpt.isPresent() && metadataOpt.isPresent()) {
+                    final ScriptMetadata metadata = metadataOpt.get();
+                    cache.put(scriptHash, scriptOpt.get());
+                    loaded++;
+                }
+            }
+
+            if (loaded > 0) {
+                logger.info("Warmed cache with {} scripts from disk", loaded);
+            }
+
+        } catch (final Exception e) {
+            logger.error("Failed to warm cache from disk", e);
+        }
+    }
+
+    /**
      * Get a cached script if available.
+     * First checks in-memory cache, then falls back to disk storage.
      *
      * @param projectPath        the project path
      * @param patternDescription the pattern description
@@ -65,29 +104,49 @@ public class VisitorScriptCache {
      * @return the cached script, or empty if not found
      */
     public Optional<OpenRewriteVisitorScript> get(
-            String projectPath,
-            String patternDescription,
-            String nodeType,
-            List<String> filePaths) {
+            final String projectPath,
+            final String patternDescription,
+            final String nodeType,
+            final List<String> filePaths) {
 
         if (!enabled) {
             return Optional.empty();
         }
 
-        String key = generateCacheKey(projectPath, patternDescription, nodeType, filePaths);
-        OpenRewriteVisitorScript script = cache.getIfPresent(key);
+        final String key = generateCacheKey(projectPath, patternDescription, nodeType, filePaths);
+
+        // Check in-memory cache first
+        final OpenRewriteVisitorScript script = cache.getIfPresent(key);
 
         if (script != null) {
-            logger.debug("Cache hit for pattern: {}, nodeType: {}", patternDescription, nodeType);
-        } else {
-            logger.debug("Cache miss for pattern: {}, nodeType: {}", patternDescription, nodeType);
+            logger.debug("Memory cache hit for pattern: {}, nodeType: {}", patternDescription, nodeType);
+            return Optional.of(script);
         }
 
-        return Optional.ofNullable(script);
+        // Check disk storage if memory cache miss
+        if (repository.isEnabled()) {
+            final Optional<OpenRewriteVisitorScript> diskScript = repository.loadScript(key);
+            if (diskScript.isPresent()) {
+                logger.debug("Disk cache hit for pattern: {}, nodeType: {}", patternDescription, nodeType);
+                // Load into memory cache for faster access next time
+                cache.put(key, diskScript.get());
+
+                // Update metadata usage
+                repository.loadMetadata(key).ifPresent(metadata -> {
+                    metadata.recordSuccess();
+                    repository.updateMetadata(key, metadata);
+                });
+
+                return diskScript;
+            }
+        }
+
+        logger.debug("Cache miss (memory + disk) for pattern: {}, nodeType: {}", patternDescription, nodeType);
+        return Optional.empty();
     }
 
     /**
-     * Put a script into the cache.
+     * Put a script into the cache and persist to disk.
      *
      * @param projectPath        the project path
      * @param patternDescription the pattern description
@@ -96,21 +155,68 @@ public class VisitorScriptCache {
      * @param script             the compiled script to cache
      */
     public void put(
-            String projectPath,
-            String patternDescription,
-            String nodeType,
-            List<String> filePaths,
-            OpenRewriteVisitorScript script) {
+            final String projectPath,
+            final String patternDescription,
+            final String nodeType,
+            final List<String> filePaths,
+            final OpenRewriteVisitorScript script) {
 
         if (!enabled) {
             return;
         }
 
-        String key = generateCacheKey(projectPath, patternDescription, nodeType, filePaths);
+        final String key = generateCacheKey(projectPath, patternDescription, nodeType, filePaths);
+
+        // Store in memory cache
         cache.put(key, script);
+
+        // Persist to disk if repository is enabled
+        if (repository.isEnabled()) {
+            final ScriptMetadata metadata = ScriptMetadata.create(
+                    key,
+                    patternDescription,
+                    nodeType,
+                    projectPath,
+                    filePaths,
+                    script.getGenerationAttempts(),
+                    true // validated since it was successfully generated
+            );
+
+            repository.saveScript(key, script.getSourceCode(), metadata);
+        }
 
         logger.info("Cached script for pattern: {}, nodeType: {}, attempts: {}",
                 patternDescription, nodeType, script.getGenerationAttempts());
+    }
+
+    /**
+     * Invalidate (remove) a cached script.
+     * This is useful when a script execution fails and needs to be regenerated.
+     *
+     * @param projectPath        the project path
+     * @param patternDescription the pattern description
+     * @param nodeType           the node type
+     * @param filePaths          optional list of file paths
+     */
+    public void invalidate(
+            final String projectPath,
+            final String patternDescription,
+            final String nodeType,
+            final List<String> filePaths) {
+
+        if (!enabled) {
+            return;
+        }
+
+        final String key = generateCacheKey(projectPath, patternDescription, nodeType, filePaths);
+
+        // Remove from memory cache
+        cache.invalidate(key);
+
+        // Note: We don't delete from disk storage, as the script might be useful
+        // for analysis or debugging. Disk storage has its own cleanup mechanism.
+
+        logger.info("Invalidated cache for pattern: {}, nodeType: {}", patternDescription, nodeType);
     }
 
     /**
@@ -125,12 +231,12 @@ public class VisitorScriptCache {
      * @return the cache key
      */
     private String generateCacheKey(
-            String projectPath,
-            String patternDescription,
-            String nodeType,
-            List<String> filePaths) {
+            final String projectPath,
+            final String patternDescription,
+            final String nodeType,
+            final List<String> filePaths) {
 
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         sb.append(projectPath != null ? projectPath : "");
         sb.append("|");
         sb.append(patternDescription);
@@ -142,10 +248,10 @@ public class VisitorScriptCache {
         }
 
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(sb.toString().getBytes(StandardCharsets.UTF_8));
+            final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            final byte[] hash = digest.digest(sb.toString().getBytes(StandardCharsets.UTF_8));
             return bytesToHex(hash);
-        } catch (NoSuchAlgorithmException e) {
+        } catch (final NoSuchAlgorithmException e) {
             // Fallback to simple hash if SHA-256 not available
             logger.warn("SHA-256 not available, using simple hash", e);
             return String.valueOf(sb.toString().hashCode());
@@ -155,9 +261,9 @@ public class VisitorScriptCache {
     /**
      * Convert byte array to hex string.
      */
-    private String bytesToHex(byte[] bytes) {
-        StringBuilder result = new StringBuilder();
-        for (byte b : bytes) {
+    private String bytesToHex(final byte[] bytes) {
+        final StringBuilder result = new StringBuilder();
+        for (final byte b : bytes) {
             result.append(String.format("%02x", b));
         }
         return result.toString();
