@@ -1,6 +1,5 @@
 package com.analyzer.refactoring.mcp.performance;
 
-import com.analyzer.refactoring.mcp.service.GroovyScriptGenerationService;
 import com.analyzer.refactoring.mcp.service.VisitorScriptCache;
 import com.analyzer.refactoring.mcp.tool.openrewrite.SearchJavaPatternTool;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,9 +16,6 @@ import java.time.Duration;
 import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
 
 /**
  * Performance tests for SearchJavaPatternTool.
@@ -32,10 +28,12 @@ import static org.mockito.Mockito.when;
  * - Execution time per file
  * - Memory usage
  * 
+ * Uses real services with test credentials.
  * These tests are disabled by default to avoid slowing down regular test runs.
  * Run with: mvn test -Dtest=PerformanceTest
  */
 @SpringBootTest
+@ActiveProfiles("test")
 @Disabled("Performance tests - run manually")
 class PerformanceTest {
 
@@ -45,43 +43,8 @@ class PerformanceTest {
     @Autowired
     private VisitorScriptCache cache;
 
-    @MockBean
-    private GroovyScriptGenerationService mockGenerator;
-
     @TempDir
     Path tempProjectDir;
-
-    private static final String SIMPLE_VISITOR_SCRIPT = """
-            import org.openrewrite.java.JavaIsoVisitor
-            import org.openrewrite.ExecutionContext
-            import org.openrewrite.java.tree.J
-            import org.openrewrite.SourceFile
-            import org.openrewrite.InMemoryExecutionContext
-
-            class PatternVisitor extends JavaIsoVisitor<ExecutionContext> {
-                List<Map<String, Object>> matches = []
-
-                @Override
-                J.ClassDeclaration visitClassDeclaration(J.ClassDeclaration classDecl, ExecutionContext ctx) {
-                    def match = [
-                        nodeId: classDecl.id.toString(),
-                        nodeType: 'ClassDeclaration',
-                        className: classDecl.simpleName,
-                        location: [
-                            file: getCursor().firstEnclosingOrThrow(SourceFile.class).sourcePath.toString(),
-                            line: classDecl.prefix.coordinates.line,
-                            column: classDecl.prefix.coordinates.column
-                        ]
-                    ]
-                    matches.add(match)
-                    return super.visitClassDeclaration(classDecl, ctx)
-                }
-            }
-
-            def visitor = new PatternVisitor()
-            visitor.visit(compilationUnit, new InMemoryExecutionContext())
-            return visitor.matches
-            """;
 
     @BeforeEach
     void setUp() {
@@ -93,17 +56,14 @@ class PerformanceTest {
         // Given: Create test project and populate cache
         createTestProject(10);
 
-        when(mockGenerator.generateVisitorScript(anyString(), anyString(), anyString(), any()))
-                .thenReturn(new GroovyScriptGenerationService.GenerationResult(SIMPLE_VISITOR_SCRIPT, 1));
-
-        // Warm up cache
-        tool.searchJavaPattern(tempProjectDir.toString(), "test", "ClassDeclaration", null);
+        // Warm up cache with template pattern
+        tool.searchJavaPattern(tempProjectDir.toString(), "singleton pattern", "ClassDeclaration", null);
 
         // When: Execute with cache hit
         Instant start = Instant.now();
         String result = tool.searchJavaPattern(
                 tempProjectDir.toString(),
-                "test",
+                "singleton pattern",
                 "ClassDeclaration",
                 null);
         Instant end = Instant.now();
@@ -114,7 +74,6 @@ class PerformanceTest {
 
         assertNotNull(result);
         assertTrue(durationMs < 1000, "Cache hit should be < 1000ms (was " + durationMs + "ms)");
-        // Note: 100ms target may be challenging in test environment
     }
 
     @Test
@@ -122,23 +81,18 @@ class PerformanceTest {
         // Given: Create test project
         createTestProject(10);
 
-        when(mockGenerator.generateVisitorScript(anyString(), anyString(), anyString(), any()))
-                .thenReturn(new GroovyScriptGenerationService.GenerationResult(SIMPLE_VISITOR_SCRIPT, 1));
-
-        // When: Execute with cache miss
+        // When: Execute with cache miss (using template)
         Instant start = Instant.now();
         String result = tool.searchJavaPattern(
                 tempProjectDir.toString(),
-                "test pattern",
-                "ClassDeclaration",
+                "factory pattern",
+                "MethodDeclaration",
                 null);
         Instant end = Instant.now();
 
-        // Then: Should complete within reasonable time (<10s target)
+        // Then: Should complete within reasonable time
         long durationMs = Duration.between(start, end).toMillis();
         System.out.println("Cache miss performance: " + durationMs + "ms");
-        System.out.println("  - Generation: mocked (instant)");
-        System.out.println("  - Compilation + Execution: " + durationMs + "ms");
 
         assertNotNull(result);
         assertTrue(durationMs < 15000, "Cache miss should be < 15s (was " + durationMs + "ms)");
@@ -170,9 +124,6 @@ class PerformanceTest {
         // Given: Create a moderate-sized project
         createTestProject(30);
 
-        when(mockGenerator.generateVisitorScript(anyString(), anyString(), anyString(), any()))
-                .thenReturn(new GroovyScriptGenerationService.GenerationResult(SIMPLE_VISITOR_SCRIPT, 1));
-
         // Measure memory before
         Runtime runtime = Runtime.getRuntime();
         runtime.gc();
@@ -181,7 +132,7 @@ class PerformanceTest {
         // When: Execute search
         String result = tool.searchJavaPattern(
                 tempProjectDir.toString(),
-                "test",
+                "singleton pattern",
                 "ClassDeclaration",
                 null);
 
@@ -202,11 +153,8 @@ class PerformanceTest {
         // Given: Create test project
         createTestProject(20);
 
-        when(mockGenerator.generateVisitorScript(anyString(), anyString(), anyString(), any()))
-                .thenReturn(new GroovyScriptGenerationService.GenerationResult(SIMPLE_VISITOR_SCRIPT, 1));
-
         // Warm up
-        tool.searchJavaPattern(tempProjectDir.toString(), "test", "ClassDeclaration", null);
+        tool.searchJavaPattern(tempProjectDir.toString(), "singleton pattern", "ClassDeclaration", null);
 
         // When: Execute multiple concurrent requests
         int requestCount = 5;
@@ -215,7 +163,7 @@ class PerformanceTest {
         for (int i = 0; i < requestCount; i++) {
             String result = tool.searchJavaPattern(
                     tempProjectDir.toString(),
-                    "test",
+                    "singleton pattern",
                     "ClassDeclaration",
                     null);
             assertNotNull(result);
@@ -237,14 +185,11 @@ class PerformanceTest {
     // Helper methods
 
     private void measurePerformance(String label) throws Exception {
-        when(mockGenerator.generateVisitorScript(anyString(), anyString(), anyString(), any()))
-                .thenReturn(new GroovyScriptGenerationService.GenerationResult(SIMPLE_VISITOR_SCRIPT, 1));
-
         Instant start = Instant.now();
 
         String result = tool.searchJavaPattern(
                 tempProjectDir.toString(),
-                "test pattern",
+                "singleton pattern",
                 "ClassDeclaration",
                 null);
 

@@ -3,6 +3,7 @@ package com.analyzer.refactoring.mcp.service;
 import com.analyzer.refactoring.mcp.model.OpenRewriteVisitorScript;
 import com.analyzer.refactoring.mcp.tool.openrewrite.SearchJavaPatternTool.PatternMatch;
 import com.analyzer.refactoring.mcp.tool.openrewrite.SearchJavaPatternTool.LocationInfo;
+import com.analyzer.refactoring.mcp.util.PositionTracker;
 import org.openrewrite.ExecutionContext;
 import org.openrewrite.InMemoryExecutionContext;
 import org.openrewrite.java.JavaParser;

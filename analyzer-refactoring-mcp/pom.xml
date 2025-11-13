@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
          https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    
+
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -29,6 +29,17 @@
         <eclipse.resources.version>3.23.0</eclipse.resources.version>
         <eclipse.ltk.version>3.15.0</eclipse.ltk.version>
         <openrewrite.version>8.66.1</openrewrite.version>
+
+        <commons-io.version>2.20.0</commons-io.version>
+        <commons-jexl3.version>3.3</commons-jexl3.version>
+        <validation-api.version>2.0.1.Final</validation-api.version>
+        <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
+        <jakarta.el.version>3.0.4</jakarta.el.version>
+        <org.eclipse.osgi.version>3.23.200</org.eclipse.osgi.version>
+        <org.eclipse.equinox.common.version>3.20.200</org.eclipse.equinox.common.version>
+        <org.eclipse.jdt.launching.version>3.23.400</org.eclipse.jdt.launching.version>
+
+        <bedrockruntime.version>2.38.4</bedrockruntime.version>
     </properties>
 
     <dependencies>
@@ -82,7 +93,7 @@
             <artifactId>org.eclipse.jdt.core</artifactId>
             <version>${eclipse.jdt.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.core.runtime</artifactId>
@@ -92,28 +103,28 @@
         <dependency>
             <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.osgi</artifactId>
-            <version>3.23.200</version>
+            <version>${org.eclipse.osgi.version}</version>
         </dependency>
 
 
         <dependency>
             <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.equinox.common</artifactId>
-            <version>3.20.200</version>
+            <version>${org.eclipse.equinox.common.version}</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jdt</groupId>
             <artifactId>org.eclipse.jdt.launching</artifactId>
-            <version>3.23.400</version>
+            <version>${org.eclipse.jdt.launching.version}</version>
         </dependency>
 
-        
+
         <dependency>
             <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.text</artifactId>
             <version>${eclipse.text.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.ltk.core.refactoring</artifactId>
@@ -169,6 +180,12 @@
                 <version>${openrewrite.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bedrockruntime</artifactId>
+                <version>${bedrockruntime.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

@@ -42,11 +42,11 @@ class DeepNestingAntiPatternVisitor extends JavaIsoVisitor<ExecutionContext> {
                     nestingDepth: maxDepth,
                     severity: maxDepth > NESTING_THRESHOLD * 2 ? 'HIGH' : 'MEDIUM'
                 ],
-                location: [
-                    file: getCursor().firstEnclosingOrThrow(SourceFile.class).sourcePath.toString(),
-                    line: method.prefix.coordinates.line,
-                    column: method.prefix.coordinates.column
-                ]
+                    location: [
+                        file: getCursor().firstEnclosingOrThrow(SourceFile.class).sourcePath.toString(),
+                        line: 0,  // Line information not easily accessible in OpenRewrite
+                        column: 0
+                    ]
             ]
             matches.add(match)
         }

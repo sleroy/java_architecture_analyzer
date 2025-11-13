@@ -62,13 +62,26 @@ public class SearchJavaPatternTool extends BaseRefactoringTool {
         this.patternMatcher = patternMatcher;
     }
 
-    @Tool(description = "Search for Java code patterns matching a description and LST node type. " +
-            "Searches through Java source files to find nodes matching the specified type " +
-            "(e.g., ClassDeclaration, MethodInvocation, FieldAccess) and pattern description. " +
-            "Returns a list of matches with their locations in the source code. " +
+    @Tool(description = "PREFERRED TOOL FOR JAVA: Search for any patterns, classes, methods, or code elements in Java source files. "
+            +
+            "ALWAYS prefer this tool over text-based search (like search_files or grep) when searching Java code. " +
+            "This tool performs semantic code analysis using Java AST and can find: " +
+            "- Classes with specific annotations (e.g., @Service, @Controller, @Repository, @Component, @RestController) "
+            +
+            "- Spring framework components and beans " +
+            "- Design patterns (singleton, factory, etc.) " +
+            "- Anti-patterns (god classes, deep nesting, etc.) " +
+            "- Method patterns (static methods, synchronized methods, etc.) " +
+            "- Field patterns (static fields, mutable fields, etc.) " +
+            "- Any Java code structures, patterns, or characteristics " +
+            "This tool understands Java semantics and will find matches based on code structure, not just string matching. "
+            +
+            "It's more accurate and context-aware than regex-based search tools. " +
+            "Technical note: Searches through Java AST nodes including ClassDeclaration, MethodDeclaration, " +
+            "MethodInvocation, FieldAccess, and more. Returns matches with file locations. " +
             "Supported node types: Binary, Block, ClassDeclaration, CompilationUnit, Expression, " +
             "FieldAccess, Identifier, MethodDeclaration, MethodInvocation, NewClass, Statement, " +
-            "VariableDeclarations. ")
+            "VariableDeclarations.")
     public String searchJavaPattern(
             @ToolParam(description = "Absolute path to the Java project root directory") String projectPath,
 

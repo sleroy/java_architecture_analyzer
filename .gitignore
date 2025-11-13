@@ -91,3 +91,4 @@ graph-data.json
 project-analysis.json
 *.iml
 /analyzer-refactoring-mcp/src/main/resources/application-test.properties
+/analyzer-refactoring-mcp/src/main/resources/application-*.properties

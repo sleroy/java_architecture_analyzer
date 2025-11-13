@@ -1,6 +1,10 @@
 package com.analyzer.refactoring.mcp.service;
 
 import com.analyzer.refactoring.mcp.model.OpenRewriteVisitorScript;
+import org.openrewrite.ExecutionContext;
+import org.openrewrite.InMemoryExecutionContext;
+import org.openrewrite.java.JavaParser;
+import org.openrewrite.java.tree.J;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -149,10 +153,43 @@ public class GroovyScriptExecutionService {
 
     /**
      * Create test bindings for script validation.
+     * Provides a minimal test compilation unit for validation purposes.
      */
     private Bindings createTestBindings() {
         Bindings bindings = groovyEngine.createBindings();
-        // Add any necessary test objects here
+
+        try {
+            // Create a simple test Java source for validation
+            String testSource = """
+                    package test;
+
+                    public class TestClass {
+                        public void testMethod() {
+                            // Test method
+                        }
+                    }
+                    """;
+
+            // Parse into a compilation unit
+            JavaParser javaParser = JavaParser.fromJavaVersion().build();
+            J.CompilationUnit compilationUnit = javaParser.parse(testSource)
+                    .findFirst()
+                    .map(cu -> (J.CompilationUnit) cu)
+                    .orElse(null);
+
+            // Add required bindings for script validation
+            bindings.put("compilationUnit", compilationUnit);
+            bindings.put("executionContext", new InMemoryExecutionContext());
+
+            logger.debug("Created test bindings with mock compilation unit");
+
+        } catch (Exception e) {
+            logger.warn("Failed to create test compilation unit, using null: {}", e.getMessage());
+            // Provide null as fallback - some scripts might handle this
+            bindings.put("compilationUnit", null);
+            bindings.put("executionContext", new InMemoryExecutionContext());
+        }
+
         return bindings;
     }
 

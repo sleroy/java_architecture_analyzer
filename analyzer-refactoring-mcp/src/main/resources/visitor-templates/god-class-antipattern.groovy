@@ -51,8 +51,8 @@ class GodClassAntiPatternVisitor extends JavaIsoVisitor<ExecutionContext> {
                 ],
                 location: [
                     file: getCursor().firstEnclosingOrThrow(SourceFile.class).sourcePath.toString(),
-                    line: classDecl.prefix.coordinates.line,
-                    column: classDecl.prefix.coordinates.column
+                    line: 0,  // Line information not easily accessible in OpenRewrite
+                    column: 0
                 ]
             ]
             matches.add(match)

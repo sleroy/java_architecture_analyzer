@@ -37,8 +37,8 @@ class FactoryPatternVisitor extends JavaIsoVisitor<ExecutionContext> {
                     fieldName: null,
                     location: [
                         file: getCursor().firstEnclosingOrThrow(SourceFile.class).sourcePath.toString(),
-                        line: method.prefix.coordinates.line,
-                        column: method.prefix.coordinates.column
+                        line: 0,  // Line information not easily accessible in OpenRewrite
+                        column: 0
                     ]
                 ]
                 matches.add(match)
