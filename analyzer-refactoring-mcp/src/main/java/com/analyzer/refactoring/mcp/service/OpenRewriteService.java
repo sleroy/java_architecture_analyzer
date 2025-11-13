@@ -65,7 +65,7 @@ public class OpenRewriteService {
             List<String> interfaceFiles,
             boolean updateReferences) {
         
-        Recipe recipe = new RemoveEjbInterfaceRecipe();
+        Recipe recipe = new RemoveEjbInterfaceRecipe("ALL");
         return executeRecipe(projectPath, interfaceFiles, recipe, "RemoveEjbInterfaces");
     }
     
@@ -97,11 +97,10 @@ public class OpenRewriteService {
                 
                 try {
                     List<Path> paths = Collections.singletonList(fullPath);
-                    Iterable<SourceFile> parsed = javaParser.parse(paths, basePath, new InMemoryExecutionContext());
+                    List<SourceFile> parsed = javaParser.parse(paths, basePath, new InMemoryExecutionContext())
+                        .toList();
                     
-                    for (SourceFile sf : parsed) {
-                        sourceFiles.add(sf);
-                    }
+                    sourceFiles.addAll(parsed);
                 } catch (Exception e) {
                     logger.error("Error parsing file: " + filePath, e);
                     result.addFailed(filePath, "Parse error: " + e.getMessage());
@@ -114,28 +113,31 @@ public class OpenRewriteService {
                 return result;
             }
             
-            // Execute recipe
+            // Apply recipe visitor to each file
             ExecutionContext ctx = new InMemoryExecutionContext();
-            List<Result> results = recipe.run(sourceFiles, ctx).getChangeset().getAllResults();
+            TreeVisitor<?, ExecutionContext> visitor = recipe.getVisitor();
             
-            // Process results
-            for (Result res : results) {
-                SourceFile before = res.getBefore();
-                SourceFile after = res.getAfter();
-                
-                if (after != null && !before.printAll().equals(after.printAll())) {
-                    // Write changes back to file
-                    Path sourcePath = basePath.resolve(before.getSourcePath());
+            for (SourceFile sourceFile : sourceFiles) {
+                try {
+                    SourceFile transformed = (SourceFile) visitor.visit(sourceFile, ctx);
                     
-                    try {
-                        Files.writeString(sourcePath, after.printAll());
-                        result.addProcessed(before.getSourcePath().toString(), 1);
-                    } catch (IOException e) {
-                        logger.error("Error writing file: " + sourcePath, e);
-                        result.addFailed(before.getSourcePath().toString(), "Write error: " + e.getMessage());
+                    if (transformed != null && !sourceFile.printAll().equals(transformed.printAll())) {
+                        // Write changes back to file
+                        Path sourcePath = basePath.resolve(sourceFile.getSourcePath());
+                        
+                        try {
+                            Files.writeString(sourcePath, transformed.printAll());
+                            result.addProcessed(sourceFile.getSourcePath().toString(), 1);
+                        } catch (IOException e) {
+                            logger.error("Error writing file: " + sourcePath, e);
+                            result.addFailed(sourceFile.getSourcePath().toString(), "Write error: " + e.getMessage());
+                        }
+                    } else {
+                        result.addSkipped(sourceFile.getSourcePath().toString(), "No changes needed");
                     }
-                } else {
-                    result.addSkipped(before.getSourcePath().toString(), "No changes needed");
+                } catch (Exception e) {
+                    logger.error("Error processing file: " + sourceFile.getSourcePath(), e);
+                    result.addFailed(sourceFile.getSourcePath().toString(), "Recipe error: " + e.getMessage());
                 }
             }
             
