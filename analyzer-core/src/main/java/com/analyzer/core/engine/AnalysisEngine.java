@@ -175,9 +175,17 @@ public class AnalysisEngine {
         logger.info("=== PHASE 3: Multi-pass ProjectFile Analysis ===");
         executeMultiPassInspectors(project, requestedInspectors, maxPasses);
 
+        // PHASE 3.5: Global ProjectFile Inspectors (after all node-by-node processing)
+        logger.info("=== PHASE 3.5: Global ProjectFile Inspectors ===");
+        executeGlobalProjectFileInspectors(project);
+
         // PHASE 4: Multi-pass ClassNode Analysis with Convergence Detection
         logger.info("=== PHASE 4: Multi-pass ClassNode Analysis ===");
         executeMultiPassOnClassNodes(project, maxPasses);
+
+        // PHASE 5: Global ClassNode Inspectors (after all node-by-node processing)
+        logger.info("=== PHASE 5: Global ClassNode Inspectors ===");
+        executeGlobalClassNodeInspectors(project);
 
         // Step 7: Store the project data in JSON format
         saveProjectAnalysisToJson(project);
@@ -506,14 +514,145 @@ public class AnalysisEngine {
     }
 
     /**
-     * Gets ClassNode inspectors from the inspector registry.
+     * Gets non-global ClassNode inspectors from the inspector registry.
+     * These are the regular inspectors that run node-by-node in Phase 4.
      *
-     * @return list of ClassNode inspectors
+     * @return list of non-global ClassNode inspectors
      */
     @SuppressWarnings("unchecked")
     private List<Inspector<JavaClassNode>> getClassNodeInspectors() {
         return (List<Inspector<JavaClassNode>>) (List<?>) inspectorRegistry
-                .getClassNodeInspectors();
+                .getNonGlobalClassNodeInspectors();
+    }
+
+    /**
+     * PHASE 3.5: Global ProjectFile Inspectors
+     * Executes global inspectors that require all ProjectFiles to be processed
+     * first.
+     * These inspectors run once over all files after the multi-pass Phase 3
+     * completes.
+     */
+    private void executeGlobalProjectFileInspectors(Project project) {
+        List<Inspector<ProjectFile>> globalInspectors = getGlobalProjectFileInspectors();
+
+        if (globalInspectors.isEmpty()) {
+            logger.info("No global ProjectFile inspectors found, skipping Phase 3.5");
+            return;
+        }
+
+        Collection<ProjectFile> projectFiles = project.getProjectFiles().values();
+        logger.info("Phase 3.5: Executing {} global inspectors on {} project files",
+                globalInspectors.size(), projectFiles.size());
+
+        // List the global inspectors being executed
+        List<String> inspectorNames = globalInspectors.stream()
+                .map(Inspector::getName)
+                .toList();
+        logger.info("Global ProjectFile inspectors: [{}]", String.join(", ", inspectorNames));
+
+        try (ProgressBar pb = new ProgressBar("Phase 3.5: Global Inspectors",
+                globalInspectors.size() * projectFiles.size())) {
+            for (Inspector<ProjectFile> inspector : globalInspectors) {
+                logger.debug("Executing global inspector: {}", inspector.getName());
+
+                for (ProjectFile projectFile : projectFiles) {
+                    try {
+                        if (inspector.canProcess(projectFile)) {
+                            localCache.reset();
+                            NodeDecorator<ProjectFile> decorator = new NodeDecorator<>(projectFile);
+                            inspector.inspect(projectFile, decorator);
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error running global inspector '{}' on file '{}': {}",
+                                inspector.getName(), projectFile.getRelativePath(), e.getMessage());
+                    }
+                    pb.step();
+                }
+            }
+        }
+
+        logger.info("Phase 3.5 completed: {} global inspectors executed", globalInspectors.size());
+    }
+
+    /**
+     * PHASE 5: Global ClassNode Inspectors
+     * Executes global inspectors that require all ClassNodes to be processed first.
+     * These inspectors run once over all classes after the multi-pass Phase 4
+     * completes.
+     */
+    private void executeGlobalClassNodeInspectors(Project project) {
+        List<Inspector<JavaClassNode>> globalInspectors = getGlobalClassNodeInspectors();
+
+        if (globalInspectors.isEmpty()) {
+            logger.info("No global ClassNode inspectors found, skipping Phase 5");
+            return;
+        }
+
+        if (classNodeRepository == null) {
+            logger.warn("ClassNodeRepository not configured, skipping Phase 5");
+            return;
+        }
+
+        List<JavaClassNode> classNodes = classNodeRepository.findAll();
+
+        if (classNodes.isEmpty()) {
+            logger.info("No JavaClassNode objects to analyze, skipping Phase 5");
+            return;
+        }
+
+        logger.info("Phase 5: Executing {} global inspectors on {} class nodes",
+                globalInspectors.size(), classNodes.size());
+
+        // List the global inspectors being executed
+        List<String> inspectorNames = globalInspectors.stream()
+                .map(Inspector::getName)
+                .toList();
+        logger.info("Global ClassNode inspectors: [{}]", String.join(", ", inspectorNames));
+
+        try (ProgressBar pb = new ProgressBar("Phase 5: Global Inspectors",
+                globalInspectors.size() * classNodes.size())) {
+            for (Inspector<JavaClassNode> inspector : globalInspectors) {
+                logger.debug("Executing global inspector: {}", inspector.getName());
+
+                for (JavaClassNode classNode : classNodes) {
+                    try {
+                        if (inspector.canProcess(classNode)) {
+                            localCache.reset();
+                            NodeDecorator<JavaClassNode> decorator = new NodeDecorator<>(classNode);
+                            inspector.inspect(classNode, decorator);
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error running global inspector '{}' on class '{}': {}",
+                                inspector.getName(), classNode.getFullyQualifiedName(), e.getMessage());
+                    }
+                    pb.step();
+                }
+            }
+        }
+
+        logger.info("Phase 5 completed: {} global inspectors executed", globalInspectors.size());
+    }
+
+    /**
+     * Gets global ProjectFile inspectors from the inspector registry.
+     *
+     * @return list of global ProjectFile inspectors
+     */
+    @SuppressWarnings("unchecked")
+    private List<Inspector<ProjectFile>> getGlobalProjectFileInspectors() {
+        return (List<Inspector<ProjectFile>>) (List<?>) inspectorRegistry
+                .getGlobalProjectFileInspectors();
+    }
+
+    /**
+     * Gets global ClassNode inspectors from the inspector registry.
+     *
+     * @return list of global ClassNode inspectors
+     */
+    @SuppressWarnings("unchecked")
+    private List<Inspector<JavaClassNode>> getGlobalClassNodeInspectors() {
+        return (List<Inspector<JavaClassNode>>) (List<?>) inspectorRegistry
+                .getGlobalClassNodeInspectors();
     }
 
     /**

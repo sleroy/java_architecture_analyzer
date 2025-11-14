@@ -1,7 +1,9 @@
 package com.analyzer.refactoring.mcp.config;
 
+import com.analyzer.refactoring.mcp.security.PathSecurityValidator;
 import com.analyzer.refactoring.mcp.service.AnalysisService;
 import com.analyzer.refactoring.mcp.service.EjbMigrationService;
+import com.analyzer.refactoring.mcp.service.GraphDatabaseService;
 import com.analyzer.refactoring.mcp.tool.ejb.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,8 +22,11 @@ public class EjbToolConfiguration {
     }
 
     @Bean
-    public ExtractClassMetadataTool extractClassMetadataTool(final EjbMigrationService migrationService) {
-        return new ExtractClassMetadataTool(migrationService);
+    public ExtractClassMetadataTool extractClassMetadataTool(
+            final EjbMigrationService migrationService,
+            final GraphDatabaseService graphDatabaseService,
+            final PathSecurityValidator pathSecurityValidator) {
+        return new ExtractClassMetadataTool(migrationService, graphDatabaseService, pathSecurityValidator);
     }
 
     @Bean

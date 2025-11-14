@@ -1,6 +1,7 @@
 package com.analyzer.refactoring.mcp.config;
 
 import com.analyzer.refactoring.mcp.tool.ejb.*;
+import com.analyzer.refactoring.mcp.tool.graph.*;
 import com.analyzer.refactoring.mcp.tool.jdt.*;
 import com.analyzer.refactoring.mcp.tool.openrewrite.*;
 import org.springframework.ai.support.ToolCallbacks;
@@ -97,7 +98,13 @@ public class ToolAggregationConfiguration {
             ConvertToConstructorInjectionTool convertToConstructorInjectionTool,
             MigrateSecurityAnnotationsTool migrateSecurityAnnotationsTool,
             RemoveEjbInterfaceTool removeEjbInterfaceTool,
-            SearchReplaceJavaPatternTool searchReplaceJavaPatternTool) {
+            SearchReplaceJavaPatternTool searchReplaceJavaPatternTool,
+            QueryGraphStatisticsTool queryGraphStatisticsTool,
+            QueryClassDependenciesTool queryClassDependenciesTool,
+            QueryClassMetricsTool queryClassMetricsTool,
+            QueryClassesByTagTool queryClassesByTagTool,
+            QueryClassesByPropertyTool queryClassesByPropertyTool,
+            QueryClassRelationshipsTool queryClassRelationshipsTool) {
         return Arrays.asList(ToolCallbacks.from(
                 // Active EJB and Analysis tools
                 extractClassMetadataTool,
@@ -111,7 +118,14 @@ public class ToolAggregationConfiguration {
                 convertToConstructorInjectionTool,
                 migrateSecurityAnnotationsTool,
                 removeEjbInterfaceTool,
-                searchReplaceJavaPatternTool)
+                searchReplaceJavaPatternTool,
+                // Active Graph Database Query tools
+                queryGraphStatisticsTool,
+                queryClassDependenciesTool,
+                queryClassMetricsTool,
+                queryClassesByTagTool,
+                queryClassesByPropertyTool,
+                queryClassRelationshipsTool)
         /*
          * JDT Refactoring tools (currently disabled):
          * Uncomment these to enable Eclipse JDT refactoring capabilities

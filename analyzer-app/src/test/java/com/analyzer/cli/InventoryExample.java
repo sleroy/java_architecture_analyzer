@@ -18,14 +18,15 @@ public class InventoryExample {
 
     public static void main(String[] args) throws IOException {
 
-        final Path projectFolder = Paths.get("demo-ejb2-project").toAbsolutePath();
+        //final Path projectFolder = Paths.get("demo-ejb2-project").toAbsolutePath();
+        final Path projectFolder = Paths.get("/home/sleroy/git/insurance").toAbsolutePath();
         String folder = projectFolder.toString();
         Path configFile = Paths.get(folder).resolve(Project.DEFAULT_FILE_NAME);
         if (Files.exists(configFile)) {
             Files.delete(configFile);
         }
 
-        int exitCode = new CommandLine(new AnalyzerCLI()).execute("inventory", "--project", folder, "--java_version", "17", "--packages", "com.example");
+        int exitCode = new CommandLine(new AnalyzerCLI()).execute("inventory", "--project", folder, "--java_version", "17", "--packages", "pl");
 
 
         logger.info("---------------------------------------------------------------");

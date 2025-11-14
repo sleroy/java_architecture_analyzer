@@ -106,7 +106,6 @@ public class InspectorRegistry {
         return analysisContainer.getComponents(Inspector.class);
     }
 
-
     /**
      * Gets all JavaClassNode inspectors (NEW - for Phase 4 analysis).
      * These inspectors analyze JavaClassNode objects.
@@ -122,6 +121,95 @@ public class InspectorRegistry {
             }
         }
         return classNodeInspectors;
+    }
+
+    /**
+     * Gets all global ClassNode inspectors that require all nodes to be processed
+     * before execution.
+     * These inspectors run in Phase 5 after the multi-pass Phase 4 completes.
+     *
+     * @return list of global inspectors for JavaClassNode
+     */
+    @SuppressWarnings("unchecked")
+    public List<Inspector> getGlobalClassNodeInspectors() {
+        List<Inspector> globalInspectors = new ArrayList<>();
+        for (Inspector inspector : getAllInspectors()) {
+            if (inspector.getTargetType() == InspectorTargetType.JAVA_CLASS_NODE
+                    && isGlobalInspector(inspector)) {
+                globalInspectors.add(inspector);
+            }
+        }
+        return globalInspectors;
+    }
+
+    /**
+     * Gets all non-global ClassNode inspectors that run node-by-node.
+     * These are the regular inspectors that run in Phase 4 multi-pass execution.
+     *
+     * @return list of non-global inspectors for JavaClassNode
+     */
+    @SuppressWarnings("unchecked")
+    public List<Inspector> getNonGlobalClassNodeInspectors() {
+        List<Inspector> nonGlobalInspectors = new ArrayList<>();
+        for (Inspector inspector : getAllInspectors()) {
+            if (inspector.getTargetType() == InspectorTargetType.JAVA_CLASS_NODE
+                    && !isGlobalInspector(inspector)) {
+                nonGlobalInspectors.add(inspector);
+            }
+        }
+        return nonGlobalInspectors;
+    }
+
+    /**
+     * Gets all global ProjectFile inspectors that require all nodes to be processed
+     * before execution.
+     * These inspectors run in Phase 3.5 after the multi-pass Phase 3 completes.
+     *
+     * @return list of global inspectors for ProjectFile
+     */
+    @SuppressWarnings("unchecked")
+    public List<Inspector> getGlobalProjectFileInspectors() {
+        List<Inspector> globalInspectors = new ArrayList<>();
+        for (Inspector inspector : getAllInspectors()) {
+            InspectorTargetType targetType = inspector.getTargetType();
+            if ((targetType == InspectorTargetType.PROJECT_FILE || targetType == InspectorTargetType.ANY)
+                    && isGlobalInspector(inspector)) {
+                globalInspectors.add(inspector);
+            }
+        }
+        return globalInspectors;
+    }
+
+    /**
+     * Gets all non-global ProjectFile inspectors that run node-by-node.
+     * These are the regular inspectors that run in Phase 3 multi-pass execution.
+     *
+     * @return list of non-global inspectors for ProjectFile
+     */
+    @SuppressWarnings("unchecked")
+    public List<Inspector> getNonGlobalProjectFileInspectors() {
+        List<Inspector> nonGlobalInspectors = new ArrayList<>();
+        for (Inspector inspector : getAllInspectors()) {
+            InspectorTargetType targetType = inspector.getTargetType();
+            if ((targetType == InspectorTargetType.PROJECT_FILE || targetType == InspectorTargetType.ANY)
+                    && !isGlobalInspector(inspector)) {
+                nonGlobalInspectors.add(inspector);
+            }
+        }
+        return nonGlobalInspectors;
+    }
+
+    /**
+     * Checks if an inspector is a global inspector that requires all nodes
+     * to be processed before execution.
+     *
+     * @param inspector the inspector to check
+     * @return true if the inspector has requiresAllNodesProcessed=true
+     */
+    private boolean isGlobalInspector(Inspector inspector) {
+        com.analyzer.api.inspector.InspectorDependencies annotation = inspector.getClass()
+                .getAnnotation(com.analyzer.api.inspector.InspectorDependencies.class);
+        return annotation != null && annotation.requiresAllNodesProcessed();
     }
 
     // ==================== Collector Retrieval (NEW) ====================
@@ -205,7 +293,6 @@ public class InspectorRegistry {
     public int getInspectorCount() {
         return getAllInspectors().size();
     }
-
 
     /**
      * Gets all inspector names.

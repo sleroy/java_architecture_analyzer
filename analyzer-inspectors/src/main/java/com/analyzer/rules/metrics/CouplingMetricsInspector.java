@@ -22,7 +22,6 @@ import java.util.Set;
 
 import static com.analyzer.rules.graph.BinaryClassCouplingGraphInspector.*;
 
-
 /**
  * Inspector that calculates comprehensive coupling metrics for Java classes.
  *
@@ -49,14 +48,14 @@ import static com.analyzer.rules.graph.BinaryClassCouplingGraphInspector.*;
  * @author Java Architecture Analyzer
  * @since Coupling Metrics Enhancement
  */
-@InspectorDependencies(need = BinaryClassCouplingGraphInspector.class, produces = "java.class.coupling_metrics.calculated")
+@InspectorDependencies(need = BinaryClassCouplingGraphInspector.class, produces = "java.class.coupling_metrics.calculated", requiresAllNodesProcessed = true)
 public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
 
     private static final Logger logger = LoggerFactory.getLogger(CouplingMetricsInspector.class);
 
     private final GraphRepository graphRepository;
 
-    // Lazy-initialized graph cache
+    // Graph cache - built once at start since this runs in Phase 5
     private Graph<GraphNode, GraphEdge> cachedGraph;
 
     @Inject
@@ -66,9 +65,10 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
 
     @Override
     public void inspect(final JavaClassNode node, final NodeDecorator<JavaClassNode> decorator) {
-        // Lazy-initialize the graph on first call
+        // Build graph once on first call - all nodes are already processed by
+        // BinaryClassCouplingGraphInspector
         if (cachedGraph == null) {
-            logger.info("Building coupling graph for metrics calculation...");
+            logger.info("Building coupling graph for metrics calculation (Phase 5: Global Inspector)...");
             cachedGraph = graphRepository.buildGraph(
                     Set.of(NodeTypeRegistry.getAllTypes().get(JavaClassNode.class)),
                     Set.of(EDGE_EXTENDS, EDGE_IMPLEMENTS, EDGE_USES));
@@ -98,7 +98,7 @@ public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
      * Calculates all coupling metrics for a single class.
      */
     private void calculateMetricsForClass(final Graph<GraphNode, GraphEdge> graph, final JavaClassNode classNode,
-                                          final NodeDecorator<JavaClassNode> decorator) {
+            final NodeDecorator<JavaClassNode> decorator) {
         // 1. Direct coupling metrics (1-hop)
         final int directAfferent = calculateDirectAfferent(graph, classNode);
         final int directEfferent = calculateDirectEfferent(graph, classNode);

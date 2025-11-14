@@ -37,7 +37,7 @@ import java.util.*;
  * @author Java Architecture Analyzer
  * @since Coupling Metrics Enhancement - Package Level
  */
-@InspectorDependencies(need = CouplingMetricsInspector.class, produces = "java.package.coupling_metrics.calculated")
+@InspectorDependencies(need = CouplingMetricsInspector.class, produces = "java.package.coupling_metrics.calculated", requiresAllNodesProcessed = true)
 public class PackageCouplingMetricsInspector implements Inspector<PackageNode> {
 
     public static final String EDGE_DEPENDS = "depends";
@@ -45,7 +45,7 @@ public class PackageCouplingMetricsInspector implements Inspector<PackageNode> {
     private final GraphRepository graphRepository;
     private final PackageNodeRepository packageNodeRepository;
 
-    // Cache for package graph
+    // Cache for package graph - built once since this runs as a global inspector
     private Graph<GraphNode, GraphEdge> packageGraphCache;
 
     @Inject
@@ -98,7 +98,8 @@ public class PackageCouplingMetricsInspector implements Inspector<PackageNode> {
             final GraphNode source = classGraph.getEdgeSource(edge);
             final GraphNode target = classGraph.getEdgeTarget(edge);
 
-            if (source instanceof final JavaClassNode sourceClass && target instanceof final JavaClassNode targetClass) {
+            if (source instanceof final JavaClassNode sourceClass
+                    && target instanceof final JavaClassNode targetClass) {
 
                 String sourcePackage = sourceClass.getPackageName();
                 String targetPackage = targetClass.getPackageName();

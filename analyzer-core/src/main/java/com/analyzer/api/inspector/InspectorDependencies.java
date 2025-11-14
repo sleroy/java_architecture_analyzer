@@ -79,4 +79,53 @@ public @interface InspectorDependencies {
      */
     String[] produces();
 
+    /**
+     * Indicates whether this inspector requires all nodes to be processed by its
+     * dependencies before it can execute.
+     * 
+     * <p>
+     * Global inspectors (requiresAllNodesProcessed = true) have special execution
+     * semantics:
+     * </p>
+     * <ul>
+     * <li>They run AFTER the multi-pass node-by-node phase completes</li>
+     * <li>They are executed in a separate "Global Inspectors" phase</li>
+     * <li>All their dependency inspectors have already processed all nodes</li>
+     * <li>They can iterate over all nodes or use completed graph structures</li>
+     * </ul>
+     * 
+     * <p>
+     * Example use case: CouplingMetricsInspector needs
+     * BinaryClassCouplingGraphInspector
+     * to run on ALL classes before it can calculate coupling metrics, because it
+     * needs
+     * the complete graph structure.
+     * </p>
+     * 
+     * <p>
+     * Example usage:
+     * </p>
+     * 
+     * <pre>
+     * {
+     *     &#64;code
+     *     &#64;InspectorDependencies(need = BinaryClassCouplingGraphInspector.class, produces = "java.class.coupling_metrics.calculated", requiresAllNodesProcessed = true // This
+     *                                                                                                                                                                  // inspector
+     *                                                                                                                                                                  // needs
+     *                                                                                                                                                                  // complete
+     *                                                                                                                                                                  // graph
+     *     )
+     *     public class CouplingMetricsInspector implements Inspector<JavaClassNode> {
+     *         // This will run after ALL classes have been processed by
+     *         // BinaryClassCouplingGraphInspector
+     *     }
+     * }
+     * </pre>
+     * 
+     * @return true if this inspector needs all nodes processed before execution,
+     *         false for
+     *         normal node-by-node execution (default: false)
+     */
+    boolean requiresAllNodesProcessed() default false;
+
 }

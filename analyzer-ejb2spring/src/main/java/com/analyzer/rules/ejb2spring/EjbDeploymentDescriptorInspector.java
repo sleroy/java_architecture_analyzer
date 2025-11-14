@@ -206,7 +206,7 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
 
     private BeanMetadata parseSessionBean(Element element) {
         BeanMetadata bean = new BeanMetadata();
-        bean.beanType = "session";
+        bean.beanType = Constants.BEAN_TYPE_SESSION;
         bean.ejbName = getTextContent(element, "ejb-name");
         bean.ejbClass = getTextContent(element, "ejb-class");
         bean.homeInterface = getTextContent(element, "home");
@@ -215,12 +215,14 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
         bean.localInterface = getTextContent(element, "local");
         bean.sessionType = getTextContent(element, "session-type");
         bean.transactionType = getTextContent(element, "transaction-type");
+        bean.transactionManagement = bean.transactionType; // Container or Bean
+        bean.envEntries = parseEnvEntries(element);
         return bean;
     }
 
     private BeanMetadata parseEntityBean(Element element) {
         BeanMetadata bean = new BeanMetadata();
-        bean.beanType = "entity";
+        bean.beanType = Constants.BEAN_TYPE_ENTITY;
         bean.ejbName = getTextContent(element, "ejb-name");
         bean.ejbClass = getTextContent(element, "ejb-class");
         bean.homeInterface = getTextContent(element, "home");
@@ -230,17 +232,49 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
         bean.persistenceType = getTextContent(element, "persistence-type");
         bean.primaryKeyClass = getTextContent(element, "prim-key-class");
         bean.transactionType = getTextContent(element, "transaction-type");
+        bean.transactionManagement = bean.transactionType; // Container or Bean
+        bean.envEntries = parseEnvEntries(element);
         return bean;
     }
 
     private BeanMetadata parseMessageDrivenBean(Element element) {
         BeanMetadata bean = new BeanMetadata();
-        bean.beanType = "message-driven";
+        bean.beanType = Constants.BEAN_TYPE_MESSAGE_DRIVEN;
         bean.ejbName = getTextContent(element, "ejb-name");
         bean.ejbClass = getTextContent(element, "ejb-class");
         bean.transactionType = getTextContent(element, "transaction-type");
+        bean.transactionManagement = bean.transactionType; // Container or Bean
         bean.messageDestinationType = getTextContent(element, "message-destination-type");
+        bean.envEntries = parseEnvEntries(element);
         return bean;
+    }
+
+    /**
+     * Parse environment entries from a bean element.
+     *
+     * @param beanElement The bean element containing env-entry elements
+     * @return List of parsed environment entries
+     */
+    private List<EnvEntry> parseEnvEntries(Element beanElement) {
+        List<EnvEntry> entries = new ArrayList<>();
+        NodeList envEntryNodes = beanElement.getElementsByTagName(Constants.XML_ENV_ENTRY);
+
+        for (int i = 0; i < envEntryNodes.getLength(); i++) {
+            Element envEntryElement = (Element) envEntryNodes.item(i);
+
+            EnvEntry entry = new EnvEntry();
+            entry.name = getTextContent(envEntryElement, Constants.XML_ENV_ENTRY_NAME);
+            entry.type = getTextContent(envEntryElement, Constants.XML_ENV_ENTRY_TYPE);
+            entry.value = getTextContent(envEntryElement, Constants.XML_ENV_ENTRY_VALUE);
+
+            // Only add if we have at least a name
+            if (entry.name != null && !entry.name.trim().isEmpty()) {
+                entries.add(entry);
+                logger.debug("Parsed env-entry: {}", entry);
+            }
+        }
+
+        return entries;
     }
 
     private List<TransactionConfiguration> extractTransactionConfigurations(Document doc) {
@@ -272,7 +306,7 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
             return configs;
         }
 
-        NodeList methods = containerTx.getElementsByTagName("method");
+        NodeList methods = containerTx.getElementsByTagName(Constants.XML_METHOD);
         for (int i = 0; i < methods.getLength(); i++) {
             Element method = (Element) methods.item(i);
 
@@ -283,11 +317,13 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
                 continue;
             }
 
+            String methodIntf = getTextContent(method, Constants.XML_METHOD_INTF);
             List<String> methodParams = parseMethodParams(method);
 
             TransactionConfiguration config = new TransactionConfiguration();
             config.beanName = beanName;
             config.methodName = methodName;
+            config.methodInterface = methodIntf; // "Remote" or "Local"
             config.methodParams = methodParams;
             config.ejbAttribute = ejbAttr;
             config.springPropagation = mapToSpringPropagation(ejbAttr);
@@ -370,70 +406,123 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
         return enrichedCount;
     }
 
+    /**
+     * Create interface ClassNodes and graph edges for bean interfaces.
+     * Creates both EJB-specific edges and standard "implements" edges for
+     * architectural analysis.
+     *
+     * @param beanNode The bean's JavaClassNode
+     * @param bean     The bean metadata containing interface information
+     */
     private void createInterfaceNodesAndEdges(JavaClassNode beanNode, BeanMetadata bean) {
         // Home interface
         if (bean.homeInterface != null && !bean.homeInterface.trim().isEmpty()) {
             JavaClassNode homeNode = classNodeRepository.getOrCreateByFqn(bean.homeInterface);
-            GraphEdge edge = graphRepository.getOrCreateEdge(beanNode, homeNode, "ejb_home_interface");
-            edge.setProperty("interface_type", "home");
-            edge.setProperty("ejb_version", "2.x");
+
+            // EJB-specific edge with metadata
+            GraphEdge ejbEdge = graphRepository.getOrCreateEdge(beanNode, homeNode, Constants.EDGE_EJB_HOME);
+            ejbEdge.setProperty(Constants.EDGE_PROP_INTERFACE_TYPE, Constants.INTF_TYPE_HOME);
+            ejbEdge.setProperty(Constants.EDGE_PROP_EJB_VERSION, "2.x");
+
+            // Standard "implements" edge for general architectural queries
+            graphRepository.getOrCreateEdge(beanNode, homeNode, Constants.EDGE_IMPLEMENTS);
         }
 
         // Remote interface
         if (bean.remoteInterface != null && !bean.remoteInterface.trim().isEmpty()) {
             JavaClassNode remoteNode = classNodeRepository.getOrCreateByFqn(bean.remoteInterface);
-            GraphEdge edge = graphRepository.getOrCreateEdge(beanNode, remoteNode, "ejb_remote_interface");
-            edge.setProperty("interface_type", "remote");
+
+            // EJB-specific edge with metadata
+            GraphEdge ejbEdge = graphRepository.getOrCreateEdge(beanNode, remoteNode, Constants.EDGE_EJB_REMOTE);
+            ejbEdge.setProperty(Constants.EDGE_PROP_INTERFACE_TYPE, Constants.INTF_TYPE_REMOTE);
+
+            // Standard "implements" edge for general architectural queries
+            graphRepository.getOrCreateEdge(beanNode, remoteNode, Constants.EDGE_IMPLEMENTS);
         }
 
         // Local home interface
         if (bean.localHomeInterface != null && !bean.localHomeInterface.trim().isEmpty()) {
             JavaClassNode localHomeNode = classNodeRepository.getOrCreateByFqn(bean.localHomeInterface);
-            GraphEdge edge = graphRepository.getOrCreateEdge(beanNode, localHomeNode, "ejb_local_home_interface");
-            edge.setProperty("interface_type", "local_home");
-            edge.setProperty("ejb_version", "2.x");
+
+            // EJB-specific edge with metadata
+            GraphEdge ejbEdge = graphRepository.getOrCreateEdge(beanNode, localHomeNode,
+                    Constants.EDGE_EJB_LOCAL_HOME);
+            ejbEdge.setProperty(Constants.EDGE_PROP_INTERFACE_TYPE, Constants.INTF_TYPE_LOCAL_HOME);
+            ejbEdge.setProperty(Constants.EDGE_PROP_EJB_VERSION, "2.x");
+
+            // Standard "implements" edge for general architectural queries
+            graphRepository.getOrCreateEdge(beanNode, localHomeNode, Constants.EDGE_IMPLEMENTS);
         }
 
         // Local interface
         if (bean.localInterface != null && !bean.localInterface.trim().isEmpty()) {
             JavaClassNode localNode = classNodeRepository.getOrCreateByFqn(bean.localInterface);
-            GraphEdge edge = graphRepository.getOrCreateEdge(beanNode, localNode, "ejb_local_interface");
-            edge.setProperty("interface_type", "local");
+
+            // EJB-specific edge with metadata
+            GraphEdge ejbEdge = graphRepository.getOrCreateEdge(beanNode, localNode, Constants.EDGE_EJB_LOCAL);
+            ejbEdge.setProperty(Constants.EDGE_PROP_INTERFACE_TYPE, Constants.INTF_TYPE_LOCAL);
+
+            // Standard "implements" edge for general architectural queries
+            graphRepository.getOrCreateEdge(beanNode, localNode, Constants.EDGE_IMPLEMENTS);
         }
     }
 
     private void attachBeanMetadata(JavaClassNode beanNode, BeanMetadata bean,
             List<TransactionConfiguration> allConfigs) {
-        // Deployment descriptor metadata
-        beanNode.setProperty("ejb.deployment.ejb_name", bean.ejbName);
-        beanNode.setProperty("ejb.deployment.bean_type", bean.beanType);
+        // Deployment descriptor metadata using constants
+        beanNode.setProperty(Constants.PROP_EJB_NAME, bean.ejbName);
+        beanNode.setProperty(Constants.PROP_BEAN_TYPE, bean.beanType);
 
         if (bean.homeInterface != null) {
-            beanNode.setProperty("ejb.deployment.home_interface", bean.homeInterface);
+            beanNode.setProperty(Constants.PROP_HOME_INTERFACE, bean.homeInterface);
         }
         if (bean.remoteInterface != null) {
-            beanNode.setProperty("ejb.deployment.remote_interface", bean.remoteInterface);
+            beanNode.setProperty(Constants.PROP_REMOTE_INTERFACE, bean.remoteInterface);
         }
         if (bean.localHomeInterface != null) {
-            beanNode.setProperty("ejb.deployment.local_home_interface", bean.localHomeInterface);
+            beanNode.setProperty(Constants.PROP_LOCAL_HOME_INTERFACE, bean.localHomeInterface);
         }
         if (bean.localInterface != null) {
-            beanNode.setProperty("ejb.deployment.local_interface", bean.localInterface);
+            beanNode.setProperty(Constants.PROP_LOCAL_INTERFACE, bean.localInterface);
         }
         if (bean.sessionType != null) {
-            beanNode.setProperty("ejb.deployment.session_type", bean.sessionType);
+            beanNode.setProperty(Constants.PROP_SESSION_TYPE, bean.sessionType);
         }
         if (bean.persistenceType != null) {
-            beanNode.setProperty("ejb.deployment.persistence_type", bean.persistenceType);
+            beanNode.setProperty(Constants.PROP_PERSISTENCE_TYPE, bean.persistenceType);
         }
         if (bean.primaryKeyClass != null) {
-            beanNode.setProperty("ejb.deployment.primary_key_class", bean.primaryKeyClass);
+            beanNode.setProperty(Constants.PROP_PRIMARY_KEY_CLASS, bean.primaryKeyClass);
         }
         if (bean.transactionType != null) {
-            beanNode.setProperty("ejb.deployment.transaction_type", bean.transactionType);
+            beanNode.setProperty(Constants.PROP_TRANSACTION_TYPE, bean.transactionType);
+        }
+        if (bean.transactionManagement != null) {
+            beanNode.setProperty(Constants.PROP_TRANSACTION_MANAGEMENT, bean.transactionManagement);
+
+            // Set tag for transaction management type
+            if (Constants.TX_MANAGEMENT_BEAN.equals(bean.transactionManagement)) {
+                beanNode.setProperty(Constants.TAG_BEAN_MANAGED_TX, true);
+            } else if (Constants.TX_MANAGEMENT_CONTAINER.equals(bean.transactionManagement)) {
+                beanNode.setProperty(Constants.TAG_CONTAINER_MANAGED_TX, true);
+            }
         }
         if (bean.messageDestinationType != null) {
-            beanNode.setProperty("ejb.deployment.message_destination_type", bean.messageDestinationType);
+            beanNode.setProperty(Constants.PROP_MESSAGE_DESTINATION_TYPE, bean.messageDestinationType);
+        }
+
+        // Environment entries
+        if (!bean.envEntries.isEmpty()) {
+            List<Map<String, String>> envEntriesList = new ArrayList<>();
+            for (EnvEntry entry : bean.envEntries) {
+                Map<String, String> entryMap = new HashMap<>();
+                entryMap.put("name", entry.name);
+                entryMap.put("type", entry.type);
+                entryMap.put("value", entry.value);
+                envEntriesList.add(entryMap);
+            }
+            beanNode.setProperty(Constants.PROP_ENV_ENTRIES, envEntriesList);
+            beanNode.setProperty(Constants.TAG_HAS_ENV_ENTRIES, true);
         }
 
         // Transaction configurations for this bean
@@ -446,12 +535,13 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
             for (TransactionConfiguration config : beanConfigs) {
                 Map<String, Object> configValue = new HashMap<>();
                 configValue.put("methodName", config.methodName);
+                configValue.put("methodInterface", config.methodInterface);
                 configValue.put("ejbAttr", config.ejbAttribute.name());
                 configValue.put("springProp", config.springPropagation.name());
                 configValue.put("readOnly", config.readOnly);
                 transactionConfigsList.add(configValue);
             }
-            beanNode.setProperty("ejb.transaction.configurations", transactionConfigsList);
+            beanNode.setProperty(Constants.PROP_TRANSACTION_CONFIGS, transactionConfigsList);
         }
     }
 
@@ -460,32 +550,135 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
             List<TransactionConfiguration> transactionConfigs,
             int enrichedBeans) {
         // Count beans by type
-        long sessionBeans = beans.values().stream().filter(b -> "session".equals(b.beanType)).count();
-        long entityBeans = beans.values().stream().filter(b -> "entity".equals(b.beanType)).count();
-        long messageDrivenBeans = beans.values().stream().filter(b -> "message-driven".equals(b.beanType)).count();
+        long sessionBeans = beans.values().stream().filter(b -> Constants.BEAN_TYPE_SESSION.equals(b.beanType))
+                .count();
+        long entityBeans = beans.values().stream().filter(b -> Constants.BEAN_TYPE_ENTITY.equals(b.beanType)).count();
+        long messageDrivenBeans = beans.values().stream()
+                .filter(b -> Constants.BEAN_TYPE_MESSAGE_DRIVEN.equals(b.beanType)).count();
 
-        // Store counts
-        decorator.setMetric(TAGS.METRIC_SESSION_BEANS_COUNT, (int) sessionBeans);
-        decorator.setMetric(TAGS.METRIC_ENTITY_BEANS_COUNT, (int) entityBeans);
-        decorator.setMetric(TAGS.METRIC_MESSAGE_DRIVEN_BEANS_COUNT, (int) messageDrivenBeans);
+        // Count transaction management types
+        long bmtBeans = beans.values().stream()
+                .filter(b -> Constants.TX_MANAGEMENT_BEAN.equals(b.transactionManagement)).count();
+        long cmtBeans = beans.values().stream()
+                .filter(b -> Constants.TX_MANAGEMENT_CONTAINER.equals(b.transactionManagement)).count();
+
+        // Count beans with environment entries
+        long beansWithEnvEntries = beans.values().stream().filter(b -> !b.envEntries.isEmpty()).count();
+        long totalEnvEntries = beans.values().stream().mapToLong(b -> b.envEntries.size()).sum();
+
+        // Analyze shared resources
+        Map<String, List<String>> classToBeansMap = analyzeSharedClasses(beans);
+        Map<String, List<String>> interfaceToBeansMap = analyzeSharedInterfaces(beans);
+
+        // Store basic counts
+        decorator.setMetric(Constants.METRIC_SESSION_BEANS_COUNT, (int) sessionBeans);
+        decorator.setMetric(Constants.METRIC_ENTITY_BEANS_COUNT, (int) entityBeans);
+        decorator.setMetric(Constants.METRIC_MESSAGE_DRIVEN_BEANS_COUNT, (int) messageDrivenBeans);
+        decorator.setMetric(Constants.METRIC_BMT_BEANS_COUNT, (int) bmtBeans);
+        decorator.setMetric(Constants.METRIC_CMT_BEANS_COUNT, (int) cmtBeans);
+        decorator.setMetric(Constants.METRIC_BEANS_WITH_ENV_ENTRIES, (int) beansWithEnvEntries);
+        decorator.setMetric(Constants.METRIC_TOTAL_ENV_ENTRIES, (int) totalEnvEntries);
+        decorator.setMetric(Constants.METRIC_SHARED_CLASSES_COUNT, classToBeansMap.size());
+        decorator.setMetric(Constants.METRIC_SHARED_INTERFACES_COUNT, interfaceToBeansMap.size());
 
         // Store analysis summary as a plain object
         Map<String, Object> summary = new HashMap<>();
         summary.put("sessionBeans", sessionBeans);
         summary.put("entityBeans", entityBeans);
         summary.put("messageDrivenBeans", messageDrivenBeans);
+        summary.put("bmtBeans", bmtBeans);
+        summary.put("cmtBeans", cmtBeans);
+        summary.put("beansWithEnvEntries", beansWithEnvEntries);
+        summary.put("totalEnvEntries", totalEnvEntries);
         summary.put("totalTransactionConfigs", transactionConfigs.size());
         summary.put("enrichedBeans", enrichedBeans);
-        decorator.setProperty(TAGS.TAG_EJB_JAR_ANALYSIS, summary);
+        summary.put("sharedClassesCount", classToBeansMap.size());
+        summary.put("sharedInterfacesCount", interfaceToBeansMap.size());
+
+        // Add details about shared resources if any exist
+        if (!classToBeansMap.isEmpty()) {
+            summary.put("sharedClasses", classToBeansMap);
+        }
+        if (!interfaceToBeansMap.isEmpty()) {
+            summary.put("sharedInterfaces", interfaceToBeansMap);
+        }
+
+        decorator.setProperty(Constants.TAG_EJB_JAR_ANALYSIS, summary);
 
         // Set transaction-related tags on ProjectFile
         if (!transactionConfigs.isEmpty()) {
-            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_EJB_DECLARATIVE_TRANSACTION, true);
-            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_EJB_CONTAINER_MANAGED_TRANSACTION,
+            projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_EJB_DECLARATIVE_TRANSACTION,
+                    true);
+            projectFile.setProperty(
+                    com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_EJB_CONTAINER_MANAGED_TRANSACTION,
                     true);
             projectFile.setProperty(com.analyzer.rules.ejb2spring.EjbMigrationTags.TAG_SPRING_TRANSACTION_CONVERSION,
                     true);
         }
+
+        // Set BMT tag if any BMT beans exist
+        if (bmtBeans > 0) {
+            projectFile.setProperty(Constants.TAG_BEAN_MANAGED_TX, true);
+        }
+
+        // Set environment entries tag if any beans have env entries
+        if (beansWithEnvEntries > 0) {
+            projectFile.setProperty(Constants.TAG_HAS_ENV_ENTRIES, true);
+        }
+    }
+
+    /**
+     * Analyze which EJB implementation classes are shared across multiple bean
+     * definitions.
+     *
+     * @param beans Map of bean metadata by bean name
+     * @return Map of ejb-class to list of bean names using that class
+     */
+    private Map<String, List<String>> analyzeSharedClasses(Map<String, BeanMetadata> beans) {
+        Map<String, List<String>> classToBeansMap = new HashMap<>();
+
+        for (BeanMetadata bean : beans.values()) {
+            if (bean.ejbClass != null && !bean.ejbClass.trim().isEmpty()) {
+                classToBeansMap.computeIfAbsent(bean.ejbClass, k -> new ArrayList<>()).add(bean.ejbName);
+            }
+        }
+
+        // Keep only classes that are shared (used by more than one bean)
+        classToBeansMap.entrySet().removeIf(entry -> entry.getValue().size() <= 1);
+
+        return classToBeansMap;
+    }
+
+    /**
+     * Analyze which interfaces are shared across multiple bean definitions.
+     *
+     * @param beans Map of bean metadata by bean name
+     * @return Map of interface FQN to list of bean names using that interface
+     */
+    private Map<String, List<String>> analyzeSharedInterfaces(Map<String, BeanMetadata> beans) {
+        Map<String, List<String>> interfaceToBeansMap = new HashMap<>();
+
+        for (BeanMetadata bean : beans.values()) {
+            // Track all interface types
+            if (bean.homeInterface != null && !bean.homeInterface.trim().isEmpty()) {
+                interfaceToBeansMap.computeIfAbsent(bean.homeInterface, k -> new ArrayList<>()).add(bean.ejbName);
+            }
+            if (bean.remoteInterface != null && !bean.remoteInterface.trim().isEmpty()) {
+                interfaceToBeansMap.computeIfAbsent(bean.remoteInterface, k -> new ArrayList<>()).add(bean.ejbName);
+            }
+            if (bean.localHomeInterface != null && !bean.localHomeInterface.trim().isEmpty()) {
+                interfaceToBeansMap.computeIfAbsent(bean.localHomeInterface, k -> new ArrayList<>())
+                        .add(bean.ejbName);
+            }
+            if (bean.localInterface != null && !bean.localInterface.trim().isEmpty()) {
+                interfaceToBeansMap.computeIfAbsent(bean.localInterface, k -> new ArrayList<>()).add(bean.ejbName);
+            }
+        }
+
+        // Keep only interfaces that are shared (used by more than one bean)
+        interfaceToBeansMap.entrySet().removeIf(entry -> entry.getValue().size() <= 1);
+
+        return interfaceToBeansMap;
     }
 
     private String getTextContent(Element parent, String tagName) {
@@ -496,11 +689,105 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
         return null;
     }
 
-    public static class TAGS {
-        public static final String TAG_EJB_JAR_ANALYSIS = "ejb_jar_analysis";
+    /**
+     * Constants for XML elements, property keys, metrics, tags, and edge types.
+     * All string literals are centralized here for maintainability and consistency.
+     */
+    public static class Constants {
+        // XML Elements
+        public static final String XML_SESSION = "session";
+        public static final String XML_ENTITY = "entity";
+        public static final String XML_MESSAGE_DRIVEN = "message-driven";
+        public static final String XML_ENV_ENTRY = "env-entry";
+        public static final String XML_ENV_ENTRY_NAME = "env-entry-name";
+        public static final String XML_ENV_ENTRY_TYPE = "env-entry-type";
+        public static final String XML_ENV_ENTRY_VALUE = "env-entry-value";
+        public static final String XML_METHOD_INTF = "method-intf";
+        public static final String XML_CONTAINER_TRANSACTION = "container-transaction";
+        public static final String XML_METHOD = "method";
+        public static final String XML_TRANS_ATTRIBUTE = "trans-attribute";
+
+        // Property Keys - Bean Metadata
+        public static final String PROP_EJB_NAME = "ejb.deployment.ejb_name";
+        public static final String PROP_BEAN_TYPE = "ejb.deployment.bean_type";
+        public static final String PROP_HOME_INTERFACE = "ejb.deployment.home_interface";
+        public static final String PROP_REMOTE_INTERFACE = "ejb.deployment.remote_interface";
+        public static final String PROP_LOCAL_HOME_INTERFACE = "ejb.deployment.local_home_interface";
+        public static final String PROP_LOCAL_INTERFACE = "ejb.deployment.local_interface";
+        public static final String PROP_SESSION_TYPE = "ejb.deployment.session_type";
+        public static final String PROP_PERSISTENCE_TYPE = "ejb.deployment.persistence_type";
+        public static final String PROP_PRIMARY_KEY_CLASS = "ejb.deployment.primary_key_class";
+        public static final String PROP_TRANSACTION_TYPE = "ejb.deployment.transaction_type";
+        public static final String PROP_MESSAGE_DESTINATION_TYPE = "ejb.deployment.message_destination_type";
+        public static final String PROP_ENV_ENTRIES = "ejb.deployment.env_entries";
+        public static final String PROP_TRANSACTION_MANAGEMENT = "ejb.deployment.transaction_management";
+        public static final String PROP_TRANSACTION_CONFIGS = "ejb.transaction.configurations";
+
+        // Property Keys - Shared Resources
+        public static final String PROP_SHARED_EJB_CLASS = "ejb.deployment.shared_class";
+        public static final String PROP_SHARED_INTERFACE = "ejb.deployment.shared_interface";
+        public static final String PROP_CLASS_REUSE_COUNT = "ejb.deployment.class_reuse_count";
+        public static final String PROP_INTERFACE_REUSE_COUNT = "ejb.deployment.interface_reuse_count";
+
+        // Metrics
         public static final String METRIC_SESSION_BEANS_COUNT = "ejb.session_beans_count";
         public static final String METRIC_ENTITY_BEANS_COUNT = "ejb.entity_beans_count";
         public static final String METRIC_MESSAGE_DRIVEN_BEANS_COUNT = "ejb.message_driven_beans_count";
+        public static final String METRIC_BEANS_WITH_ENV_ENTRIES = "ejb.beans_with_env_entries";
+        public static final String METRIC_BMT_BEANS_COUNT = "ejb.bmt_beans_count";
+        public static final String METRIC_CMT_BEANS_COUNT = "ejb.cmt_beans_count";
+        public static final String METRIC_SHARED_CLASSES_COUNT = "ejb.shared_classes_count";
+        public static final String METRIC_SHARED_INTERFACES_COUNT = "ejb.shared_interfaces_count";
+        public static final String METRIC_TOTAL_ENV_ENTRIES = "ejb.total_env_entries";
+
+        // Tags
+        public static final String TAG_EJB_JAR_ANALYSIS = "ejb_jar_analysis";
+        public static final String TAG_HAS_ENV_ENTRIES = "ejb_has_env_entries";
+        public static final String TAG_BEAN_MANAGED_TX = "ejb_bean_managed_transaction";
+        public static final String TAG_CONTAINER_MANAGED_TX = "ejb_container_managed_transaction";
+        public static final String TAG_SHARED_EJB_CLASS = "ejb_shared_class_instance";
+        public static final String TAG_SHARED_INTERFACE = "ejb_shared_interface_instance";
+
+        // Edge Types - EJB Specific
+        public static final String EDGE_EJB_HOME = "ejb_home_interface";
+        public static final String EDGE_EJB_REMOTE = "ejb_remote_interface";
+        public static final String EDGE_EJB_LOCAL_HOME = "ejb_local_home_interface";
+        public static final String EDGE_EJB_LOCAL = "ejb_local_interface";
+        public static final String EDGE_SHARES_CLASS = "ejb_shares_implementation";
+        public static final String EDGE_SHARES_INTERFACE = "ejb_shares_interface";
+
+        // Edge Types - Standard (from BinaryClassCouplingGraphInspector)
+        public static final String EDGE_IMPLEMENTS = "implements";
+        public static final String EDGE_EXTENDS = "extends";
+        public static final String EDGE_USES = "uses";
+
+        // Edge Properties
+        public static final String EDGE_PROP_INTERFACE_TYPE = "interface_type";
+        public static final String EDGE_PROP_EJB_VERSION = "ejb_version";
+        public static final String EDGE_PROP_REUSE_COUNT = "reuse_count";
+
+        // Bean Types
+        public static final String BEAN_TYPE_SESSION = "session";
+        public static final String BEAN_TYPE_ENTITY = "entity";
+        public static final String BEAN_TYPE_MESSAGE_DRIVEN = "message-driven";
+
+        // Transaction Management Types
+        public static final String TX_MANAGEMENT_CONTAINER = "Container";
+        public static final String TX_MANAGEMENT_BEAN = "Bean";
+
+        // Interface Types
+        public static final String INTF_TYPE_HOME = "home";
+        public static final String INTF_TYPE_REMOTE = "remote";
+        public static final String INTF_TYPE_LOCAL_HOME = "local_home";
+        public static final String INTF_TYPE_LOCAL = "local";
+    }
+
+    @Deprecated
+    public static class TAGS {
+        public static final String TAG_EJB_JAR_ANALYSIS = Constants.TAG_EJB_JAR_ANALYSIS;
+        public static final String METRIC_SESSION_BEANS_COUNT = Constants.METRIC_SESSION_BEANS_COUNT;
+        public static final String METRIC_ENTITY_BEANS_COUNT = Constants.METRIC_ENTITY_BEANS_COUNT;
+        public static final String METRIC_MESSAGE_DRIVEN_BEANS_COUNT = Constants.METRIC_MESSAGE_DRIVEN_BEANS_COUNT;
     }
 
     // Data classes
@@ -517,12 +804,26 @@ public class EjbDeploymentDescriptorInspector extends AbstractTextFileInspector 
         String primaryKeyClass;
         String transactionType;
         String messageDestinationType;
+        List<EnvEntry> envEntries = new ArrayList<>();
+        String transactionManagement; // "Container" or "Bean"
+    }
+
+    private static class EnvEntry {
+        String name;
+        String type;
+        String value;
+
+        @Override
+        public String toString() {
+            return String.format("EnvEntry{name='%s', type='%s', value='%s'}", name, type, value);
+        }
     }
 
     private static class TransactionConfiguration {
         String beanName;
         String methodName;
         List<String> methodParams = new ArrayList<>();
+        String methodInterface; // "Remote" or "Local"
         EJBTransactionAttribute ejbAttribute;
         SpringPropagation springPropagation;
         boolean readOnly;

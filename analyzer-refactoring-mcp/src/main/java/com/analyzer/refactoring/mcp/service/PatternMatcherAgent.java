@@ -62,6 +62,94 @@ public class PatternMatcherAgent {
     }
 
     /**
+     * Match natural language query to actual tag names using AI.
+     * 
+     * @param naturalLanguageQuery User's natural language query (e.g., "stateless
+     *                             EJBs")
+     * @param availableTags        Set of all tag names in the database
+     * @return List of matched tag names
+     */
+    public List<String> matchTagsToQuery(String naturalLanguageQuery, java.util.Set<String> availableTags) {
+        if (!enabled) {
+            logger.debug("PatternMatcherAgent disabled, returning empty list");
+            return new ArrayList<>();
+        }
+
+        if (availableTags.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        try {
+            logger.info("AI matching query '{}' against {} tags", naturalLanguageQuery, availableTags.size());
+
+            String prompt = buildTagMatchingPrompt(naturalLanguageQuery, availableTags);
+            BedrockResponse response = bedrockClient.invokeModel(prompt);
+
+            List<String> matchedTags = parseTagMatchResult(response.getText(), availableTags);
+
+            logger.info("AI matched to {} tags: {}", matchedTags.size(), matchedTags);
+            return matchedTags;
+
+        } catch (BedrockApiException e) {
+            logger.error("Bedrock API error during tag matching", e);
+            return new ArrayList<>();
+        } catch (Exception e) {
+            logger.error("Unexpected error during tag matching", e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Build prompt for tag matching.
+     */
+    private String buildTagMatchingPrompt(String query, java.util.Set<String> availableTags) {
+        StringBuilder prompt = new StringBuilder();
+
+        prompt.append("You are an expert at matching natural language queries to database tags.\n\n");
+        prompt.append("USER QUERY: ").append(query).append("\n\n");
+        prompt.append("AVAILABLE TAGS:\n");
+
+        List<String> sortedTags = new ArrayList<>(availableTags);
+        java.util.Collections.sort(sortedTags);
+        for (String tag : sortedTags) {
+            prompt.append("- ").append(tag).append("\n");
+        }
+
+        prompt.append("\nTASK: Return ONLY the tag names that match the user's query, one per line.\n");
+        prompt.append("Return NONE if no tags match.\n");
+        prompt.append("Do not include explanations, just the tag names.\n\n");
+
+        prompt.append("Examples:\n");
+        prompt.append("Query: 'stateless EJBs' → ejb.type\n");
+        prompt.append("Query: 'complex classes' → complexity.high\n");
+        prompt.append("Query: 'service layer' → layer\n");
+
+        return prompt.toString();
+    }
+
+    /**
+     * Parse tag match results from Bedrock response.
+     */
+    private List<String> parseTagMatchResult(String response, java.util.Set<String> availableTags) {
+        List<String> matchedTags = new ArrayList<>();
+
+        if (response.trim().equalsIgnoreCase("NONE")) {
+            return matchedTags;
+        }
+
+        // Split by lines and extract tag names
+        String[] lines = response.split("\\n");
+        for (String line : lines) {
+            String cleaned = line.trim().replaceAll("^[\\-\\*]\\s*", "");
+            if (!cleaned.isEmpty() && availableTags.contains(cleaned)) {
+                matchedTags.add(cleaned);
+            }
+        }
+
+        return matchedTags;
+    }
+
+    /**
      * Find the best matching pattern using AI semantic analysis.
      * 
      * @param userPattern       The user's pattern description

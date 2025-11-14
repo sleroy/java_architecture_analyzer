@@ -10,13 +10,26 @@ This inspector analyzes class dependencies at the bytecode level and creates dir
 
 ## Edge Types
 
-The inspector creates three types of edges:
+The inspector creates **`uses`** edges for all type dependencies. The specific relationship kind is stored as an edge property:
 
-| Edge Type | Description | Example |
-|-----------|-------------|---------|
+| Relationship Kind (Edge Property) | Description | Example |
+|----------------------------------|-------------|---------|
 | `extends` | Inheritance relationship | `class Dog extends Animal` |
 | `implements` | Interface implementation | `class ArrayList implements List` |
-| `uses` | General usage dependency | Field types, method parameters, return types |
+| *(default - no property)* | Direct type usage | Field types, method parameters, return types |
+| `annotated_with` | Annotation usage | `@Service`, `@Autowired`, `@Column` |
+| `type_parameter` | Generic type parameter | `List<String>` - the String is a type parameter |
+| `throws` | Exception in throws clause | `void process() throws IOException` |
+| `type_variable` | Type variable reference | `<T extends Comparable>` - references Comparable |
+
+**Edge Properties:**
+
+All property names are defined as constants in `BinaryClassCouplingGraphInspector`:
+
+- `PROP_RELATIONSHIP_KIND` (`relationshipKind`): The specific type of relationship (extends, implements, etc.)
+- `PROP_CONTAINER_TYPE` (`containerType`): For type parameters, the generic container class (e.g., "java.util.List")
+- `PROP_TYPE_ARGUMENT_INDEX` (`typeArgumentIndex`): For type parameters, the position in the type argument list (0-based)
+- `PROP_WILDCARD_KIND` (`wildcardKind`): For wildcard bounds, either "extends" or "super"
 
 ## Dependencies
 
@@ -68,6 +81,45 @@ class MyService {
 }
 ```
 
+### 5. Exception Dependencies
+```java
+class MyService {
+    public void processData() throws IOException, SQLException {  // creates "throws" edges to IOException and SQLException
+        // ...
+    }
+}
+```
+
+### 6. Annotation Dependencies
+```java
+@Service  // creates "annotated_with" edge to org.springframework.stereotype.Service
+class MyService {
+    @Autowired  // creates "annotated_with" edge to org.springframework.beans.factory.annotation.Autowired
+    private UserRepository userRepo;
+    
+    @Transactional  // creates "annotated_with" edge to org.springframework.transaction.annotation.Transactional
+    public void saveUser(User user) { }
+}
+```
+
+### 7. Generic Type Parameter Dependencies
+```java
+class MyService {
+    // List<User> involves TWO types: List and User
+    // Creates TWO edges:
+    private List<User> users;  
+    // 1. "uses" edge to java.util.List (from descriptor)
+    // 2. "type_parameter" edge to User (from signature)
+    
+    // Map<String, Order> involves THREE types: Map, String, and Order
+    // Creates THREE edges:
+    private Map<String, Order> orders;
+    // 1. "uses" edge to java.util.Map (from descriptor)
+    // 2. "type_parameter" edge to String (from signature)
+    // 3. "type_parameter" edge to Order (from signature)
+}
+```
+
 ## Filtering
 
 The inspector automatically filters out:
@@ -111,8 +163,71 @@ For each analyzed class, the inspector:
 ## Limitations
 
 - Only creates edges to classes that exist as JavaClassNode instances in the graph
-- External dependencies (third-party libraries not in the analyzed codebase) are logged but no edges are created
+- External dependencies (third-party libraries not in the analyzed codebase) are automatically created as nodes
 - Does not analyze method body dependencies (only signatures)
+
+### Generic Type Handling - Implemented Solution
+
+The inspector now uses a **unified type parser** that preserves structural relationships through edge properties:
+
+**Implementation**:
+```java
+// Example field with generics
+private SingularAttribute<City, Province> attribute;
+
+// Parsed using TypeParser.parseType(descriptor, signature)
+// - Unified parsing of both descriptor and signature
+// - Complete type structure including generics
+
+// Edges created (3 total, all "uses" edges):
+// 1. "uses" edge to SingularAttribute
+//    - No special properties (direct usage)
+//
+// 2. "uses" edge to City
+//    - PROP_RELATIONSHIP_KIND: "type_parameter"
+//    - PROP_CONTAINER_TYPE: "javax.persistence.metamodel.SingularAttribute"
+//    - PROP_TYPE_ARGUMENT_INDEX: 0
+//
+// 3. "uses" edge to Province
+//    - PROP_RELATIONSHIP_KIND: "type_parameter"
+//    - PROP_CONTAINER_TYPE: "javax.persistence.metamodel.SingularAttribute"
+//    - PROP_TYPE_ARGUMENT_INDEX: 1
+```
+
+**What Works**:
+- ✅ All types involved in generic declarations are captured (container + type arguments)
+- ✅ Each type gets its own "uses" edge in the graph
+- ✅ Edge properties preserve the structural relationships (containerType, typeArgumentIndex)
+- ✅ Nested generics are handled recursively with proper container tracking
+- ✅ Wildcard bounds are captured (`? extends Number`, `? super T`)
+- ✅ Type variable references are captured with special relationshipKind
+- ✅ Array component types are handled recursively
+- ✅ Unified parser eliminates descriptor/signature parsing inconsistencies
+
+**Complete Example - Nested Generics**:
+```java
+private Map<String, List<User>> usersByName;
+
+// Edges created (4 total):
+// 1. uses -> Map (direct usage)
+// 2. uses -> String (PROP_RELATIONSHIP_KIND: type_parameter, PROP_CONTAINER_TYPE: Map, PROP_TYPE_ARGUMENT_INDEX: 0)
+// 3. uses -> List (PROP_RELATIONSHIP_KIND: type_parameter, PROP_CONTAINER_TYPE: Map, PROP_TYPE_ARGUMENT_INDEX: 1)
+// 4. uses -> User (PROP_RELATIONSHIP_KIND: type_parameter, PROP_CONTAINER_TYPE: List, PROP_TYPE_ARGUMENT_INDEX: 0)
+```
+
+**Graph Queries**:
+With edge properties, you can now:
+- Find all type parameters of a specific container: Query edges where `PROP_CONTAINER_TYPE = "java.util.List"`
+- Reconstruct generic structure: Follow edges and reconstruct `List<String>` from edges
+- Identify wildcard usage: Query edges where `PROP_WILDCARD_KIND` property exists
+- Find nested generic relationships: Query chains of type_parameter edges
+- Query by relationship kind: Filter edges by `PROP_RELATIONSHIP_KIND` value
+
+**Technical Implementation**:
+- `TypeInfo` class: Represents complete type structure (class, generics, arrays, wildcards)
+- `TypeParser` class: Unified parser using ASM SignatureVisitor
+- Recursive processing: `processTypeInfo()` and `processTypeArgument()` methods
+- Edge properties: All metadata stored as GraphEdge properties
 
 ## Integration Points
 
