@@ -451,6 +451,33 @@ Eclipse-powered refactoring operations:
 - moveElements, moveStaticMembers
 - copyElements, deleteElements
 
+### Graph Database Query Tools (7 tools)
+
+Query project metadata from the H2 graph database:
+
+1. **queryGraphStatistics** - Get overall database statistics (node/edge counts)
+2. **queryClassMetrics** - Get metrics for a specific class (complexity, LOC, coupling)
+3. **queryClassDependencies** - Get all dependencies for a class (incoming/outgoing)
+4. **queryClassRelationships** - Get all graph relationships (edges) for a class
+5. **queryClassesByTag** - Find classes by tag using natural language (AI-enhanced)
+6. **queryClassesByProperty** - Find classes by property name and optional value
+7. **queryMetricValues** - Query metric values across all classes using natural language (AI-enhanced)
+
+**AI-Enhanced Tools:**
+
+The `queryMetricValues` tool uses Bedrock AI to understand natural language metric queries:
+- **Example queries**: "complexity metrics", "lines of code", "coupling metrics"
+- **Returns**: All classes with values for matched metrics, plus statistical analysis
+- **Statistics**: min, max, average, median, standard deviation for each metric
+- **Use cases**: Understand metric distributions, identify outliers, find high-complexity classes
+
+```bash
+# Example usage with AI assistant:
+"Show me all complexity metrics across the codebase"
+"What are the lines of code values for all classes?"
+"Find coupling metrics and show me the statistics"
+```
+
 ---
 
 ## Database Integration

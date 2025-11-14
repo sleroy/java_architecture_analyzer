@@ -50,4 +50,11 @@ public class GraphToolConfiguration {
             GraphDatabaseService graphDatabaseService) {
         return new QueryClassRelationshipsTool(graphDatabaseService);
     }
+
+    @Bean
+    public QueryMetricValuesTool queryMetricValuesTool(
+            GraphDatabaseService graphDatabaseService,
+            PatternMatcherAgent patternMatcherAgent) {
+        return new QueryMetricValuesTool(graphDatabaseService, patternMatcherAgent);
+    }
 }

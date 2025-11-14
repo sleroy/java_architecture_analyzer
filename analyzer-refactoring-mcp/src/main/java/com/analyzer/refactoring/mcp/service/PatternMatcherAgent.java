@@ -100,6 +100,44 @@ public class PatternMatcherAgent {
     }
 
     /**
+     * Match natural language query to actual metric names using AI.
+     * 
+     * @param naturalLanguageQuery User's natural language query (e.g., "complexity
+     *                             metrics")
+     * @param availableMetrics     Set of all metric names in the database
+     * @return List of matched metric names
+     */
+    public List<String> matchMetricsToQuery(String naturalLanguageQuery, java.util.Set<String> availableMetrics) {
+        if (!enabled) {
+            logger.debug("PatternMatcherAgent disabled, returning empty list");
+            return new ArrayList<>();
+        }
+
+        if (availableMetrics.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        try {
+            logger.info("AI matching query '{}' against {} metrics", naturalLanguageQuery, availableMetrics.size());
+
+            String prompt = buildMetricMatchingPrompt(naturalLanguageQuery, availableMetrics);
+            BedrockResponse response = bedrockClient.invokeModel(prompt);
+
+            List<String> matchedMetrics = parseMetricMatchResult(response.getText(), availableMetrics);
+
+            logger.info("AI matched to {} metrics: {}", matchedMetrics.size(), matchedMetrics);
+            return matchedMetrics;
+
+        } catch (BedrockApiException e) {
+            logger.error("Bedrock API error during metric matching", e);
+            return new ArrayList<>();
+        } catch (Exception e) {
+            logger.error("Unexpected error during metric matching", e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
      * Build prompt for tag matching.
      */
     private String buildTagMatchingPrompt(String query, java.util.Set<String> availableTags) {
@@ -128,6 +166,34 @@ public class PatternMatcherAgent {
     }
 
     /**
+     * Build prompt for metric matching.
+     */
+    private String buildMetricMatchingPrompt(String query, java.util.Set<String> availableMetrics) {
+        StringBuilder prompt = new StringBuilder();
+
+        prompt.append("You are an expert at matching natural language queries to software metrics.\n\n");
+        prompt.append("USER QUERY: ").append(query).append("\n\n");
+        prompt.append("AVAILABLE METRICS:\n");
+
+        List<String> sortedMetrics = new ArrayList<>(availableMetrics);
+        java.util.Collections.sort(sortedMetrics);
+        for (String metric : sortedMetrics) {
+            prompt.append("- ").append(metric).append("\n");
+        }
+
+        prompt.append("\nTASK: Return ONLY the metric names that match the user's query, one per line.\n");
+        prompt.append("Return NONE if no metrics match.\n");
+        prompt.append("Do not include explanations, just the metric names.\n\n");
+
+        prompt.append("Examples:\n");
+        prompt.append("Query: 'complexity metrics' → cyclomatic_complexity, cognitive_complexity\n");
+        prompt.append("Query: 'lines of code' → loc, sloc\n");
+        prompt.append("Query: 'coupling metrics' → afferent_coupling, efferent_coupling\n");
+
+        return prompt.toString();
+    }
+
+    /**
      * Parse tag match results from Bedrock response.
      */
     private List<String> parseTagMatchResult(String response, java.util.Set<String> availableTags) {
@@ -147,6 +213,28 @@ public class PatternMatcherAgent {
         }
 
         return matchedTags;
+    }
+
+    /**
+     * Parse metric match results from Bedrock response.
+     */
+    private List<String> parseMetricMatchResult(String response, java.util.Set<String> availableMetrics) {
+        List<String> matchedMetrics = new ArrayList<>();
+
+        if (response.trim().equalsIgnoreCase("NONE")) {
+            return matchedMetrics;
+        }
+
+        // Split by lines and extract metric names
+        String[] lines = response.split("\\n");
+        for (String line : lines) {
+            String cleaned = line.trim().replaceAll("^[\\-\\*]\\s*", "");
+            if (!cleaned.isEmpty() && availableMetrics.contains(cleaned)) {
+                matchedMetrics.add(cleaned);
+            }
+        }
+
+        return matchedMetrics;
     }
 
     /**
