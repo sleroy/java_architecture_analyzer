@@ -2,8 +2,10 @@ import groovy.transform.CompileStatic
 import org.openrewrite.java.JavaIsoVisitor
 import org.openrewrite.ExecutionContext
 import org.openrewrite.java.tree.J
+import org.openrewrite.java.tree.JavaSourceFile
 import org.openrewrite.SourceFile
 import org.openrewrite.InMemoryExecutionContext
+import com.analyzer.refactoring.mcp.util.PositionTracker
 
 /**
  * WORKING EXAMPLE: Visitor that finds all public methods in a class.
@@ -34,6 +36,10 @@ class ExampleVisitor extends JavaIsoVisitor<ExecutionContext> {
             // Extract class context for additional information
             J.ClassDeclaration classDecl = getCursor().firstEnclosing(J.ClassDeclaration.class)
             
+            // Extract accurate line/column position using PositionTracker
+            SourceFile sourceFile = getCursor().firstEnclosingOrThrow(SourceFile.class)
+            Map<String, Integer> position = PositionTracker.getPosition((JavaSourceFile) sourceFile, method)
+            
             // Build match object with all required fields
             Map<String, Object> match = [
                 nodeId: method.id.toString(),
@@ -42,10 +48,9 @@ class ExampleVisitor extends JavaIsoVisitor<ExecutionContext> {
                 methodName: method.simpleName,
                 fieldName: null,
                 location: [
-                    file: getCursor().firstEnclosingOrThrow(SourceFile.class).sourcePath.toString(),
-                        // Not supported by OpenRewrite
-                    line: 0,
-                    column: 0,
+                    file: sourceFile.sourcePath.toString(),
+                    line: position.get('line'),
+                    column: position.get('column')
                 ]
             ]
             matches.add(match)

@@ -150,6 +150,10 @@ public class VisitorTemplateService {
             // Look for "Detects X" or "Identifies Y" patterns
             if (line.toLowerCase().startsWith("detects ")) {
                 String phrase = line.substring(8).trim();
+                // Extract just the pattern name, stop at "in", "for", "by", etc.
+                phrase = phrase.split("\\s+in\\s+")[0]; // Stop at " in "
+                phrase = phrase.split("\\s+for\\s+")[0]; // Stop at " for "
+                phrase = phrase.split("\\s+by\\s+")[0]; // Stop at " by "
                 // Remove trailing punctuation
                 phrase = phrase.replaceAll("[.:]$", "").trim();
                 if (!phrase.isEmpty() && phrase.length() > 3) {
@@ -157,6 +161,10 @@ public class VisitorTemplateService {
                 }
             } else if (line.toLowerCase().startsWith("identifies ")) {
                 String phrase = line.substring(11).trim();
+                // Extract just the pattern name
+                phrase = phrase.split("\\s+in\\s+")[0];
+                phrase = phrase.split("\\s+for\\s+")[0];
+                phrase = phrase.split("\\s+by\\s+")[0];
                 phrase = phrase.replaceAll("[.:]$", "").trim();
                 if (!phrase.isEmpty() && phrase.length() > 3) {
                     phrases.add(phrase.toLowerCase());

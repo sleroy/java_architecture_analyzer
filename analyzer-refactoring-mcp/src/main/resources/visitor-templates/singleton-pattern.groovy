@@ -1,8 +1,10 @@
 import org.openrewrite.java.JavaIsoVisitor
 import org.openrewrite.ExecutionContext
 import org.openrewrite.java.tree.J
+import org.openrewrite.java.tree.JavaSourceFile
 import org.openrewrite.SourceFile
 import org.openrewrite.InMemoryExecutionContext
+import com.analyzer.refactoring.mcp.util.PositionTracker
 
 /**
  * Detects singleton pattern implementations in Java code.
@@ -58,6 +60,10 @@ class SingletonPatternVisitor extends JavaIsoVisitor<ExecutionContext> {
         
         // If all singleton characteristics are present, record it
         if (hasPrivateStaticInstance && hasPrivateConstructor && hasGetInstanceMethod) {
+            // Extract accurate position using PositionTracker
+            SourceFile sourceFile = getCursor().firstEnclosingOrThrow(SourceFile.class)
+            Map<String, Integer> position = PositionTracker.getPosition((JavaSourceFile) sourceFile, classDecl)
+            
             def match = [
                 nodeId: classDecl.id.toString(),
                 nodeType: 'ClassDeclaration',
@@ -65,9 +71,9 @@ class SingletonPatternVisitor extends JavaIsoVisitor<ExecutionContext> {
                 methodName: null,
                 fieldName: null,
                 location: [
-                    file: getCursor().firstEnclosingOrThrow(SourceFile.class).sourcePath.toString(),
-                    line: 0,
-                    column: 0
+                    file: sourceFile.sourcePath.toString(),
+                    line: position.get('line'),
+                    column: position.get('column')
                 ]
             ]
             matches.add(match)

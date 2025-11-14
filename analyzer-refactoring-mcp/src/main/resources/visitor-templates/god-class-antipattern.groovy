@@ -1,8 +1,10 @@
 import org.openrewrite.java.JavaIsoVisitor
 import org.openrewrite.ExecutionContext
 import org.openrewrite.java.tree.J
+import org.openrewrite.java.tree.JavaSourceFile
 import org.openrewrite.SourceFile
 import org.openrewrite.InMemoryExecutionContext
+import com.analyzer.refactoring.mcp.util.PositionTracker
 
 /**
  * Detects God Class anti-pattern in Java code.
@@ -38,6 +40,10 @@ class GodClassAntiPatternVisitor extends JavaIsoVisitor<ExecutionContext> {
         
         // Check if class exceeds thresholds
         if (methodCount > METHOD_THRESHOLD || fieldCount > FIELD_THRESHOLD) {
+            // Extract accurate position using PositionTracker
+            SourceFile sourceFile = getCursor().firstEnclosingOrThrow(SourceFile.class)
+            Map<String, Integer> position = PositionTracker.getPosition((JavaSourceFile) sourceFile, classDecl)
+            
             def match = [
                 nodeId: classDecl.id.toString(),
                 nodeType: 'ClassDeclaration',
@@ -50,9 +56,9 @@ class GodClassAntiPatternVisitor extends JavaIsoVisitor<ExecutionContext> {
                     severity: (methodCount > METHOD_THRESHOLD * 1.5 || fieldCount > FIELD_THRESHOLD * 1.5) ? 'HIGH' : 'MEDIUM'
                 ],
                 location: [
-                    file: getCursor().firstEnclosingOrThrow(SourceFile.class).sourcePath.toString(),
-                    line: 0,  // Line information not easily accessible in OpenRewrite
-                    column: 0
+                    file: sourceFile.sourcePath.toString(),
+                    line: position.get('line'),
+                    column: position.get('column')
                 ]
             ]
             matches.add(match)

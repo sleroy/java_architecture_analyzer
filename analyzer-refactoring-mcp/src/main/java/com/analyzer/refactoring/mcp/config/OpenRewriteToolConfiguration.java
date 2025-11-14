@@ -7,6 +7,9 @@ import com.analyzer.refactoring.mcp.service.GroovyScriptGenerationService;
 import com.analyzer.refactoring.mcp.service.OpenRewriteExecutionService;
 import com.analyzer.refactoring.mcp.service.OpenRewriteService;
 import com.analyzer.refactoring.mcp.service.PatternMatcherAgent;
+import com.analyzer.refactoring.mcp.service.RecipeExecutionService;
+import com.analyzer.refactoring.mcp.service.RecipeGenerationService;
+import com.analyzer.refactoring.mcp.service.RecipeScriptCache;
 import com.analyzer.refactoring.mcp.service.VisitorScriptCache;
 import com.analyzer.refactoring.mcp.service.VisitorTemplateService;
 import com.analyzer.refactoring.mcp.tool.openrewrite.AddTransactionalTool;
@@ -15,6 +18,7 @@ import com.analyzer.refactoring.mcp.tool.openrewrite.ConvertToConstructorInjecti
 import com.analyzer.refactoring.mcp.tool.openrewrite.MigrateSecurityAnnotationsTool;
 import com.analyzer.refactoring.mcp.tool.openrewrite.RemoveEjbInterfaceTool;
 import com.analyzer.refactoring.mcp.tool.openrewrite.SearchJavaPatternTool;
+import com.analyzer.refactoring.mcp.tool.openrewrite.SearchReplaceJavaPatternTool;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -63,5 +67,16 @@ public class OpenRewriteToolConfiguration {
             final GroovyScriptAnalytics analytics) {
         return new SearchJavaPatternTool(scriptCache, scriptGenerator, scriptExecutor, openRewriteExecutor,
                 templateService, patternMatcher, analytics);
+    }
+
+    @Bean
+    public SearchReplaceJavaPatternTool searchReplaceJavaPatternTool(
+            final RecipeScriptCache scriptCache,
+            final RecipeGenerationService recipeGenerator,
+            final GroovyScriptExecutionService scriptExecutor,
+            final RecipeExecutionService recipeExecutor,
+            final GroovyScriptAnalytics analytics) {
+        return new SearchReplaceJavaPatternTool(scriptCache, recipeGenerator, scriptExecutor, recipeExecutor,
+                analytics);
     }
 }

@@ -1,6 +1,5 @@
 package com.analyzer.refactoring.mcp.config;
 
-
 import com.analyzer.refactoring.mcp.tool.ejb.*;
 import com.analyzer.refactoring.mcp.tool.jdt.*;
 import com.analyzer.refactoring.mcp.tool.openrewrite.*;
@@ -11,7 +10,6 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.Arrays;
 import java.util.List;
-
 
 /**
  * Configuration that aggregates all MCP tools and provides them as a list.
@@ -36,6 +34,8 @@ public class ToolAggregationConfiguration {
      * - ConvertToConstructorInjectionTool: Convert to constructor injection
      * - MigrateSecurityAnnotationsTool: Migrate security annotations
      * - RemoveEjbInterfaceTool: Remove EJB interfaces
+     * - SearchReplaceJavaPatternTool: Search and replace Java patterns using
+     * OpenRewrite recipes
      * 
      * Commented out tools (JDT rename/refactoring operations):
      * These are currently disabled but can be enabled by uncommenting them.
@@ -67,6 +67,8 @@ public class ToolAggregationConfiguration {
      * @param migrateSecurityAnnotationsTool    Tool for migrating security
      *                                          annotations
      * @param removeEjbInterfaceTool            Tool for removing EJB interfaces
+     * @param searchReplaceJavaPatternTool      Tool for searching and replacing
+     *                                          Java patterns
      * @return List of all available tools
      */
     @Bean
@@ -94,7 +96,8 @@ public class ToolAggregationConfiguration {
             BatchReplaceAnnotationsTool batchReplaceAnnotationsTool,
             ConvertToConstructorInjectionTool convertToConstructorInjectionTool,
             MigrateSecurityAnnotationsTool migrateSecurityAnnotationsTool,
-            RemoveEjbInterfaceTool removeEjbInterfaceTool) {
+            RemoveEjbInterfaceTool removeEjbInterfaceTool,
+            SearchReplaceJavaPatternTool searchReplaceJavaPatternTool) {
         return Arrays.asList(ToolCallbacks.from(
                 // Active EJB and Analysis tools
                 extractClassMetadataTool,
@@ -107,7 +110,8 @@ public class ToolAggregationConfiguration {
                 batchReplaceAnnotationsTool,
                 convertToConstructorInjectionTool,
                 migrateSecurityAnnotationsTool,
-                removeEjbInterfaceTool)
+                removeEjbInterfaceTool,
+                searchReplaceJavaPatternTool)
         /*
          * JDT Refactoring tools (currently disabled):
          * Uncomment these to enable Eclipse JDT refactoring capabilities

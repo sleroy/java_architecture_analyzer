@@ -17,21 +17,22 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * Service for generating Groovy scripts using AWS Bedrock.
- * Uses the existing BedrockApiClient to generate OpenRewrite visitor scripts
- * based on pattern descriptions.
+ * Service for generating OpenRewrite Recipe scripts using AWS Bedrock.
+ * Similar to GroovyScriptGenerationService but generates recipes for
+ * transformations
+ * instead of visitors for searching.
  */
 @Service
-public class GroovyScriptGenerationService {
+public class RecipeGenerationService {
 
-    private static final Logger logger = LoggerFactory.getLogger(GroovyScriptGenerationService.class);
+    private static final Logger logger = LoggerFactory.getLogger(RecipeGenerationService.class);
 
     private final BedrockApiClient bedrockClient;
     private final int maxRetries;
     private final ResourceLoader resourceLoader;
-    private String skeletonExample;
+    private String recipeSkeleton;
 
-    public GroovyScriptGenerationService(
+    public RecipeGenerationService(
             ResourceLoader resourceLoader,
             @Value("${groovy.bedrock.model}") String model,
             @Value("${groovy.bedrock.temperature:0.1}") double temperature,
@@ -46,31 +47,31 @@ public class GroovyScriptGenerationService {
         this.resourceLoader = resourceLoader;
         this.maxRetries = maxRetries;
 
-        // Configure Bedrock client for script generation using Properties
+        // Configure Bedrock client
         BedrockConfig config = createBedrockConfig(
                 model, temperature, topK, maxTokens, timeoutSeconds,
                 awsRegion, awsAccessKey, awsSecretKey);
 
         this.bedrockClient = new BedrockApiClient(config);
 
-        logger.info("Groovy script generation service initialized with model: {}, temperature: {}, maxRetries: {}",
+        logger.info("Recipe generation service initialized with model: {}, temperature: {}, maxRetries: {}",
                 model, temperature, maxRetries);
     }
 
     /**
-     * Load the Groovy visitor skeleton example on startup.
+     * Load the recipe skeleton example on startup.
      */
     @PostConstruct
     public void loadSkeleton() {
         try {
-            Resource resource = resourceLoader.getResource("classpath:groovy-visitor-skeleton.groovy");
-            skeletonExample = new String(
+            Resource resource = resourceLoader.getResource("classpath:recipe-skeleton.groovy");
+            recipeSkeleton = new String(
                     resource.getInputStream().readAllBytes(),
                     StandardCharsets.UTF_8);
-            logger.info("Loaded Groovy visitor skeleton example ({} chars)", skeletonExample.length());
+            logger.info("Loaded recipe skeleton example ({} chars)", recipeSkeleton.length());
         } catch (IOException e) {
-            logger.error("Failed to load Groovy visitor skeleton", e);
-            skeletonExample = null;
+            logger.error("Failed to load recipe skeleton", e);
+            recipeSkeleton = null;
         }
     }
 
@@ -87,7 +88,6 @@ public class GroovyScriptGenerationService {
             String awsAccessKey,
             String awsSecretKey) {
 
-        // Create properties for Bedrock configuration
         java.util.Properties properties = new java.util.Properties();
         properties.setProperty("bedrock.model.id", model);
         properties.setProperty("bedrock.temperature", String.valueOf(temperature));
@@ -98,12 +98,11 @@ public class GroovyScriptGenerationService {
         properties.setProperty("bedrock.aws.access.key.id", awsAccessKey);
         properties.setProperty("bedrock.aws.secret.access.key", awsSecretKey);
         properties.setProperty("bedrock.rate.limit.rpm", "60");
-        properties.setProperty("bedrock.retry.attempts", "1"); // We handle retries ourselves
+        properties.setProperty("bedrock.retry.attempts", "1");
         properties.setProperty("bedrock.log.requests", "false");
         properties.setProperty("bedrock.log.responses", "false");
         properties.setProperty("bedrock.enabled", "true");
 
-        // Use reflection to create BedrockConfig with our properties
         try {
             java.lang.reflect.Constructor<BedrockConfig> constructor = BedrockConfig.class
                     .getDeclaredConstructor(java.util.Properties.class);
@@ -115,46 +114,27 @@ public class GroovyScriptGenerationService {
     }
 
     /**
-     * Generate a Groovy visitor script based on pattern description.
-     * Implements retry logic with error feedback.
-     *
-     * @param projectPath        the project path
-     * @param patternDescription the pattern to search for
-     * @param nodeType           the OpenRewrite node type
-     * @param filePaths          optional list of file paths
-     * @return the generated Groovy script source code
-     * @throws ScriptGenerationException if generation fails after all retries
+     * Generate a recipe script based on pattern and transformation description.
      */
-    public GenerationResult generateVisitorScript(
+    public GenerationResult generateRecipeScript(
             String projectPath,
             String patternDescription,
             String nodeType,
+            String transformation,
             List<String> filePaths) throws ScriptGenerationException {
 
-        return generateVisitorScriptWithErrorFeedback(
-                projectPath, patternDescription, nodeType, filePaths, null, null);
+        return generateRecipeScriptWithErrorFeedback(
+                projectPath, patternDescription, nodeType, transformation, filePaths, null, null);
     }
 
     /**
-     * Generate a Groovy visitor script with error feedback from a previous failed
-     * attempt.
-     * This method is used when a generated script failed execution and needs to be
-     * regenerated
-     * with context about what went wrong.
-     *
-     * @param projectPath        the project path
-     * @param patternDescription the pattern to search for
-     * @param nodeType           the OpenRewrite node type
-     * @param filePaths          optional list of file paths
-     * @param previousScript     the script that failed execution (for AI learning)
-     * @param previousError      the error message from the failed execution
-     * @return the generated Groovy script source code
-     * @throws ScriptGenerationException if generation fails after all retries
+     * Generate a recipe script with error feedback from a previous failed attempt.
      */
-    public GenerationResult generateVisitorScriptWithErrorFeedback(
+    public GenerationResult generateRecipeScriptWithErrorFeedback(
             String projectPath,
             String patternDescription,
             String nodeType,
+            String transformation,
             List<String> filePaths,
             String previousScript,
             String previousError) throws ScriptGenerationException {
@@ -163,23 +143,23 @@ public class GroovyScriptGenerationService {
 
         while (attempts < maxRetries) {
             attempts++;
-            logger.info("Generating visitor script (attempt {}/{}): pattern='{}', nodeType='{}'",
-                    attempts, maxRetries, patternDescription, nodeType);
+            logger.info("Generating recipe script (attempt {}/{}): pattern='{}', transformation='{}'",
+                    attempts, maxRetries, patternDescription, transformation);
 
             try {
                 String prompt = buildPrompt(
                         projectPath,
                         patternDescription,
                         nodeType,
+                        transformation,
                         filePaths,
                         previousScript,
-                        previousError,
-                        attempts);
+                        previousError);
 
                 BedrockResponse response = bedrockClient.invokeModel(prompt);
                 String generatedScript = extractScript(response.getText());
 
-                logger.info("Script generated successfully on attempt {}", attempts);
+                logger.info("Recipe script generated successfully on attempt {}", attempts);
                 return new GenerationResult(generatedScript, attempts);
 
             } catch (BedrockApiException e) {
@@ -188,49 +168,43 @@ public class GroovyScriptGenerationService {
 
                 if (attempts >= maxRetries) {
                     throw new ScriptGenerationException(
-                            "Failed to generate script after " + maxRetries + " attempts: " + e.getMessage(), e);
+                            "Failed to generate recipe after " + maxRetries + " attempts: " + e.getMessage(), e);
                 }
 
-                // Wait before retry
                 waitBeforeRetry(attempts);
             }
         }
 
-        throw new ScriptGenerationException("Failed to generate script after " + maxRetries + " attempts");
+        throw new ScriptGenerationException("Failed to generate recipe after " + maxRetries + " attempts");
     }
 
     /**
-     * Build the prompt for Bedrock to generate a Groovy visitor script.
+     * Build the prompt for Bedrock to generate a recipe script.
      */
     private String buildPrompt(
             String projectPath,
             String patternDescription,
             String nodeType,
+            String transformation,
             List<String> filePaths,
             String previousScript,
-            String previousError,
-            int attemptNumber) {
+            String previousError) {
 
-        // Build context section
         String contextSection = buildContextSection(projectPath, filePaths);
-
-        // Build skeleton example section
-        String skeletonSection = skeletonExample != null
-                ? "\n```groovy\n" + skeletonExample + "\n```\n"
+        String skeletonSection = recipeSkeleton != null
+                ? "\n```groovy\n" + recipeSkeleton + "\n```\n"
                 : "";
-
-        // Build example code section
-        String exampleCode = buildExampleCode(nodeType);
-
-        // Build error feedback section if needed
+        String exampleCode = buildExampleCode(nodeType, transformation);
         String errorFeedback = buildErrorFeedbackSection(previousScript, previousError);
 
-        // Combine all sections using text blocks
         return """
-                You are a Java code analysis expert. Generate a Groovy script that implements \
-                an OpenRewrite JavaIsoVisitor to find the following pattern in Java code.
+                You are a Java code refactoring expert. Generate a Groovy script that implements \
+                an OpenRewrite Recipe to transform Java code matching a specific pattern.
 
-                ## Pattern to Find
+                ## Pattern to Find and Transform
+                %s
+
+                ## Transformation to Apply
                 %s
 
                 ## Target Node Type
@@ -239,42 +213,30 @@ public class GroovyScriptGenerationService {
                 %s
 
                 ## Requirements
-                1. Create a class that extends org.openrewrite.java.JavaIsoVisitor<ExecutionContext>
-                2. Override the appropriate visit method for the node type: visit%s
-                3. Implement logic to match the pattern: %s
-                4. For each match found, collect it in a list
-                5. Store location information (file path, line number, column number)
+                1. Create a class that extends org.openrewrite.Recipe
+                2. Implement getDisplayName() and getDescription()
+                3. Implement getVisitor() returning a JavaIsoVisitor<ExecutionContext>
+                4. In the visitor, override the appropriate visit method for node type: visit%s
+                5. Implement transformation logic using withXXX() methods for immutable updates
                 6. Return ONLY the Groovy code, no explanations
-                7. Use proper OpenRewrite APIs and patterns
-                8. Use @CompileStatic annotation for type safety and performance
-                9. Declare all variable types explicitly (List<String>, Map<String, Object>, etc.)
-                10. Avoid dynamic Groovy features; prefer static typing
+                7. Use @CompileStatic annotation for type safety
+                8. Use proper OpenRewrite Recipe patterns
 
                 ## WORKING EXAMPLE TO ADAPT
-                Here is a complete, tested Groovy visitor that demonstrates correct OpenRewrite API usage.
-                Adapt this pattern for your specific search requirements:
+                Here is a complete, tested Recipe that demonstrates correct OpenRewrite Recipe usage.
+                Adapt this pattern for your specific transformation:
                 %s
 
-                ## Expected Output Format
-                IMPORTANT: Use @CompileStatic for type safety. Import it first:
-                import groovy.transform.CompileStatic
-
-                The script MUST return a List<Map<String, Object>> where each Map contains:
-                - nodeId: Unique identifier (use node.id.toString())
-                - nodeType: Type of the node (e.g., 'ClassDeclaration', 'MethodInvocation')
-                - className: Name of the class (if applicable)
-                - methodName: Name of the method (if applicable)
-                - fieldName: Name of the field (if applicable)
-                - location: Map with 'file', 'line', 'column' keys
-
-                IMPORTANT: Use PositionTracker utility to extract accurate line/column positions:
-                - Import: import com.analyzer.refactoring.mcp.util.PositionTracker
-                - Also import: import org.openrewrite.java.tree.JavaSourceFile
-                - File path: sourceFile.sourcePath.toString() where sourceFile = getCursor().firstEnclosingOrThrow(SourceFile.class)
-                - Position: Map<String, Integer> position = PositionTracker.getPosition((JavaSourceFile) sourceFile, node)
-                - Note: Cast to JavaSourceFile is required for PositionTracker
-                - Line number: position.get('line')
-                - Column number: position.get('column')
+                ## Important Notes on Transformations
+                - OpenRewrite uses immutable AST nodes
+                - Never modify nodes directly - use withXXX() methods
+                - Common transformation methods:
+                  * withSimpleName(newName) - rename methods/fields
+                  * withModifiers(newModifiers) - change modifiers
+                  * withBody(newBody) - replace method body
+                  * withAnnotations(newAnnotations) - add/remove annotations
+                - Always call super.visitXXX() to continue traversal
+                - Return the modified node from visit methods
 
                 %s
                 %s
@@ -283,10 +245,10 @@ public class GroovyScriptGenerationService {
                 """
                 .formatted(
                         patternDescription,
+                        transformation,
                         nodeType,
                         contextSection,
                         nodeType,
-                        patternDescription,
                         skeletonSection,
                         exampleCode,
                         errorFeedback);
@@ -310,61 +272,53 @@ public class GroovyScriptGenerationService {
     }
 
     /**
-     * Build example code section with PositionTracker usage.
+     * Build example code section for recipe generation.
      */
-    private String buildExampleCode(String nodeType) {
+    private String buildExampleCode(String nodeType, String transformation) {
         return """
                 ```groovy
                 import groovy.transform.CompileStatic
-                import org.openrewrite.java.JavaIsoVisitor
                 import org.openrewrite.ExecutionContext
+                import org.openrewrite.Recipe
+                import org.openrewrite.TreeVisitor
+                import org.openrewrite.java.JavaIsoVisitor
                 import org.openrewrite.java.tree.J
-                import org.openrewrite.java.tree.JavaSourceFile
-                import org.openrewrite.SourceFile
-                import org.openrewrite.InMemoryExecutionContext
-                import com.analyzer.refactoring.mcp.util.PositionTracker
 
                 @CompileStatic
-                class PatternVisitor extends JavaIsoVisitor<ExecutionContext> {
-                    List<Map<String, Object>> matches = []
+                class TransformationRecipe extends Recipe {
 
                     @Override
-                    J.%s visit%s(J.%s node, ExecutionContext ctx) {
-                        // Example: Check if pattern matches (use explicit typing)
-                        if (/* your matching logic */) {
-                            // Extract accurate position using PositionTracker
-                            SourceFile sourceFile = getCursor().firstEnclosingOrThrow(SourceFile.class)
-                            Map<String, Integer> position = PositionTracker.getPosition((JavaSourceFile) sourceFile, node)
-
-                            Map<String, Object> match = [
-                                nodeId: node.id.toString(),
-                                nodeType: '%s',
-                                className: extractClassName(node),  // implement as needed
-                                location: [
-                                    file: sourceFile.sourcePath.toString(),
-                                    line: position.get('line'),
-                                    column: position.get('column')
-                                ]
-                            ]
-                            matches.add(match)
-                        }
-                        return super.visit%s(node, ctx)
+                    String getDisplayName() {
+                        return "Apply transformation: %s"
                     }
 
-                    // Helper method to extract class name from context
-                    private String extractClassName(J node) {
-                        J.ClassDeclaration classDecl = getCursor().firstEnclosing(J.ClassDeclaration.class)
-                        return classDecl?.simpleName ?: 'Unknown'
+                    @Override
+                    String getDescription() {
+                        return "Transforms code matching the pattern"
+                    }
+
+                    @Override
+                    TreeVisitor<?, ExecutionContext> getVisitor() {
+                        return new JavaIsoVisitor<ExecutionContext>() {
+
+                            @Override
+                            J.%s visit%s(J.%s node, ExecutionContext ctx) {
+                                // Check if pattern matches
+                                if (/* your matching logic */) {
+                                    // Apply transformation using withXXX() methods
+                                    return node.withSimpleName("newName")  // example transformation
+                                }
+
+                                return super.visit%s(node, ctx)
+                            }
+                        }
                     }
                 }
 
-                // After creating the visitor, execute it and return matches
-                PatternVisitor visitor = new PatternVisitor()
-                visitor.visit(compilationUnit, new InMemoryExecutionContext())
-                return visitor.matches  // MUST return the matches list
+                // Return the recipe instance
+                return new TransformationRecipe()
                 ```
-                """
-                .formatted(nodeType, nodeType, nodeType, nodeType, nodeType);
+                """.formatted(transformation, nodeType, nodeType, nodeType, nodeType);
     }
 
     /**
@@ -380,42 +334,35 @@ public class GroovyScriptGenerationService {
             staticCompilationSuggestion = """
 
                     SUGGESTION: The error appears to be related to @CompileStatic constraints. \
-                    You can either:
-                    1. Fix the type declarations to satisfy static compilation (PREFERRED)
-                       - Use explicit types: List<String>, Map<String, Object>
-                       - Add type casts where needed: ... as List<String>
-                       - Import all required types
-                    2. Remove @CompileStatic if the pattern truly requires dynamic features (FALLBACK)
+                    Check type declarations and ensure all types are properly declared.
                     """;
         }
 
         return """
 
                 ## Previous Attempt Failed
-                The previous script had this error:
+                The previous recipe had this error:
                 ```
                 %s
                 ```
                 %s
-                Previous script that failed:
+                Previous recipe that failed:
                 ```groovy
                 %s
                 ```
 
-                Please fix the error and generate a corrected script.
+                Please fix the error and generate a corrected recipe.
                 """.formatted(previousError, staticCompilationSuggestion, previousScript);
     }
 
     /**
-     * Extract the Groovy script from Bedrock response.
-     * Looks for code blocks marked with ```groovy.
+     * Extract the recipe script from Bedrock response.
      */
     private String extractScript(String response) throws ScriptGenerationException {
         if (response == null || response.trim().isEmpty()) {
             throw new ScriptGenerationException("Empty response from Bedrock");
         }
 
-        // Look for ```groovy code block
         String groovyMarker = "```groovy";
         String endMarker = "```";
 
@@ -428,11 +375,9 @@ public class GroovyScriptGenerationService {
             }
         }
 
-        // Fallback: look for any code block
         startIdx = response.indexOf("```");
         if (startIdx >= 0) {
             startIdx += 3;
-            // Skip language identifier if present
             int newlineIdx = response.indexOf('\n', startIdx);
             if (newlineIdx > startIdx && newlineIdx - startIdx < 20) {
                 startIdx = newlineIdx + 1;
@@ -443,7 +388,6 @@ public class GroovyScriptGenerationService {
             }
         }
 
-        // If no code blocks, return the whole response (assume it's the script)
         logger.warn("No code blocks found in response, using entire response as script");
         return response.trim();
     }
@@ -461,9 +405,7 @@ public class GroovyScriptGenerationService {
                 lowerError.contains("cannot find matching method") ||
                 lowerError.contains("cannot assign value of type") ||
                 lowerError.contains("incompatible types") ||
-                lowerError.contains("cannot convert from") ||
-                lowerError.contains("groovy.lang.missingmethodexception") ||
-                lowerError.contains("groovy.lang.missingpropertyexception");
+                lowerError.contains("cannot convert from");
     }
 
     /**
@@ -471,7 +413,7 @@ public class GroovyScriptGenerationService {
      */
     private void waitBeforeRetry(int attemptNumber) {
         try {
-            long waitMs = 1000L * attemptNumber; // Exponential backoff
+            long waitMs = 1000L * attemptNumber;
             logger.debug("Waiting {}ms before retry", waitMs);
             Thread.sleep(waitMs);
         } catch (InterruptedException e) {
@@ -489,7 +431,7 @@ public class GroovyScriptGenerationService {
     }
 
     /**
-     * Result of script generation.
+     * Result of recipe generation.
      */
     public static class GenerationResult {
         private final String scriptSource;
@@ -510,7 +452,7 @@ public class GroovyScriptGenerationService {
     }
 
     /**
-     * Exception thrown when script generation fails.
+     * Exception thrown when recipe generation fails.
      */
     public static class ScriptGenerationException extends Exception {
         public ScriptGenerationException(String message) {

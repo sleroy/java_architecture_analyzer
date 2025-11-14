@@ -1,8 +1,10 @@
 import org.openrewrite.java.JavaIsoVisitor
 import org.openrewrite.ExecutionContext
 import org.openrewrite.java.tree.J
+import org.openrewrite.java.tree.JavaSourceFile
 import org.openrewrite.SourceFile
 import org.openrewrite.InMemoryExecutionContext
+import com.analyzer.refactoring.mcp.util.PositionTracker
 
 /**
  * Detects deep nesting anti-pattern in Java code.
@@ -32,6 +34,10 @@ class DeepNestingAntiPatternVisitor extends JavaIsoVisitor<ExecutionContext> {
         if (maxDepth > NESTING_THRESHOLD) {
             def classDecl = getCursor().firstEnclosing(J.ClassDeclaration.class)
             
+            // Extract accurate position using PositionTracker
+            SourceFile sourceFile = getCursor().firstEnclosingOrThrow(SourceFile.class)
+            Map<String, Integer> position = PositionTracker.getPosition((JavaSourceFile) sourceFile, method)
+            
             def match = [
                 nodeId: method.id.toString(),
                 nodeType: 'MethodDeclaration',
@@ -42,11 +48,11 @@ class DeepNestingAntiPatternVisitor extends JavaIsoVisitor<ExecutionContext> {
                     nestingDepth: maxDepth,
                     severity: maxDepth > NESTING_THRESHOLD * 2 ? 'HIGH' : 'MEDIUM'
                 ],
-                    location: [
-                        file: getCursor().firstEnclosingOrThrow(SourceFile.class).sourcePath.toString(),
-                        line: 0,  // Line information not easily accessible in OpenRewrite
-                        column: 0
-                    ]
+                location: [
+                    file: sourceFile.sourcePath.toString(),
+                    line: position.get('line'),
+                    column: position.get('column')
+                ]
             ]
             matches.add(match)
         }
